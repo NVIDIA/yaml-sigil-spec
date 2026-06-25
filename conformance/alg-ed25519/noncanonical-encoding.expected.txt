@@ -1,0 +1,7 @@
+# Three canonical-encoding rejection fixtures.
+# All use payload = (empty), public_key = RFC 8032 §7.1 Test 1's public key.
+# public_key: d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a
+
+Verify(*, input=noncanonical-R.binpb, ...)               -> MalformedAttemptedSigned
+Verify(*, input=noncanonical-S-equals-L.binpb, ...)      -> MalformedAttemptedSigned
+Verify(*, input=noncanonical-S-equals-L-plus-1.binpb, ...) -> MalformedAttemptedSigned

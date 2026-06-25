@@ -1,0 +1,5 @@
+# Wrong-curve public key (secp256k1 generator) — MUST be rejected.
+
+# This point is on secp256k1, not secp256r1. A P-256 verifier
+# checking the curve equation will see y^2 != x^3 - 3x + b (P-256).
+public_key (hex): 0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8

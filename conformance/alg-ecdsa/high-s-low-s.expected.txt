@@ -1,0 +1,11 @@
+# High-S / low-S acceptance pair.
+# payload: 68656c6c6f3a20776f726c640a
+# public_key: 043ad3861a95621392516bb593ef05583ed2e5866f5cb6260a3017237fd89b90afd0961c7e37075a6791a39c61f56295b02b6d26567b615e60aa41ee1c8e83388d
+
+R (shared):  e14492964d758e7de59e3adade4b3337cdc112e8bd37933c3769a2feb2d44de8
+high-S:      ec99b2f31d1ff6fb23bdd19a4552a282e48bcd27af9b2492c14eb76433b32ac7
+low-S:       13664d0be2e00905dc422e65baad5d7cd85b2d85f77c79f2326b135ec8affa8a
+(low-S = n - high-S)
+
+Verify(*, input=high-s.binpb / .yaml, ...) -> Verified
+Verify(*, input=low-s.binpb  / .yaml, ...) -> Verified

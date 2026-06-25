@@ -1,0 +1,4 @@
+# Off-curve public key — MUST be rejected as KeyResolutionFailure.
+
+# (Qx, Qy+1 mod p) is not on secp256r1.
+public_key (hex): 043ad3861a95621392516bb593ef05583ed2e5866f5cb6260a3017237fd89b90afd0961c7e37075a6791a39c61f56295b02b6d26567b615e60aa41ee1c8e83388e

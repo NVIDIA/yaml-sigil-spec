@@ -1,0 +1,16 @@
+[package]
+name = "xtask"
+version = "0.0.0"
+edition = "2021"
+publish = false
+license = "Apache-2.0"
+description = "Developer-only tasks (vendor refresh, etc.) for rebuild-rs."
+
+[[bin]]
+name = "xtask"
+path = "src/main.rs"
+
+# Intentionally dependency-free: the xtask shells out to `curl`
+# rather than carrying an HTTP/TLS stack, so the only thing it
+# locks against the lockfile is the standard library.
+[dependencies]

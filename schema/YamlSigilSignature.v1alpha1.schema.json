@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "YamlSigilSignature.v1alpha1.schema.json",
+  "title": "YamlSigilSignature.v1alpha1",
+  "description": "Strict YAML-form schema for the YamlSigilSignature.v1alpha1 signature document. This schema validates the parsed YAML signature document object; byte-level artifact decomposition, YAML parser behavior, and EOF handling are specified outside JSON Schema. Duplicate-key rejection is governed by the verifier's advertised conformance profile (Strict / SignatureStrict reject; Permissive last-wins) per verification-api.md 'Conformance Profiles'.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "alg",
+    "signature"
+  ],
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "YamlSigilSignature.v1alpha1",
+      "description": "YAML-form schema discriminator. The protobuf form omits this because the message type is the schema."
+    },
+    "alg": {
+      "$ref": "#/$defs/algorithm"
+    },
+    "keyid": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "$comment": "If present, keyid MUST be non-empty and MUST be at most 1024 UTF-8 octets. JSON Schema maxLength counts Unicode code points, so the schema's 1024 is a loose approximation; the strict octet bound is enforced at decode (Signing rejects with INVALID_KEYID; Verification rejects as MalformedAttemptedSigned).",
+      "description": "Optional caller-supplied lookup hint for the verification key. Mirrors proto optional string keyid. When present, MUST be 1..1024 UTF-8 octets. Unsigned and never proof of signer identity."
+    },
+    "signature": {
+      "$ref": "#/$defs/signature"
+    }
+  },
+  "$defs": {
+    "algorithm": {
+      "enum": [
+        "ED25519_PUREEDDSA_RAW_RS64_CANONICAL",
+        "ECDSA_SECP256R1_SHA256_RAW_RS64"
+      ],
+      "$comment": "Closed enum of YAML-form alg wire strings (no ALGORITHM_ prefix). Maps to protobuf Algorithm per README.md 'The Signature Document' (ED25519_* -> ALGORITHM_ED25519_* enum 1, ECDSA_* -> ALGORITHM_ECDSA_* enum 2). ALGORITHM_UNSPECIFIED (protobuf 0) is not a valid alg here; unknown strings are schema-invalid and map to MalformedAttemptedSigned at verification. A schema-defined algorithm the verifier does not implement maps to SignedButAlgorithmUnsupported. Transcription treats the signature carrier as opaque bytes and does not read alg.",
+      "description": "Required algorithm identifier. Closed enum of YAML/JSON Schema wire spellings; see README.md mapping table to protobuf. Per-algorithm specifications live under README.md's 'The Signature Document' section."
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^(?:[A-Za-z0-9_-]{4})*(?:[A-Za-z0-9_-]{2,3})?$",
+      "$comment": "URL-safe base64 without padding per base64-requirements.md. Trailing-bits rejection is enforced at decode (Verification), not fully expressible in JSON Schema. The signature's decoded length is algorithm-specific (a fixed 64 octets, i.e. 86 base64url characters, for both v1alpha1 algorithms) and is enforced at the verification stage, not by this pattern, which constrains only the URL-safe alphabet and base64 grouping. The empty string is allowed here because empty bytes are wire-representable in the protobuf form; Verification rules reject empty decoded signature octets separately. Transcription treats the signature carrier as opaque bytes and does not read signature octets.",
+      "description": "Required base64-encoded signature octets for the YAML form (URL-safe, unpadded). Mirrors proto bytes signature; empty octets are schema-representable but invalid under later verification semantics."
+    }
+  }
+}

@@ -1,0 +1,320 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ============================================================================
+  YamlSigil.v1alpha1 . YAML artifact transcription / decomposition diagram
+  ============================================================================
+
+  PURPOSE
+  .......
+  Visual reference for the byte ranges and named terms used by the YAML-form
+  Transcription API and Artifact Decomposition. Each of the four boxes below
+  shows a different artifact shape and labels which span is `payload_range`,
+  which is the constrained marker, which is `signature_carrier_range`, and
+  which is `signature_document_range`.
+
+  The four cases are:
+
+    1. Signed Single Document       payload + marker + signature carrier
+    2. Signed Multi Document        multi-doc payload + marker + carrier
+    3. Unsigned (no marker)         payload only; no signing attempt
+    4. Empty-payload signed         marker at offset 0; signature carrier only
+
+  AUTHORITY
+  .........
+  This is a non-normative visual aid. The normative definitions live in:
+
+    . artifact-decomposition.md  (byte-level ranges, marker profile, algorithm)
+    . transcription-api.md       (Compose / Decompose contracts, YAML profile)
+    . README.md                  (glossary: "Signature document" vs.
+                                  "Signature carrier")
+
+  If those documents and this diagram disagree, the documents win.
+
+  HOW TO UPDATE
+  .............
+  Update this file whenever any of these change:
+
+    . The named byte ranges in artifact-decomposition.md (currently
+      `payload_range`, `signature_document_range`, `signature_carrier_range`).
+    . The constrained marker profile (LF / CRLF octets and the line-start
+      rule).
+    . The four canonical cases the README and transcription-api.md describe
+      (signed single, signed multi, unsigned, empty-payload signed).
+    . Term renames in the README glossary that touch any of: artifact,
+      payload stream, signature document, signature carrier, payload_range,
+      signature_document_range, signature_carrier_range.
+
+  Style note: rect fill/stroke are INLINE (not driven from the embedded
+  <style> block) because ImageMagick v6's SVG backend does not apply CSS
+  classes to shape elements. Text classes are fine. If you migrate to a
+  CSS-aware renderer (rsvg-convert, recent inkscape), you may move these
+  back into the style block, but keep them inline for the PNG build path
+  unless you also update the PNG build pipeline.
+
+  When updating: also re-render the PNG sibling
+  (`yaml-artifact-transcription-diagram.png`) so the GitLab/GitHub render
+  matches. The PNG is produced via:
+
+      convert -density 120 -background white \
+          images/yaml-artifact-transcription-diagram.svg \
+          images/yaml-artifact-transcription-diagram.png
+
+  Also update:
+
+    . `DIAGRAM.md` (the full end-to-end mermaid diagram needs companion
+      updates when these terms shift, even though this diagram is a
+      narrower YAML-form view).
+    . `AGENTS.md` lists this file in its maintenance notes; cross-check
+      that the maintenance description still matches the diagram's scope.
+
+  COLOR / SHAPE LEGEND
+  ....................
+    light blue   (#cfe8ff)  payload_range / payload_stream
+    yellow       (#fff3a3)  constrained marker (three-dash + LF/CRLF)
+    light green  (#c8e6c9)  signature_carrier_range  (markerless)
+    dashed grey outline     signature_document_range (marker-inclusive)
+
+  Offsets:
+    `0`    the start of the artifact
+    `M`    the offset of the first marker octet
+    `T`    M + 4 (LF) or M + 5 (CRLF); first octet AFTER the marker
+    `|A|`  the artifact length (end of artifact)
+  ============================================================================
+-->
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 1240 1080"
+     width="1240" height="1080"
+     font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+
+  <title>YamlSigil.v1alpha1 YAML artifact transcription / decomposition diagram</title>
+  <desc>
+    Four YAML artifact shapes labelled with the byte ranges and named terms
+    from the Transcription API and Artifact Decomposition: signed single
+    document, signed multi-document, unsigned (no marker), and empty-payload
+    signed.
+  </desc>
+
+  <defs>
+    <style><![CDATA[
+      .frame-title  { font-size: 16px; font-weight: bold; fill: #222; }
+      .frame-sub    { font-size: 11px; fill: #555; font-style: italic; }
+      .yaml         { font-family: 'DejaVu Sans Mono', 'Courier New', monospace; font-size: 13px; fill: #111; }
+      .range-label  { font-family: 'DejaVu Sans Mono', 'Courier New', monospace; font-size: 11px; fill: #333; }
+      .range-cap    { font-size: 10px; fill: #555; }
+      .offset       { font-family: 'DejaVu Sans Mono', 'Courier New', monospace; font-size: 11px; fill: #555; }
+      .legend-text  { font-size: 12px; fill: #222; }
+      .heading      { font-size: 20px; font-weight: bold; fill: #111; }
+      .subheading   { font-size: 12px; fill: #555; }
+    ]]></style>
+  </defs>
+
+  <!-- background -->
+  <rect x="0" y="0" width="1240" height="1080" fill="#ffffff" />
+
+  <text x="620" y="32" text-anchor="middle" class="heading">YamlSigil.v1alpha1 . YAML Artifact Byte Ranges</text>
+  <text x="620" y="52" text-anchor="middle" class="subheading">Named ranges from artifact-decomposition.md as they appear in four canonical artifact shapes</text>
+
+  <g id="ex-signed-single">
+    <rect x="40" y="80" width="580" height="420" rx="4" fill="#fafafa" stroke="#333" stroke-width="1" />
+    <text x="330" y="105" text-anchor="middle" class="frame-title">Signed Single Document</text>
+    <text x="330" y="122" text-anchor="middle" class="frame-sub">payload + marker + signature carrier</text>
+
+    <rect x="60" y="140" width="380" height="40" fill="#cfe8ff" />
+    <rect x="60" y="180" width="380" height="22" fill="#fff3a3" />
+    <rect x="60" y="202" width="380" height="100" fill="#c8e6c9" />
+    <rect x="58" y="178" width="384" height="126" fill="none" stroke="#555" stroke-dasharray="5 3" stroke-width="1.2" />
+
+    <g class="yaml">
+      <text x="70" y="158">some: random</text>
+      <text x="70" y="176">yaml: document</text>
+      <text x="70" y="197">---</text>
+      <text x="70" y="220">schema: YamlSigilSignature.v1alpha1</text>
+      <text x="70" y="238">alg: &lt;required enum...&gt;</text>
+      <text x="70" y="256">keyid: &lt;optional hint&gt;</text>
+      <text x="70" y="274">signature: &lt;b64 sig&gt;</text>
+    </g>
+
+    <text class="offset" x="55" y="158" text-anchor="end">0&#8594;</text>
+    <text class="offset" x="55" y="197" text-anchor="end">M&#8594;</text>
+    <text class="offset" x="55" y="220" text-anchor="end">T&#8594;</text>
+    <text class="offset" x="55" y="296" text-anchor="end">|A|&#8594;</text>
+
+    <g class="range-label">
+      <text x="455" y="156">payload_range</text>
+      <text x="455" y="170" class="range-cap">[0, M)</text>
+
+      <text x="455" y="195">marker</text>
+      <text x="455" y="207" class="range-cap">three-dash + LF/CRLF</text>
+
+      <text x="455" y="240">signature_carrier_range</text>
+      <text x="455" y="254" class="range-cap">[T, |A|) markerless</text>
+
+      <text x="455" y="285">signature_document_range</text>
+      <text x="455" y="299" class="range-cap">[M, |A|) marker-inclusive</text>
+    </g>
+
+    <text x="60" y="335" class="frame-sub">Verifier-state mapping after metadata extraction + crypto:</text>
+    <text x="70" y="352" class="range-label">Verified | SignedButFailedVerification | SignedButAlgorithmUnsupported</text>
+    <text x="70" y="366" class="range-label">| MalformedAttemptedSigned</text>
+    <text x="60" y="388" class="frame-sub">DecomposeOutcome: Ok</text>
+  </g>
+
+  <g id="ex-signed-multi">
+    <rect x="640" y="80" width="580" height="420" rx="4" fill="#fafafa" stroke="#333" stroke-width="1" />
+    <text x="930" y="105" text-anchor="middle" class="frame-title">Signed Multi Document</text>
+    <text x="930" y="122" text-anchor="middle" class="frame-sub">multi-doc payload; only the LAST three-dash marker starts the signature document</text>
+
+    <rect x="660" y="140" width="380" height="98" fill="#cfe8ff" />
+    <rect x="660" y="238" width="380" height="22" fill="#fff3a3" />
+    <rect x="660" y="260" width="380" height="100" fill="#c8e6c9" />
+    <rect x="658" y="236" width="384" height="126" fill="none" stroke="#555" stroke-dasharray="5 3" stroke-width="1.2" />
+
+    <g class="yaml">
+      <text x="670" y="158">some: random</text>
+      <text x="670" y="176">yaml: document</text>
+      <text x="670" y="197">---</text>
+      <text x="670" y="215">some: other-random</text>
+      <text x="670" y="233">yaml: document</text>
+      <text x="670" y="257">---</text>
+      <text x="670" y="280">schema: YamlSigilSignature.v1alpha1</text>
+      <text x="670" y="298">alg: &lt;required enum...&gt;</text>
+      <text x="670" y="316">keyid: &lt;optional hint&gt;</text>
+      <text x="670" y="334">signature: &lt;b64 sig&gt;</text>
+    </g>
+
+    <text class="offset" x="655" y="158" text-anchor="end">0&#8594;</text>
+    <text class="offset" x="655" y="197" text-anchor="end">m&#8320;&#8594;</text>
+    <text class="offset" x="655" y="257" text-anchor="end">M&#8594;</text>
+    <text class="offset" x="655" y="280" text-anchor="end">T&#8594;</text>
+    <text class="offset" x="655" y="356" text-anchor="end">|A|&#8594;</text>
+
+    <g class="range-label">
+      <text x="1055" y="170">payload_range</text>
+      <text x="1055" y="184" class="range-cap">[0, M)</text>
+      <text x="1055" y="198" class="range-cap">m&#8320; is an earlier</text>
+      <text x="1055" y="212" class="range-cap">marker INSIDE</text>
+      <text x="1055" y="226" class="range-cap">the payload</text>
+
+      <text x="1055" y="252">marker (at M)</text>
+      <text x="1055" y="266" class="range-cap">M = max(S)</text>
+
+      <text x="1055" y="298">signature_carrier_range</text>
+      <text x="1055" y="312" class="range-cap">[T, |A|)</text>
+
+      <text x="1055" y="342">signature_document_range</text>
+      <text x="1055" y="356" class="range-cap">[M, |A|)</text>
+    </g>
+
+    <text x="660" y="385" class="frame-sub">Algorithm step 4: M = max(S). The earlier three-dash at offset m&#8320; is a</text>
+    <text x="660" y="400" class="frame-sub">YAML document boundary inside the payload; only the FINAL constrained</text>
+    <text x="660" y="415" class="frame-sub">marker starts the signature document.</text>
+    <text x="660" y="438" class="frame-sub">DecomposeOutcome: Ok</text>
+  </g>
+
+  <g id="ex-unsigned">
+    <rect x="40" y="540" width="580" height="420" rx="4" fill="#fafafa" stroke="#333" stroke-width="1" />
+    <text x="330" y="565" text-anchor="middle" class="frame-title">Unsigned (no constrained marker)</text>
+    <text x="330" y="582" text-anchor="middle" class="frame-sub">payload only; no signing attempt</text>
+
+    <rect x="60" y="600" width="380" height="60" fill="#cfe8ff" />
+
+    <rect x="60" y="665" width="380" height="22" fill="#f0f0f0" stroke="#ccc" stroke-dasharray="2 2" />
+    <rect x="60" y="690" width="380" height="60" fill="#f0f0f0" stroke="#ccc" stroke-dasharray="2 2" />
+
+    <g class="yaml">
+      <text x="70" y="618">some: random</text>
+      <text x="70" y="636">yaml: document</text>
+      <text x="70" y="654">more: payload</text>
+    </g>
+
+    <g class="yaml" fill="#888" font-style="italic">
+      <text x="70" y="680">(no constrained marker)</text>
+      <text x="70" y="710">(no signature carrier)</text>
+      <text x="70" y="728">(no signature document)</text>
+    </g>
+
+    <text class="offset" x="55" y="618" text-anchor="end">0&#8594;</text>
+    <text class="offset" x="55" y="654" text-anchor="end">|A|&#8594;</text>
+
+    <g class="range-label">
+      <text x="455" y="618">|S| = 0</text>
+      <text x="455" y="632" class="range-cap">no constrained marker</text>
+      <text x="455" y="646" class="range-cap">offset found in A</text>
+
+      <text x="455" y="685">payload_range</text>
+      <text x="455" y="699" class="range-cap">undefined here:</text>
+      <text x="455" y="713" class="range-cap">the algorithm</text>
+      <text x="455" y="727" class="range-cap">returns Unsigned</text>
+      <text x="455" y="741" class="range-cap">before assigning</text>
+      <text x="455" y="755" class="range-cap">ranges</text>
+    </g>
+
+    <text x="60" y="790" class="frame-sub">Algorithm step 4: |S| = 0 returns Unsigned (no ranges assigned).</text>
+    <text x="60" y="805" class="frame-sub">Same outcome as an empty artifact (|A| = 0, step 2).</text>
+
+    <text x="60" y="838" class="frame-sub">DecomposeOutcome: Unsigned</text>
+    <text x="60" y="853" class="frame-sub">Verifier-state mapping: Unsigned (defined at Verification layer)</text>
+  </g>
+
+  <g id="ex-empty-payload">
+    <rect x="640" y="540" width="580" height="420" rx="4" fill="#fafafa" stroke="#333" stroke-width="1" />
+    <text x="930" y="565" text-anchor="middle" class="frame-title">Empty-payload Signed</text>
+    <text x="930" y="582" text-anchor="middle" class="frame-sub">marker at offset 0; signature carrier only</text>
+
+    <rect x="660" y="600" width="380" height="6" fill="#cfe8ff" stroke="#999" stroke-width="0.5" stroke-dasharray="2 2" />
+
+    <rect x="660" y="606" width="380" height="22" fill="#fff3a3" />
+    <rect x="660" y="628" width="380" height="100" fill="#c8e6c9" />
+    <rect x="658" y="604" width="384" height="126" fill="none" stroke="#555" stroke-dasharray="5 3" stroke-width="1.2" />
+
+    <g class="yaml">
+      <text x="670" y="623">---</text>
+      <text x="670" y="646">schema: YamlSigilSignature.v1alpha1</text>
+      <text x="670" y="664">alg: &lt;required enum...&gt;</text>
+      <text x="670" y="682">keyid: &lt;optional hint&gt;</text>
+      <text x="670" y="700">signature: &lt;b64 sig&gt;</text>
+    </g>
+
+    <text class="offset" x="655" y="610" text-anchor="end">0=M&#8594;</text>
+    <text class="offset" x="655" y="646" text-anchor="end">T&#8594;</text>
+    <text class="offset" x="655" y="720" text-anchor="end">|A|&#8594;</text>
+
+    <g class="range-label">
+      <text x="1055" y="606">payload_range</text>
+      <text x="1055" y="620" class="range-cap">[0, 0) empty</text>
+
+      <text x="1055" y="640">marker</text>
+      <text x="1055" y="654" class="range-cap">at offset 0</text>
+
+      <text x="1055" y="675">signature_carrier_range</text>
+      <text x="1055" y="689" class="range-cap">[T, |A|)</text>
+
+      <text x="1055" y="715">signature_document_range</text>
+      <text x="1055" y="729" class="range-cap">[0, |A|)</text>
+    </g>
+
+    <text x="660" y="765" class="frame-sub">Distinct from Unsigned: a marker exists, so the artifact is a signing attempt.</text>
+    <text x="660" y="780" class="frame-sub">Verified result returns zero verified payload bytes.</text>
+
+    <text x="660" y="810" class="frame-sub">DecomposeOutcome: Ok (payload bytes are empty)</text>
+    <text x="660" y="825" class="frame-sub">Verifier-state mapping: Verified | SignedBut* | MalformedAttemptedSigned</text>
+  </g>
+
+  <g id="legend">
+    <rect x="40" y="990" width="1180" height="80" rx="4" fill="#fafafa" stroke="#333" stroke-width="1" />
+    <text x="60" y="1015" class="frame-title">Legend</text>
+
+    <rect x="60" y="1028" width="22" height="14" fill="#cfe8ff" />
+    <text x="90" y="1040" class="legend-text">payload_range . the signed payload stream bytes; marker-exclusive on the right</text>
+
+    <rect x="60" y="1048" width="22" height="14" fill="#fff3a3" />
+    <text x="90" y="1060" class="legend-text">constrained marker . three-dash + LF (or three-dash + CR + LF), at a line-start position</text>
+
+    <rect x="640" y="1028" width="22" height="14" fill="#c8e6c9" />
+    <text x="670" y="1040" class="legend-text">signature_carrier_range . markerless; the bytes that cross the Transcription API as signature_carrier</text>
+
+    <rect x="640" y="1048" width="22" height="14" fill="none" stroke="#555" stroke-dasharray="5 3" stroke-width="1.2" />
+    <text x="670" y="1060" class="legend-text">signature_document_range . marker-inclusive; the YAML signature document as a YAML construct</text>
+  </g>
+
+</svg>

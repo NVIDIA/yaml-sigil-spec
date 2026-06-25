@@ -1,0 +1,15 @@
+# ECDSA P-256 / SHA-256 happy-path fixture.
+# private key d: 4242424242424242424242424242424242424242424242424242424242424242
+# public key Q (uncompressed): 043ad3861a95621392516bb593ef05583ed2e5866f5cb6260a3017237fd89b90afd0961c7e37075a6791a39c61f56295b02b6d26567b615e60aa41ee1c8e83388d
+# payload (signed bytes): 68656c6c6f3a20776f726c640a  (13 bytes, 'hello: world\n')
+# ephemeral k: cafebabecafebabecafebabecafebabecafebabecafebabecafebabecafebabe
+# R: e14492964d758e7de59e3adade4b3337cdc112e8bd37933c3769a2feb2d44de8
+# S: 13664d0be2e00905dc422e65baad5d7cd85b2d85f77c79f2326b135ec8affa8a
+
+Verify(form=PROTOBUF, input=verify-happy-path.binpb,
+       config.public_key_handle=<65-octet uncompressed PUB above>)
+Expected: Verified
+
+Verify(form=YAML, input=verify-happy-path.yaml,
+       config.public_key_handle=<same 65-octet uncompressed PUB>)
+Expected: Verified

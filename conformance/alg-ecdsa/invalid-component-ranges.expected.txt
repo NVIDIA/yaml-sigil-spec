@@ -1,0 +1,7 @@
+# Range-rejection fixtures. Wire rule: 0 < R < n and 0 < S < n.
+# n (curve order): ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551
+
+Verify(*, input=invalid-r-zero.binpb)      -> MalformedAttemptedSigned
+Verify(*, input=invalid-s-zero.binpb)      -> MalformedAttemptedSigned
+Verify(*, input=invalid-r-equals-n.binpb)  -> MalformedAttemptedSigned
+Verify(*, input=invalid-s-equals-n.binpb)  -> MalformedAttemptedSigned

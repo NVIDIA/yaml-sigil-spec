@@ -1,0 +1,8 @@
+# algorithm_parameters MUST be absent or zero-length for this algorithm.
+
+Sign(alg=ECDSA_SECP256R1_SHA256_RAW_RS64,
+     algorithm_parameters=b'\x00')
+-> SignerInvocationError(InvalidAlgorithmParameters)
+
+Verify(..., config.algorithm_parameters=b'\x00')
+-> InvocationError(InvalidAlgorithmParameters)

@@ -1,0 +1,19 @@
+# Deterministic-harness signature-octet instability.
+# Two signatures over the same (private key, payload) using two
+# explicitly chosen distinct nonces k1 != k2. Both verify; octets differ.
+
+# payload: 68656c6c6f3a20776f726c640a
+# private key d: 4242424242424242424242424242424242424242424242424242424242424242
+# public key (uncompressed): 043ad3861a95621392516bb593ef05583ed2e5866f5cb6260a3017237fd89b90afd0961c7e37075a6791a39c61f56295b02b6d26567b615e60aa41ee1c8e83388d
+
+k1: cafebabecafebabecafebabecafebabecafebabecafebabecafebabecafebabe
+R1: e14492964d758e7de59e3adade4b3337cdc112e8bd37933c3769a2feb2d44de8
+S1: 13664d0be2e00905dc422e65baad5d7cd85b2d85f77c79f2326b135ec8affa8a
+
+k2: deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef
+R2: 339118eab84d4d7b9adfadf908eea6fc4844ef55380886877139a061c1e41dc3
+S2: b3dcdee2d2654afdb15cf7cad296cc3cbe8ab91529d701aa19c7ec71cae28566
+
+Verify(*, input=two-nonce-instability-k1.binpb) -> Verified
+Verify(*, input=two-nonce-instability-k2.binpb) -> Verified
+Octet equality:  signature(k1) != signature(k2)  (MUST hold)

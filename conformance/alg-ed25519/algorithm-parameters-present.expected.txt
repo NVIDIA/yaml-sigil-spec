@@ -1,0 +1,8 @@
+# algorithm_parameters MUST be absent or zero-length for this algorithm.
+
+Sign(alg=ED25519_PUREEDDSA_RAW_RS64_CANONICAL,
+     algorithm_parameters=b'\x00')
+-> SignerInvocationError(InvalidAlgorithmParameters)
+
+Verify(..., config.algorithm_parameters=b'\x00')
+-> InvocationError(InvalidAlgorithmParameters)

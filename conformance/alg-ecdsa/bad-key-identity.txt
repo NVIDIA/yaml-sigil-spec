@@ -1,0 +1,9 @@
+# Point at infinity (identity O) — MUST be rejected as KeyResolutionFailure.
+
+# SEC 1 §2.3.3 represents O as the single octet 0x00.
+Q-encoded-as-O-single-byte: 00
+
+# Some implementations might be presented with an all-zero 65-octet
+# string (04 || 0...0 || 0...0). This is also NOT a valid public key
+# and MUST be rejected.
+Q-encoded-all-zero-65: 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000

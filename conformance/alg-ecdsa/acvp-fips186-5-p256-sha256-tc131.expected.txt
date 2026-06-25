@@ -1,0 +1,27 @@
+# NIST ACVP-Server FIPS 186-5 ECDSA SigGen AFT vector.
+# Source:        https://github.com/usnistgov/ACVP-Server @ 15c0f3deeefbfa8cb6cd32a99e1ca3b738c66bf0
+# Upstream path: gen-val/json-files/ECDSA-SigGen-FIPS186-5/internalProjection.json
+# (see vendor/acvp/README.md for the manual-verification hash steps)
+#
+# tgId:        14
+# tcId:        131
+# curve:       P-256
+# hashAlg:     SHA2-256
+# testType:    AFT
+#
+# d:           a88c7a12e6cd3ec1467e96dfd230d654f786fa72efa43ca9632b8de5bd245cc3
+# Q (uncompressed, hex): 046ea294cf3990ee50aad0b49475f4e09add8db1595485891176347514a712fe06fb1ab27c16fa33e7cb7960d6ebc575742649431e9ac35ee9130bec3dacd391f2
+# k:           48fa4b5e8bb917973c25a0ada41f33821f68b650568eb144be5960da1c756aba
+# message (128 bytes, hex):
+#   4f1b2aba5d952e434d26b9015cb17fb4ffebd0cc7a9420f1915db0a298fd925092cd66c3d6556b30dca4c1559247dcb22dbfd78fc9ffb4b5df0110c8c50be70f7b4c483964ad74d67b99cc2f4a00f2a12575ae800c0e9cda06cb714a2ce6caa9d30b5585e80228dc3fe39d66dabb80504b3caf90b4bb1bd1d2303b8d89b3ba18
+# R:           642a2fea3fe1ea23ab699e5ed5568d0833b4cef596764628af9c47e23c0b400b
+# S:           3be682f265ae3db0d595128f35af41bc63cb0fc4d067cefdec95687ac2b3b5af
+#
+# The rebuilder replays sign(d, SHA-256(message), k) and asserts
+# byte-equality against the (R, S) above before writing the
+# .binpb. The fixture is therefore a NIST-anchored conformance
+# artifact, not a locally-generated value.
+
+Verify(form=PROTOBUF, input=acvp-fips186-5-p256-sha256-tc131.binpb,
+       config.public_key_handle=<65-octet uncompressed PUB above>)
+Expected: Verified

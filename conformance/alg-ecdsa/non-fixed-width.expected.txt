@@ -1,0 +1,4 @@
+# Non-fixed-width signature encodings.
+
+Verify(*, input=signature-63-bytes.binpb) -> MalformedAttemptedSigned
+Verify(*, input=signature-65-bytes.binpb) -> MalformedAttemptedSigned
