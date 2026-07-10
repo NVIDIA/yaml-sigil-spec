@@ -6,8 +6,8 @@ license for NVIDIA-authored material.
 
 ## NIST ACVP-Server test data
 
-The repository includes a renamed, otherwise unmodified copy of the following
-NIST ACVP-Server file:
+The `yaml-sigil-spec` repository includes a renamed, otherwise unmodified copy
+of the following NIST ACVP-Server file:
 
 - Source repository: <https://github.com/usnistgov/ACVP-Server>.
 - Source commit: `15c0f3deeefbfa8cb6cd32a99e1ca3b738c66bf0`.
