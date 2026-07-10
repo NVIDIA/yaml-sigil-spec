@@ -60,12 +60,13 @@
 //! ## Small-order points — Chalkias / Garillot / Nikolaenko (2020)
 //!
 //! Chalkias, Garillot, and Nikolaenko, ["Taming the Many EdDSAs"](https://eprint.iacr.org/2020/1244)
-//! (IACR ePrint 2020/1244), Table 5 enumerates the eight small-order
-//! encodings on edwards25519. Those exact 32-octet hex strings are
-//! reproduced in [`SMALL_ORDER_POINTS`]; the `configured-key-small-order`
+//! (IACR ePrint 2020/1244), Table 5 reports the eight small-order
+//! encodings on edwards25519. Those numeric 32-octet hex strings are
+//! recorded in [`SMALL_ORDER_POINTS`]; the `configured-key-small-order`
 //! fixture writes them out for verifier-side `KeyResolutionFailure`
 //! tests. The strict-variant verification rule (Algorithm 2 in the
-//! same paper) is the rule this crate's spec adopts.
+//! same paper) is the rule this crate's spec adopts. See the repository
+//! `THIRD_PARTY_NOTICES.md` for source attribution.
 
 use std::path::Path;
 
@@ -99,8 +100,8 @@ pub const SIG_2_HEX: &str = concat!(
 /// of the base point, little-endian (RFC 8032 §5.1).
 pub const L_HEX: &str = "edd3f55c1a631258d69cf7a2def9de1400000000000000000000000000000010";
 
-/// The eight 32-octet small-order edwards25519 point encodings from
-/// Table 5 of "Taming the Many EdDSAs" (IACR ePrint 2020/1244).
+/// The eight numeric 32-octet small-order edwards25519 point encodings
+/// reported in Table 5 of "Taming the Many EdDSAs" (IACR ePrint 2020/1244).
 pub const SMALL_ORDER_POINTS: &[&str] = &[
     "0100000000000000000000000000000000000000000000000000000000000000",
     "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",

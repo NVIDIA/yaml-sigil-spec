@@ -170,9 +170,12 @@ fn render_readme(commit: &str, size: u64) -> String {
          covers multiple curve / hash combinations; the rebuilder\n\
          filters for `curve = P-256` and `hashAlg = SHA2-256`.\n\
          \n\
-         NIST-published works are in the public domain in the United\n\
-         States (17 U.S.C. § 105). No attribution is required, but the\n\
-         origin URL above is the canonical reference.\n\
+         The National Institute of Standards and Technology is explicitly\n\
+         acknowledged as the source of this test data. The local file name\n\
+         was changed; its contents were not modified. The NIST notice that\n\
+         governs this snapshot is reproduced in\n\
+         [`THIRD_PARTY_NOTICES.md`](../../../../THIRD_PARTY_NOTICES.md) and\n\
+         must remain with distributions of this vendored file.\n\
          \n\
          ## Manual verification\n\
          \n\

@@ -8,9 +8,10 @@
 //! arithmetic step is derived directly from the cited upstream
 //! standards.
 //!
-//! ## Domain parameters — SEC 2 v2.0 §2.4.2
+//! ## Domain parameters — Standards for Efficient Cryptography 2 (SEC 2)
 //!
-//! [SEC 2 v2.0](https://www.secg.org/sec2-v2.pdf) §2.4.2 ("Recommended
+//! [Standards for Efficient Cryptography 2 (SEC 2), Version 2.0](https://www.secg.org/sec2-v2.pdf)
+//! §2.4.2 ("Recommended
 //! Parameters secp256r1") publishes the P-256 (a.k.a. secp256r1, a.k.a.
 //! NIST P-256) domain parameters. Reproduced verbatim:
 //!
@@ -43,9 +44,10 @@
 //! given as `p - 3`; we store it as `(-3) mod p`, which equals that
 //! number.
 //!
-//! ## Point operations — SEC 1 v2.0 §2.2.1
+//! ## Point operations — Standards for Efficient Cryptography 1 (SEC 1)
 //!
-//! [SEC 1 v2.0](https://www.secg.org/sec1-v2.pdf) §2.2.1 ("Elliptic
+//! [Standards for Efficient Cryptography 1 (SEC 1), Version 2.0](https://www.secg.org/sec1-v2.pdf)
+//! §2.2.1 ("Elliptic
 //! Curves over Fp") gives the addition and doubling formulae:
 //!
 //! > Let P1 = (x1, y1) ∈ E(Fp) and P2 = (x2, y2) ∈ E(Fp), where

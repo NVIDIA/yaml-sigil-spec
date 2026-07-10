@@ -18,7 +18,8 @@ sources:
 - Chalkias, Garillot, Nikolaenko,
   ["Taming the Many EdDSAs"](https://eprint.iacr.org/2020/1244) —
   Algorithm 2 (strict variant), Table 5 (the eight small-order public-key
-  encodings; copied verbatim into the generator).
+  encodings recorded as numeric conformance data in the generator). See
+  [`THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md).
 - [`algorithms/01-ED25519_PUREEDDSA_RAW_RS64_CANONICAL.md`](../../algorithms/01-ED25519_PUREEDDSA_RAW_RS64_CANONICAL.md)
   — slot specification.
 

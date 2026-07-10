@@ -24,9 +24,12 @@ byte-equality against the published `(r, s)`. The file
 covers multiple curve / hash combinations; the rebuilder
 filters for `curve = P-256` and `hashAlg = SHA2-256`.
 
-NIST-published works are in the public domain in the United
-States (17 U.S.C. § 105). No attribution is required, but the
-origin URL above is the canonical reference.
+The National Institute of Standards and Technology is explicitly
+acknowledged as the source of this test data. The local file name
+was changed; its contents were not modified. The NIST notice that
+governs this snapshot is reproduced in
+[`THIRD_PARTY_NOTICES.md`](../../../../THIRD_PARTY_NOTICES.md) and
+must remain with distributions of this vendored file.
 
 ## Manual verification
 

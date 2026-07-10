@@ -26,6 +26,10 @@ subsection below names what's missing and what additional coverage
 the auditor should run. See also [`AGENTS.md`](./AGENTS.md) for the
 process of updating these directories.
 
+The applicable redistribution notices are collected in
+[`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md) and must remain with
+distributed copies of the fixtures and generator.
+
 ## General Notes
 
 - `.binpb` is used for protobuf-wire-format messages (raw serialized

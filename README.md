@@ -211,6 +211,13 @@ require public gRPC deployment.
 | [`DIAGRAM.md`](./DIAGRAM.md) | Non-normative API diagram companion. |
 | [`original-readme.md`](./original-readme.md) | Historical starting point. |
 
+## License
+
+NVIDIA-authored material is licensed under the
+[Apache License 2.0](./LICENSE). Third-party test data, standards-derived
+material, and their redistribution requirements are documented in
+[`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).
+
 ## Known Deficiencies
 
 - `.proto` and JSON Schema alignment is maintained by hand. Automated
