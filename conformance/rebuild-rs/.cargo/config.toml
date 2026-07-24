@@ -3,3 +3,8 @@
 
 [alias]
 xtask = "run --package xtask --release --"
+
+# NOTE(ddurst-nvda): Not a requirement long term, being added for an
+#                    internal scanner and should be removed.
+[net]
+git-fetch-with-cli = true
