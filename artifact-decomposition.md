@@ -128,6 +128,9 @@ as valid metadata, the next stage MUST enforce:
 > `YamlSigilSignature.v1alpha1`.
 
 Failure of this obligation MUST produce `MalformedAttemptedSigned`.
+The YAML document-end marker `...` has no byte-layer significance and does not
+change the returned ranges. Content after it still must satisfy the
+single-document-through-EOF obligation.
 
 ## Failure Modes
 
