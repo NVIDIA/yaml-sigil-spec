@@ -30,6 +30,10 @@ JSON Schema's fit for a YAML-rooted format is imperfect:
 - It is JSON-rooted formalism. The YAML mapping it validates is
   what an implementation's YAML parser produced; JSON Schema does
   not see the original YAML bytes.
+- This file represents the `Strict` and `SignatureStrict` unknown-key
+  posture. `Permissive` decoders apply its declared constraints to known
+  fields but accept unknown mapping keys as specified by the
+  [Verification API](../verification-api.md).
 - The `keyid` 1024 UTF-8-octet bound is not fully expressible:
   JSON Schema's `maxLength` counts Unicode code points, so the
   schema's `maxLength: 1024` is a loose approximation; the strict

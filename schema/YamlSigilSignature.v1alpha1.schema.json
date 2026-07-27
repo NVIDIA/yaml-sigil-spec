@@ -3,7 +3,7 @@
   "$comment": "SPDX-FileCopyrightText: Copyright 2026 NVIDIA CORPORATION & AFFILIATES\nSPDX-License-Identifier: Apache-2.0",
   "$id": "YamlSigilSignature.v1alpha1.schema.json",
   "title": "YamlSigilSignature.v1alpha1",
-  "description": "Strict YAML-form schema for the YamlSigilSignature.v1alpha1 signature document. This schema validates the parsed YAML signature document object; byte-level artifact decomposition, YAML parser behavior, and EOF handling are specified outside JSON Schema. Duplicate-key rejection is governed by the verifier's advertised conformance profile (Strict / SignatureStrict reject; Permissive last-wins) per verification-api.md 'Conformance Profiles'.",
+  "description": "Strict and SignatureStrict YAML-form schema for the YamlSigilSignature.v1alpha1 signature document. This schema validates the parsed YAML signature document object; byte-level artifact decomposition, YAML parser behavior, and EOF handling are specified outside JSON Schema. Permissive decoders apply the declared constraints to known fields but do not apply this schema's additionalProperties rule. Duplicate-key handling is governed by the verifier's advertised conformance profile per verification-api.md 'Conformance Profiles'.",
   "type": "object",
   "additionalProperties": false,
   "required": [
