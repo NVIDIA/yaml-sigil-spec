@@ -51,9 +51,13 @@ has propagated through the generator.
 | `bom-signed.yaml` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | UTF-8 BOM octets `EF BB BF` at offset 0 fail before signed artifact processing. |
 | `bom-no-marker.yaml` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | UTF-8 BOM octets `EF BB BF` at offset 0 fail before no-marker handling. It MUST NOT be reported as `Unsigned`. |
 
-Step 7 has no direct fixture because correct `M = max(S)` selection makes
-its failure condition unreachable. `extra-marker-inside-carrier.yaml`
-instead checks that implementations select the last marker.
+Artifact Decomposition defines no artifact condition for an additional
+constrained marker inside `signature_carrier_range`. Correct `M = max(S)`
+selection makes that condition unreachable. An implementation can retain an
+internal assertion for scan consistency, but an assertion failure indicates an
+implementation defect rather than a fixture outcome.
+`extra-marker-inside-carrier.yaml` instead checks that implementations select
+the last marker.
 
 ## Byte-level reference
 
