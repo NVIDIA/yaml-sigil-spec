@@ -213,6 +213,24 @@ require public gRPC deployment.
 | [`DIAGRAM.md`](./DIAGRAM.md) | Non-normative API diagram companion. |
 | [`original-readme.md`](./original-readme.md) | Historical starting point. |
 
+## Security Considerations
+
+`Verified` authenticates only the exact payload bytes under the verifier's
+key and algorithm policy. The `schema`, `alg`, `keyid`, and `signature` fields
+are untrusted inputs. The signature covers raw payload bytes without a context
+string or domain separator, so deployments SHOULD prevent cross-protocol key
+reuse.
+
+The format carries no freshness, expiry, revocation, or replay claim. An
+empty-payload signature is replayable like any other. Put required context in
+the payload and validate it after verification. Removing the YAML signature
+document produces `Unsigned`; callers that require authentication MUST accept
+only `Verified`.
+
+This specification sets no universal size limit. Implementations SHOULD bound
+artifact, payload, and signature-carrier sizes before buffering, scanning, or
+parsing attacker-controlled input.
+
 ## License
 
 NVIDIA-authored material is licensed under the
