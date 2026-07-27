@@ -24,8 +24,9 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 1024,
-      "$comment": "If present, keyid MUST be non-empty and MUST be at most 1024 UTF-8 octets. JSON Schema maxLength counts Unicode code points, so the schema's 1024 is a loose approximation; the strict octet bound is enforced at decode (Signing rejects with INVALID_KEYID; Verification rejects as MalformedAttemptedSigned).",
-      "description": "Optional caller-supplied lookup hint for the verification key. Mirrors proto optional string keyid. When present, MUST be 1..1024 UTF-8 octets. Unsigned and never proof of signer identity."
+      "pattern": "^[^\\r\\n]+$",
+      "$comment": "If present, keyid MUST be non-empty, MUST be at most 1024 UTF-8 octets, and MUST contain no U+000A or U+000D. JSON Schema maxLength counts Unicode code points, so the schema's 1024 is a loose approximation; the strict octet bound is enforced at decode (Signing rejects with INVALID_KEYID; Verification rejects as MalformedAttemptedSigned).",
+      "description": "Optional caller-supplied lookup hint for the verification key. Mirrors proto optional string keyid. When present, MUST be 1..1024 UTF-8 octets and contain no CR or LF. Unsigned and never proof of signer identity."
     },
     "signature": {
       "$ref": "#/$defs/signature"

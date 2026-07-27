@@ -86,7 +86,8 @@ See [schema-alignment/README.md](./schema-alignment/README.md).
 
 - **`keyid`** — absent, present-empty, exactly 1024 UTF-8 octets,
   oversized, multibyte (proves octet-count enforcement beyond JSON
-  Schema's code-point `maxLength` approximation).
+  Schema's code-point `maxLength` approximation), and line-break
+  rejection.
 
 See [key-id/README.md](./key-id/README.md).
 

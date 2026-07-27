@@ -4,9 +4,9 @@
 //! Generator for `conformance/key-id/` fixtures.
 //!
 //! The `keyid` field is an optional UTF-8 string bounded by 1..=1024
-//! UTF-8 *octets*. The repo-level `README.md` "The Signature Document"
-//! section is the normative source for that octet bound; the JSON
-//! Schema (`schema/YamlSigilSignature.v1alpha1.schema.json`) uses
+//! UTF-8 *octets* with CR and LF excluded. The repo-level `README.md`
+//! "The Signature Document" section is normative. The JSON Schema
+//! (`schema/YamlSigilSignature.v1alpha1.schema.json`) uses
 //! `maxLength: 1024`, which in JSON Schema is measured in *code
 //! points* — that mismatch is itself one of the things these fixtures
 //! exercise.
@@ -74,6 +74,23 @@ fn proto_artifact(keyid: Option<&str>) -> Vec<u8> {
     out
 }
 
+/// `keyid` that places a constrained marker inside a single-quoted carrier.
+const MARKER_INJECTION_KEYID: &str = "kid\n\
+     ---\n\
+     schema: YamlSigilSignature.v1alpha1\n\
+     alg: ED25519_PUREEDDSA_RAW_RS64_CANONICAL #";
+
+/// Markerless carrier rejected by YAML Compose under `transcription-api.md`.
+fn marker_injection_carrier(sig: &str) -> Vec<u8> {
+    format!(
+        "schema: YamlSigilSignature.v1alpha1\n\
+         alg: ED25519_PUREEDDSA_RAW_RS64_CANONICAL\n\
+         keyid: '{MARKER_INJECTION_KEYID}'\n\
+         signature: {sig}\n"
+    )
+    .into_bytes()
+}
+
 pub fn generate(dir: &Path) -> std::io::Result<()> {
     let sig = placeholder_sig();
 
@@ -129,6 +146,17 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
         Some(&format!("keyid: \"{key_mb_over}\"")),
         Some(&key_mb_over),
     )?;
+    write_pair(
+        dir,
+        "keyid-line-break",
+        Some("keyid: \"kid\\nsuffix\""),
+        Some("kid\nsuffix"),
+    )?;
+    write_bytes(
+        dir,
+        "keyid-marker-injection.carrier.txt",
+        &marker_injection_carrier(&sig),
+    )?;
 
     Ok(())
 }
@@ -150,5 +178,11 @@ mod tests {
     fn multibyte_octet_arithmetic() {
         assert_eq!("\u{1F600}".repeat(256).len(), 1024);
         assert_eq!("\u{1F600}".repeat(257).len(), 1028);
+    }
+
+    #[test]
+    fn marker_injection_carrier_contains_a_constrained_marker() {
+        let carrier = super::marker_injection_carrier(&crate::b64::placeholder_sig());
+        assert!(carrier.windows(5).any(|window| window == b"\n---\n"));
     }
 }

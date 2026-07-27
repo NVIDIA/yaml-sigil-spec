@@ -136,4 +136,8 @@ enum TranscriberInvocationErrorCategory {
 enum TranscriberErrorCategory {
   TRANSCRIBER_ERROR_CATEGORY_UNSPECIFIED = 0;
   TRANSCRIBER_ERROR_CATEGORY_INVALID_PAYLOAD_BYTES = 1;
+
+  // YAML Compose received a carrier containing a constrained marker at a
+  // line-start position.
+  TRANSCRIBER_ERROR_CATEGORY_INVALID_SIGNATURE_CARRIER = 2;
 }

@@ -256,7 +256,7 @@ subdirectories. The cross-table:
 | `transcription-api.md`, `transcription.proto`, `yaml_sigil.proto` wire shape, `OuterConformance` enum, protobuf-form inner conformance rules | `protobuf-conformance/` |
 | `verification-api.md` "Conformance Profiles" rules as they apply to the YAML signature-document mapping (duplicate keys, unknown keys) | `yaml-signature-conformance/` |
 | `Algorithm` enum membership, YAML `alg` string mapping, README's "The Signature Document" alg table | `schema-alignment/` |
-| `keyid` bounds (README, `yaml_sigil.proto`, `signing.proto`, `verification.proto`, JSON Schema) | `key-id/` |
+| `keyid` constraints (README, `yaml_sigil.proto`, `signing.proto`, `verification.proto`, JSON Schema) | `key-id/` |
 | `base64-requirements.md` | `base64/` |
 | `algorithms/01-ED25519_PUREEDDSA_RAW_RS64_CANONICAL.md` | `alg-ed25519/` |
 | `algorithms/02-ECDSA_SECP256R1_SHA256_RAW_RS64.md` | `alg-ecdsa/` |

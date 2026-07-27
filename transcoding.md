@@ -36,9 +36,9 @@ A conforming protobuf to YAML transcoder MUST:
 
 ## Canonical YAML Carrier
 
-Canonical YAML carrier emission is for stable transcoder output. Verification
-does not require byte-identical carrier formatting because the carrier is not
-signed.
+Signing and protobuf-to-YAML transcoding MUST use this carrier profile.
+Verification does not require byte-identical carrier formatting because the
+carrier is not signed.
 
 | Item | Requirement |
 | --- | --- |
@@ -46,9 +46,10 @@ signed.
 | Field separator | One field per line, each terminated by `\n`. |
 | Key/value syntax | `key: value\n` with one space after `:`. |
 | YAML features | No anchors, aliases, custom tags, comments, flow form, or block scalars. |
-| String values | Plain scalars where unambiguous; double-quote arbitrary strings by default. |
+| String values | Emit `schema`, `alg`, and `signature` as plain scalars. Emit `keyid` as a double-quoted scalar with required YAML escapes. |
 | `alg` value | Canonical name from [README](./README.md). |
 | Signature encoding | Base64 per [Base64 Requirements](./base64-requirements.md), no line wrapping. |
+| Envelope safety | No constrained marker at a carrier line-start position. |
 | EOF | Exactly one trailing `\n` after the last field and no additional octets. |
 
 The constrained marker is not part of the carrier. Compose owns the marker.

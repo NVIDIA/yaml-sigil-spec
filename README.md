@@ -117,7 +117,7 @@ aligned.
 | --- | --- | --- | --- |
 | `schema` | Required scalar. | Message type. | YAML value MUST be `YamlSigilSignature.v1alpha1`. |
 | `alg` | Required scalar. | Required `Algorithm` value. | MUST identify a schema-defined algorithm. |
-| `keyid` | Optional scalar. | Optional string. | When present, MUST be non-empty and at most 1024 UTF-8 octets. It is only a lookup hint. |
+| `keyid` | Optional scalar. | Optional string. | When present, MUST be non-empty, at most 1024 UTF-8 octets, and contain no `U+000A` or `U+000D`. It is only a lookup hint. |
 | `signature` | Required base64url scalar. | Required bytes. | YAML uses the profile in [Base64 Requirements](./base64-requirements.md). Decoded signature octets MUST be non-empty before cryptographic verification. |
 
 ### Algorithms
@@ -162,6 +162,8 @@ actually enforces. Full profile rules are in
   marker. They may be empty. A non-empty YAML-form payload necessarily ends
   with `0A` or `0D 0A` so the marker can land at a line start.
 - Protobuf-form payload bytes are arbitrary octets.
+- YAML Compose MUST reject a signature carrier that contains a constrained
+  marker at a line-start position.
 - Implementations MUST run form-appropriate structural separation before
   cryptographic verification.
 - Verifiers MUST return verified payload bytes only for `Verified`.

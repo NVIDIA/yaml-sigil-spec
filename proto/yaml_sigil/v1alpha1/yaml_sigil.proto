@@ -37,8 +37,9 @@ message YamlSigilSignature {
   // SignedButAlgorithmUnsupported during verification.
   Algorithm alg = 1;
 
-  // Optional lookup hint. When present, it MUST be non-empty and at most 1024
-  // UTF-8 octets. It is never proof of signer identity.
+  // Optional lookup hint. When present, it MUST be non-empty, at most 1024
+  // UTF-8 octets, and contain no U+000A or U+000D. It is never proof of signer
+  // identity.
   optional string keyid = 2;
 
   // Raw signature octets. YAML form base64-encodes the same bytes. The value

@@ -45,6 +45,7 @@ message SignRequest {
   Algorithm alg = 3;
 
   // Optional lookup hint copied into the signature document when present.
+  // It MUST satisfy the keyid constraints in README.md.
   optional string keyid = 4;
 
   // Caller-selected output form.

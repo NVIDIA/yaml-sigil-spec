@@ -127,7 +127,7 @@ flowchart TD
         ec_sign_invoc["Signer invocation errors:<br/>InvalidOrUnsupportedAlgorithm,<br/>InvalidAlgorithmParameters,<br/>InvalidOrUnsupportedOutputForm,<br/>InvalidKeyid"]
         ec_sign["Signer errors:<br/>InvalidPayloadBytes,<br/>PayloadLineTerminatorRefusal,<br/>KeyOperationFailure,<br/>YAMLValidationFailure"]
         ec_trans_invoc["Transcriber invocation errors:<br/>InvalidOrUnsupportedForm,<br/>InvalidOrUnsupportedOuterConformance"]
-        ec_trans["Transcriber errors:<br/>InvalidPayloadBytes"]
+        ec_trans["Transcriber errors:<br/>InvalidPayloadBytes,<br/>InvalidSignatureCarrier"]
         ec_decompose["Decompose failure outcomes:<br/>Unsigned (YAML only),<br/>MalformedAttemptedSigned"]
         ec_ver_inv["Verifier invocation errors:<br/>InvalidOrUnsupportedForm,<br/>InvalidAlgorithmParameters,<br/>KeyResolutionFailure,<br/>TrustPolicyConfigurationError,<br/>InvalidPreVerifyResult"]
         ec_ver_non_verified["Non-Verified verifier states:<br/>Unsigned,<br/>MalformedAttemptedSigned,<br/>SignedButAlgorithmUnsupported,<br/>SignedButFailedVerification"]

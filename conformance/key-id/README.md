@@ -1,14 +1,15 @@
 # `keyid` Conformance Fixtures
 
-Exercises the `keyid` structural bounds (optional; when present, 1..1024
-UTF-8 octets) pinned in [README](../../README.md)'s "The Signature
-Document" section.
+Exercises the `keyid` constraints pinned in
+[README](../../README.md)'s "The Signature Document" section.
 
 ## Upstream sources
 
-- [`README.md`](../../README.md) "The Signature Document" — keyid bounds
+- [`README.md`](../../README.md) "The Signature Document" — `keyid`
+  constraints
 - [`proto/.../yaml_sigil.proto`](../../proto/yaml_sigil/v1alpha1/yaml_sigil.proto) — `optional string keyid = 2`
-- [`schema/YamlSigilSignature.v1alpha1.schema.json`](../../schema/YamlSigilSignature.v1alpha1.schema.json) — `maxLength: 1024`
+- [`schema/YamlSigilSignature.v1alpha1.schema.json`](../../schema/YamlSigilSignature.v1alpha1.schema.json)
+  — `maxLength: 1024` and the CR/LF exclusion
 - [`signing-api.md`](../../signing-api.md) — `InvalidKeyid` invocation-error category
 - The multibyte test uses U+1F600 (4 UTF-8 octets per code point); see
   [Unicode](https://www.unicode.org/charts/) /
@@ -36,11 +37,14 @@ outcome:
   `MalformedAttemptedSigned` (if `keyid` is invalid).
 - **Signer path** — a signer presented with the equivalent
   `SignRequest.keyid` would return `InvalidKeyid` for the
-  oversized / present-empty cases.
+  oversized, present-empty, and line-break cases.
+- **Compose path** — a transcriber presented with
+  `keyid-marker-injection.carrier.txt` returns
+  `InvalidSignatureCarrier`.
 
 ## Fixtures
 
-| File | `keyid` value | Bound check | Expected verifier outcome |
+| File | `keyid` value | Constraint | Expected verifier outcome |
 | --- | --- | --- | --- |
 | `keyid-absent.yaml` / `keyid-absent.binpb` | (field omitted) | OK | proceeds to verification |
 | `keyid-present-empty.yaml` / `keyid-present-empty.binpb` | empty string | violates min (0 octets) | `MalformedAttemptedSigned` |
@@ -48,6 +52,8 @@ outcome:
 | `keyid-1025-ascii.yaml` / `keyid-1025-ascii.binpb` | 1025 ASCII `a` characters (= 1025 octets) | one over | `MalformedAttemptedSigned` |
 | `keyid-multibyte-under.yaml` / `keyid-multibyte-under.binpb` | 256 × U+1F600 emoji (= 1024 UTF-8 octets, 256 code points) | exactly at the octet boundary | proceeds to verification |
 | `keyid-multibyte-over.yaml` / `keyid-multibyte-over.binpb` | 257 × U+1F600 emoji (= 1028 UTF-8 octets, 257 code points) | over the octet boundary by 4; the code-point count (257) is well under JSON Schema's `maxLength: 1024`. **An implementation that only checks code points would erroneously accept this.** | `MalformedAttemptedSigned` |
+| `keyid-line-break.yaml` / `keyid-line-break.binpb` | `kid`, `U+000A`, `suffix` | line break prohibited | `MalformedAttemptedSigned` |
+| `keyid-marker-injection.carrier.txt` | Markerless carrier with a constrained marker inside a single-quoted `keyid` | Compose envelope check | `InvalidSignatureCarrier` |
 
 ## Why the multibyte fixtures matter
 

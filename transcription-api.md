@@ -55,6 +55,7 @@ Compose failures after request-shape validation return `TranscriberError`.
 | Check | Category |
 | --- | --- |
 | YAML Compose receives payload bytes that are invalid UTF-8, begin with a BOM, or are non-empty without a trailing `0A` or `0D 0A`. | `InvalidPayloadBytes`. |
+| YAML Compose receives a signature carrier containing a constrained marker at a line-start position. | `InvalidSignatureCarrier`. |
 
 Decompose returns a structural outcome.
 
@@ -86,6 +87,10 @@ payload bytes || constrained marker || signature carrier bytes
 The constrained marker is `---\n` or `---\r\n` at a line-start position.
 `signature_carrier` is markerless at the API boundary. Compose inserts the
 marker, and Decompose strips it.
+
+YAML Compose MUST reject a `signature_carrier` containing a constrained marker
+at offset `0` or immediately after an `0A` octet. It returns
+`InvalidSignatureCarrier`. This envelope check does not parse the carrier.
 
 YAML Decompose MUST run the byte-level algorithm in
 [Artifact Decomposition](./artifact-decomposition.md). That document is
@@ -132,6 +137,7 @@ Signing API concern.
 - Transcription touches the envelope only.
 - Payload and signature-carrier bytes are byte-preserved across Compose and
   Decompose.
-- Transcription MUST NOT read `alg`, `keyid`, or signature octets.
+- Transcription MUST NOT read `alg`, `keyid`, or signature octets. The YAML
+  carrier marker check is an envelope operation.
 - YAML and protobuf are independent envelope forms for the same abstract
   Artifact.

@@ -17,7 +17,7 @@ another binding, but the validation and output contract remains the same.
 | `alg` | Required `Algorithm` value from the closed allowlist in [README](./README.md). The signer accepts it or refuses. |
 | `algorithm_parameters` | Required exactly when the selected algorithm defines parameters. Surplus parameters are invalid. |
 | `output_form` | Required `OutputForm`. The signer emits exactly that form or refuses. |
-| `keyid` | Optional lookup hint. When present, it MUST be non-empty and at most 1024 UTF-8 octets. The signer copies it verbatim and MUST NOT derive it from private-key secret material. |
+| `keyid` | Optional lookup hint. When present, it MUST be non-empty, at most 1024 UTF-8 octets, and contain no `U+000A` or `U+000D`. The signer copies it verbatim and MUST NOT derive it from private-key secret material. |
 
 ## Capabilities
 
@@ -39,7 +39,7 @@ processing.
 | `alg` is unspecified, schema-unknown, absent from `supported_algorithms`, or unsupported. | `InvalidOrUnsupportedAlgorithm`. |
 | Algorithm parameters are missing, malformed, out of bounds, or surplus. | `InvalidAlgorithmParameters`. |
 | `output_form` is unspecified, schema-unknown, or absent from `supported_output_forms`. | `InvalidOrUnsupportedOutputForm`. |
-| Present `keyid` is empty or longer than 1024 UTF-8 octets. | `InvalidKeyid`. |
+| Present `keyid` is empty, longer than 1024 UTF-8 octets, or contains `U+000A` or `U+000D`. | `InvalidKeyid`. |
 
 Failures after request-shape validation return `SignerError`.
 
@@ -87,7 +87,7 @@ add framing, or pre-hash unless the selected algorithm requires it.
 
 | Output form | Required artifact |
 | --- | --- |
-| YAML | Final payload bytes, followed by `---\n`, followed by one YAML `YamlSigilSignature.v1alpha1` signature document through EOF. |
+| YAML | Final payload bytes, followed by `---\n`, followed by one YAML `YamlSigilSignature.v1alpha1` signature document through EOF. The carrier MUST follow [Canonical YAML Carrier](./transcoding.md#canonical-yaml-carrier). |
 | Protobuf | Serialized `SignedYamlArtifact` with `payload` set to the final payload bytes and `signature` set to `YamlSigilSignature`. |
 
 A successful response returns the serialized artifact. If the signer appended a

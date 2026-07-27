@@ -95,7 +95,7 @@ After Transcription succeeds, metadata extraction MUST enforce:
 | `payload` is valid UTF-8 and does not begin with `EF BB BF`. | YAML form only. | `MalformedAttemptedSigned`. |
 | YAML `schema` equals `YamlSigilSignature.v1alpha1`; protobuf schema identity is the message type. | Both. | `MalformedAttemptedSigned`. |
 | `alg` maps to a defined `Algorithm` enum value. | Both. | Invalid or schema-unknown values are `MalformedAttemptedSigned`. |
-| Present `keyid` is non-empty and at most 1024 UTF-8 octets. | Both. | `MalformedAttemptedSigned`. |
+| Present `keyid` is non-empty, at most 1024 UTF-8 octets, and contains no `U+000A` or `U+000D`. | Both. | `MalformedAttemptedSigned`. |
 | YAML `signature` base64-decodes per [Base64 Requirements](./base64-requirements.md); protobuf `signature` carries raw bytes. | YAML decode only. | `MalformedAttemptedSigned`. |
 
 The non-empty and algorithm-specific signature length checks run after metadata
