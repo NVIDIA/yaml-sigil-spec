@@ -228,6 +228,13 @@ A signature document inside `verified_payload_bytes` is authenticated only as
 payload content, not as a nested artifact verified by the outer result. See the
 [Verification API reader-side rule](./verification-api.md#reader-side-rule).
 
+The [YAML Compose carrier-marker check](./transcription-api.md#yaml-profile) is
+an emission-time defense. Once the **Artifact** exists, `Decompose`'s required
+last-marker selection gives no indication of how an earlier marker entered the
+**Payload stream**. Verification can only validate the `payload` and
+`signature_carrier` bytes returned by `Decompose`, so it cannot identify
+carrier injection as such.
+
 The format carries no freshness, expiry, revocation, or replay claim. An
 empty-payload signature is replayable like any other. Put required context in
 the payload and validate it after verification. Removing the YAML signature
