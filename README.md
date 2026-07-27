@@ -251,6 +251,8 @@ material, and their redistribution requirements are documented in
 - Strict inner-protobuf conformance is not reliably available from stock
   protobuf parsers. Implementations that cannot reject unknown fields and
   duplicate known singular fields honestly advertise `Permissive`.
+- YAML Decompose cannot finalize the payload boundary before EOF because it
+  selects the last constrained marker.
 
 ## Open Decisions
 
