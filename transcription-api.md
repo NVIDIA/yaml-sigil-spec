@@ -91,6 +91,10 @@ marker, and Decompose strips it.
 YAML Compose MUST reject a `signature_carrier` containing a constrained marker
 at offset `0` or immediately after an `0A` octet. It returns
 `InvalidSignatureCarrier`. This envelope check does not parse the carrier.
+The carrier-wide check is not redundant with field-specific rules such as the
+`keyid` line-break constraint. It applies to all carrier bytes, including bytes
+for signature-document fields added later, without requiring Transcription to
+parse them.
 
 YAML Decompose MUST run the byte-level algorithm in
 [Artifact Decomposition](./artifact-decomposition.md). That document is
