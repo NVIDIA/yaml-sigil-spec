@@ -224,6 +224,10 @@ are untrusted inputs. The signature covers raw payload bytes without a context
 string or domain separator, so deployments SHOULD prevent cross-protocol key
 reuse.
 
+A signature document inside `verified_payload_bytes` is authenticated only as
+payload content, not as a nested artifact verified by the outer result. See the
+[Verification API reader-side rule](./verification-api.md#reader-side-rule).
+
 The format carries no freshness, expiry, revocation, or replay claim. An
 empty-payload signature is replayable like any other. Put required context in
 the payload and validate it after verification. Removing the YAML signature
