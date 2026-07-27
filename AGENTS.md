@@ -1,11 +1,21 @@
 # AGENTS.md
 
-## Local Skill
+## Agent Documentation Standards
+
+Project-local skills exist under `.agents/skills/` and should remain
+discoverable by agents working in this repository. Maintain those skills
+according to the
+[Agent Skills specification](https://agentskills.io/specification), and
+maintain this file according to the
+[AGENTS.md standard](https://agents.md/). Keep both portable across compatible
+agent clients, without assumptions about user-specific paths or session state.
 
 Use `.agents/skills/update-non-normative/SKILL.md` when updating or reviewing
 non-normative companion material after specification changes, including
 diagrams, schema-adjacent documentation, conformance indexes, examples, and
 cross-references.
+
+## Repository scope
 
 This repository is a **specification**: the normative deliverables are
 Markdown and protobuf schema, not application source code. The day-to-day
