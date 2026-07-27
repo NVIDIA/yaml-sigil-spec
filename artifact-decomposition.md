@@ -108,8 +108,8 @@ Each step is normative.
 7. **Check signature-document EOF invariant.** The signature document extends to
    EOF. Implementations MUST verify that no constrained marker occurs at any
    line-start position in `signature_carrier_range`. If one is found, return
-   `MalformedAttemptedSigned`. This redundant check turns scan consistency into
-   an explicit invariant.
+   `MalformedAttemptedSigned`. Correct `M = max(S)` selection makes this
+   condition unreachable; the check detects an inconsistent marker scan.
 
 8. **Return ranges.** Return `(payload_range, signature_document_range, signature_carrier_range)`.
    Downstream stages select the range appropriate to their layer: the
@@ -141,7 +141,7 @@ The byte-level outcomes map directly onto the Transcription API's
 | Empty artifact | `Unsigned` | `Unsigned` |
 | No constrained marker found | `Unsigned` | `Unsigned` |
 | Marker found but `signature_carrier_range` is empty | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
-| Additional constrained marker inside `signature_carrier_range` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
+| Additional constrained marker inside `signature_carrier_range` (unreachable after correct step 4) | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
 | Valid `(payload_range, signature_document_range, signature_carrier_range)` produced | `Ok` | proceed to verification |
 
 Artifact Decomposition never produces `Verified`,

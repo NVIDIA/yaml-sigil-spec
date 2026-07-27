@@ -51,18 +51,9 @@ has propagated through the generator.
 | `bom-signed.yaml` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | UTF-8 BOM octets `EF BB BF` at offset 0 fail before signed artifact processing. |
 | `bom-no-marker.yaml` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | UTF-8 BOM octets `EF BB BF` at offset 0 fail before no-marker handling. It MUST NOT be reported as `Unsigned`. |
 
-Note: step 7 of the algorithm ("Check signature-document EOF invariant
-— no constrained marker in `A[T..|A|)`") is intentionally redundant
-under correct `M = max(S)` selection in step 4. We have NOT shipped a
-fixture targeting step 7 directly because no byte sequence can trip
-it under a correct implementation; the check exists to catch
-buggy forward-scan implementations that pick the first `---` instead
-of the last. The `extra-marker-inside-carrier.yaml` fixture exercises
-the same algorithmic concern (a buggy forward scan returning the wrong
-`M`) but via a different mechanism: a forward-scan implementation that
-returned the first `---` as `M` would yield a carrier that erroneously
-parses as a valid signature document, while the correct backward-scan
-behavior yields a carrier that fails Verification.
+Step 7 has no direct fixture because correct `M = max(S)` selection makes
+its failure condition unreachable. `extra-marker-inside-carrier.yaml`
+instead checks that implementations select the last marker.
 
 ## Byte-level reference
 
