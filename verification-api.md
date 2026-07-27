@@ -198,6 +198,8 @@ the same verifier outcome under the same configuration.
 Readers downstream of verification MUST parse only `verified_payload_bytes`
 from a `Verified` result. They MUST NOT re-open the original artifact, parse
 trailing artifact spans, or fetch content the verifier did not return.
+A signature document inside those bytes is authenticated only as payload
+content. The outer result does not verify it as a nested artifact.
 
 ## Cross-Form Rules
 
