@@ -47,6 +47,9 @@ document carries verification inputs: `schema`, `alg`, `keyid`, and
 
 ## Artifact Forms
 
+`v1alpha1` defines no magic bytes, registered media type, or required file
+extension. Callers identify the form out of band.
+
 ### YAML Form
 
 A YAML-form signed artifact is a UTF-8 byte sequence whose last constrained
