@@ -245,6 +245,12 @@ This specification sets no universal size limit. Implementations SHOULD bound
 artifact, payload, and signature-carrier sizes before buffering, scanning, or
 parsing attacker-controlled input.
 
+Signature-carrier byte limits alone do not bound YAML parser work. Before
+parsing unauthenticated YAML signature-carrier bytes, implementations SHOULD
+bound nesting depth, constructed node count, and alias expansion independently.
+Implementations MUST disable application-defined constructors for custom tags
+on those bytes.
+
 ## License
 
 NVIDIA-authored material is licensed under the
