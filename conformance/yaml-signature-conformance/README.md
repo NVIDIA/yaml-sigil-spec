@@ -52,38 +52,30 @@ attributable to the conformance rule under test.
 | File | Targets | `Strict` outcome | `SignatureStrict` outcome | `Permissive` outcome |
 | --- | --- | --- | --- | --- |
 | `valid-baseline.yaml` | Sanity baseline: each mapping key appears exactly once. | Decode reaches the verification stage. | Same. | Same. |
-| `duplicate-schema.yaml` | `schema` key appears twice with matching values. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | Last-wins. |
-| `duplicate-alg.yaml` | `alg` key appears twice with **different** values; an attacker is the model. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | Last-wins (the second `alg` value is what extraction sees). |
-| `duplicate-keyid.yaml` | `keyid` key appears twice with different values. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | Last-wins. |
-| `duplicate-signature.yaml` | `signature` key appears twice with different base64 strings. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | Last-wins. |
+| `duplicate-schema.yaml` | `schema` key appears twice with matching values. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | The decoder may reject or accept using its documented effective value. |
+| `duplicate-alg.yaml` | `alg` key appears twice with **different** values; an attacker is the model. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | The decoder may reject or accept using its documented effective value. |
+| `duplicate-keyid.yaml` | `keyid` key appears twice with different values. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | The decoder may reject or accept using its documented effective value. |
+| `duplicate-signature.yaml` | `signature` key appears twice with different base64 strings. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | The decoder may reject or accept using its documented effective value. |
 | `unknown-key.yaml` | An extra mapping key (`bogus`) not declared in the schema. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | Accept; the unknown key is dropped at parse. |
 
-`Permissive`-only behavior is what an unhardened YAML parser will
-produce by default — YAML 1.2.2 §6.7.2 SAYS the parser "should warn"
-but doesn't require rejection. `Strict` and `SignatureStrict` are
-the modes that need to *reject*; the "Permissive outcome" column
-captures what an unhardened parser would do.
+`Permissive` does not prescribe one duplicate-key outcome. An implementation
+advertising `Permissive` MUST document in human-readable implementation
+documentation whether its YAML decoder rejects duplicate known mapping keys
+and, if it accepts them, the exact rule used to select each effective field
+value. Naming the parser library or relying on source code alone does not
+satisfy this requirement.
 
-**Implementations whose default YAML parser is stricter than
-Permissive are still conforming.** Per the ceiling-reading paragraph
-in [Verification API](../../verification-api.md)'s "Conformance
-Profiles", the advertised profile is the loosest decode posture
-the verifier guarantees; behaving strictly stricter than that on
-any axis is over-delivery, not a conformance failure. A
-`Permissive`-advertising verifier whose YAML library rejects
-duplicate mapping keys at parse time (the structural default of
-most Rust YAML libraries, for instance) MAY return
-`MalformedAttemptedSigned` on the four `duplicate-*.yaml` fixtures
-without violating its `Permissive` advertisement. Drivers SHOULD
-record the over-delivery axis(es) in their own audit trail so
-callers know what they actually get.
+The `Permissive` column records both permitted outcomes. A decoder that rejects
+duplicates returns `MalformedAttemptedSigned`. A decoder that accepts them
+continues with its documented effective field values. Conformance drivers
+SHOULD compare the observed behavior with the implementation's prose
+documentation.
 
 ## Notes
 
 A YAML parser whose API exposes raw mapping-key occurrences can
 implement Strict / SignatureStrict by rejecting on the second occurrence.
-A parser that collapses to last-wins before exposing the mapping to
-the caller MUST disclose that limitation with the advertised
-profile (see verification-api.md "Conformance Profiles") and SHOULD
-surface the discarded duplicate through the `parser_observations`
-channel when the caller opts in via `include_parser_observations`.
+A parser that accepts duplicates before exposing the mapping to the caller MUST
+document its exact effective-value rule and SHOULD surface discarded duplicate
+occurrences through the `parser_observations` channel when the caller opts in
+via `include_parser_observations`.

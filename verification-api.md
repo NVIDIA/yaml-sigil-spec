@@ -151,8 +151,19 @@ signature-document decode. The same profile applies to all supported forms.
 | Profile | Inner signature-document rule | Expected protobuf outer conformance |
 | --- | --- | --- |
 | `Strict` | Reject unknown fields and duplicate known singular fields. | `OUTER_CONFORMANCE_STRICT`. |
-| `Permissive` | Accept per the form's default decode semantics. | Caller-determined. |
+| `Permissive` | Apply the form's documented decode semantics, including permitted YAML duplicate rejection. | Caller-determined. |
 | `SignatureStrict` | Reject unknown fields and duplicate known singular fields. | `OUTER_CONFORMANCE_SIGNATURE_STRICT`. |
+
+Under `Permissive`, a YAML decoder MAY reject duplicate known mapping keys or
+accept them according to its decode semantics. An implementation advertising
+`Permissive` MUST state in human-readable implementation documentation whether
+it rejects those duplicates and, if it accepts them, the exact rule used to
+select each effective field value. Naming the parser library or relying on
+source code alone does not satisfy this requirement.
+
+A YAML artifact containing duplicate known mapping keys has no portable
+`Permissive` interpretation. `Strict` and `SignatureStrict` MUST reject it as
+`MalformedAttemptedSigned`.
 
 Only these profiles are conforming. A verifier supporting both wire forms MUST
 advertise one profile for both. Advertising different profiles per form is

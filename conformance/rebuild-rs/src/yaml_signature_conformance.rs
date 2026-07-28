@@ -12,8 +12,8 @@
 //!
 //! ## YAML 1.2.2 §6.7.2 — duplicate mapping keys
 //!
-//! YAML 1.2.2 leaves duplicate mapping keys formally ambiguous and
-//! pushes the choice onto the implementation:
+//! YAML 1.2.2 requires mapping keys to be unique but allows a processor
+//! to continue after reporting a duplicate-key error:
 //!
 //! > The content of a mapping node is an unordered set of key:value
 //! > node pairs, with the restriction that each of the keys is unique.
@@ -26,10 +26,10 @@
 //! > This strategy preserves a consistent information model for
 //! > applications that do not wish to recognize duplicate keys.
 //!
-//! `YamlSigil.v1alpha1` reads that "may continue, ignoring the second"
-//! clause as the `Permissive` profile's last-wins rule. `Strict` and
-//! `SignatureStrict` adopt the "It is an error" half of the rule and
-//! map the rejection to `MalformedAttemptedSigned`.
+//! Under `Permissive`, `YamlSigil.v1alpha1` permits a YAML decoder to
+//! reject duplicate known mapping keys or accept them according to its
+//! documented decode semantics. `Strict` and `SignatureStrict` reject
+//! them and map the rejection to `MalformedAttemptedSigned`.
 //!
 //! ## Schema closed-key set
 //!
@@ -78,9 +78,9 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
     write_bytes(dir, "duplicate-schema.yaml", &artifact(&dup_schema))?;
 
     // duplicate-alg.yaml: alg appears twice with DIFFERENT values.
-    // This is the load-bearing attacker case — a Permissive parser
-    // would silently use the second alg, which could swap signing
-    // algorithm interpretation.
+    // This is the load-bearing attacker case. A Permissive decoder
+    // that accepts the fixture must document which alg is effective;
+    // different choices can swap signing algorithm interpretation.
     let dup_alg = format!(
         "schema: YamlSigilSignature.v1alpha1\n\
          alg: ED25519_PUREEDDSA_RAW_RS64_CANONICAL\n\
@@ -101,8 +101,8 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
 
     // duplicate-signature.yaml: signature appears twice with different
     // base64 strings. Both decode to 64 zero bytes (the placeholder)
-    // versus a flipped-bits variant — but the parser sees two
-    // different scalar values, which is what the rule rejects.
+    // versus a flipped-bits variant. The parser sees two different
+    // scalar values, making effective-value selection observable.
     let other_sig = "B".repeat(86);
     let dup_signature = format!(
         "schema: YamlSigilSignature.v1alpha1\n\

@@ -149,7 +149,7 @@ Verifiers advertise one inner-signature-document conformance profile.
 | Profile | Inner signature-document rule |
 | --- | --- |
 | `Strict` | Reject unknown fields and duplicate known singular fields. |
-| `Permissive` | Accept per each wire form's default decode semantics. |
+| `Permissive` | Apply each wire form's documented decode semantics. YAML duplicates may be rejected or decoder-resolved. |
 | `SignatureStrict` | Reject unknown fields and duplicate known singular fields on the inner signature document, while using the matching signature-strict protobuf outer-envelope mode. |
 
 The advertised profile is a ceiling on permissiveness. A verifier MAY behave

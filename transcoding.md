@@ -60,7 +60,7 @@ The constrained marker is not part of the carrier. Compose owns the marker.
 | --- | --- |
 | Payload bytes preserved across YAML to protobuf to YAML. | Yes. |
 | Payload bytes preserved across protobuf to YAML to protobuf. | Yes, when the protobuf payload satisfies the YAML envelope. Otherwise protobuf to YAML fails. |
-| Effective decoded `YamlSigilSignature` fields preserved. | Yes, except unknown fields and parser-discarded duplicate occurrences accepted under `Permissive`. |
+| Effective decoded `YamlSigilSignature` fields preserved. | Yes, except unknown fields and duplicate occurrences discarded under a `Permissive` decoder's documented semantics. |
 | Signature octets preserved when the round trip completes. | Yes. |
 | Full artifact byte hash preserved. | Not guaranteed. |
 | Signature validity preserved when the round trip completes. | Yes, under equivalent verifier configuration. |
