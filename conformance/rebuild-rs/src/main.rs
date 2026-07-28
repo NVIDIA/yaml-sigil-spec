@@ -16,6 +16,7 @@
 //! (run from inside `conformance/rebuild-rs/`).
 
 use std::env;
+use std::fs;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -60,9 +61,19 @@ fn main() -> ExitCode {
     };
     for (name, generator) in SUBDIRS {
         let subdir = root.join(name);
-        if !subdir.is_dir() {
-            eprintln!("missing subdirectory: {}", subdir.display());
-            return ExitCode::FAILURE;
+        match fs::symlink_metadata(&subdir) {
+            Ok(metadata) if metadata.file_type().is_dir() => {}
+            Ok(_) => {
+                eprintln!(
+                    "subdirectory is not a non-symlink directory: {}",
+                    subdir.display()
+                );
+                return ExitCode::FAILURE;
+            }
+            Err(e) => {
+                eprintln!("cannot inspect subdirectory {}: {e}", subdir.display());
+                return ExitCode::FAILURE;
+            }
         }
         println!("=== {name} ===");
         if let Err(e) = generator(&subdir) {

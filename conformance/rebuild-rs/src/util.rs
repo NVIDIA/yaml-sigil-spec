@@ -10,15 +10,68 @@
 //! files use lower-case hex, and SEC 2 v2.0 prints curve parameters
 //! in lower-case hex. No fancier format is involved.
 
-use std::fs;
-use std::io;
-use std::path::Path;
+use std::fs::{self, OpenOptions};
+use std::io::{self, Write};
+use std::path::{Component, Path};
 
-/// Write `content` to `<dir>/<name>` (overwriting) and emit a one-line
-/// progress log to stdout.
+/// Replace the regular file at `<dir>/<name>` without following symlinks and
+/// emit a one-line progress log to stdout.
+///
+/// Rust documents [`OpenOptions::create_new`] as an atomic existence check:
+///
+/// > No file is allowed to exist at the target location, also no (dangling)
+/// > symlink.
+///
+/// The helper removes an existing regular fixture first. If any entry appears
+/// before creation, `create_new` fails instead of opening that entry for output.
+///
+/// [`OpenOptions::create_new`]: https://doc.rust-lang.org/std/fs/struct.OpenOptions.html#method.create_new
 pub fn write_bytes(dir: &Path, name: &str, content: &[u8]) -> io::Result<()> {
+    let mut components = Path::new(name).components();
+    if !matches!(
+        (components.next(), components.next()),
+        (Some(Component::Normal(_)), None)
+    ) {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("fixture name is not a single path component: {name}"),
+        ));
+    }
+
+    let dir_metadata = fs::symlink_metadata(dir)?;
+    if !dir_metadata.file_type().is_dir() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!(
+                "fixture directory is not a non-symlink directory: {}",
+                dir.display()
+            ),
+        ));
+    }
+
     let path = dir.join(name);
-    fs::write(&path, content)?;
+    match fs::symlink_metadata(&path) {
+        Ok(metadata) if metadata.file_type().is_file() => {
+            fs::remove_file(&path)?;
+        }
+        Ok(_) => {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!(
+                    "refusing to replace non-regular fixture path: {}",
+                    path.display()
+                ),
+            ));
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error),
+    }
+
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&path)?;
+    file.write_all(content)?;
     println!("  {}: {} bytes", name, content.len());
     Ok(())
 }
@@ -59,6 +112,93 @@ pub fn from_hex(s: &str) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static NEXT_TEST_DIR: AtomicU64 = AtomicU64::new(0);
+
+    fn test_dir(label: &str) -> PathBuf {
+        let sequence = NEXT_TEST_DIR.fetch_add(1, Ordering::Relaxed);
+        let path = std::env::temp_dir().join(format!(
+            "yamlsigil-rebuild-{label}-{}-{sequence}",
+            std::process::id()
+        ));
+        fs::create_dir(&path).expect("create test directory");
+        path
+    }
+
+    #[test]
+    fn write_bytes_replaces_regular_file() {
+        let dir = test_dir("replace-regular");
+        let path = dir.join("fixture.txt");
+        fs::write(&path, b"old").expect("write original fixture");
+
+        write_bytes(&dir, "fixture.txt", b"new").expect("replace fixture");
+
+        assert_eq!(fs::read(&path).expect("read fixture"), b"new");
+        fs::remove_file(path).expect("remove fixture");
+        fs::remove_dir(dir).expect("remove test directory");
+    }
+
+    #[test]
+    fn write_bytes_rejects_nested_fixture_name() {
+        let dir = test_dir("reject-nested-name");
+
+        let error = write_bytes(&dir, "../outside.txt", b"content")
+            .expect_err("nested fixture name must fail");
+
+        assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
+        fs::remove_dir(dir).expect("remove test directory");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_bytes_rejects_symlink_destination() {
+        use std::os::unix::fs::symlink;
+
+        let root = test_dir("reject-destination-symlink");
+        let output_dir = root.join("output");
+        fs::create_dir(&output_dir).expect("create output directory");
+        let target = root.join("outside.txt");
+        fs::write(&target, b"keep").expect("write symlink target");
+        let destination = output_dir.join("fixture.txt");
+        symlink(&target, &destination).expect("create destination symlink");
+
+        let error = write_bytes(&output_dir, "fixture.txt", b"replace")
+            .expect_err("destination symlink must fail");
+
+        assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
+        assert_eq!(fs::read(&target).expect("read target"), b"keep");
+        assert!(fs::symlink_metadata(&destination)
+            .expect("inspect destination")
+            .file_type()
+            .is_symlink());
+        fs::remove_file(destination).expect("remove destination symlink");
+        fs::remove_file(target).expect("remove target");
+        fs::remove_dir(output_dir).expect("remove output directory");
+        fs::remove_dir(root).expect("remove test root");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_bytes_rejects_symlink_directory() {
+        use std::os::unix::fs::symlink;
+
+        let root = test_dir("reject-directory-symlink");
+        let real_dir = root.join("real");
+        fs::create_dir(&real_dir).expect("create real directory");
+        let linked_dir = root.join("linked");
+        symlink(&real_dir, &linked_dir).expect("create directory symlink");
+
+        let error = write_bytes(&linked_dir, "fixture.txt", b"content")
+            .expect_err("directory symlink must fail");
+
+        assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
+        assert!(!real_dir.join("fixture.txt").exists());
+        fs::remove_file(linked_dir).expect("remove directory symlink");
+        fs::remove_dir(real_dir).expect("remove real directory");
+        fs::remove_dir(root).expect("remove test root");
+    }
 
     #[test]
     fn hex_round_trip() {
