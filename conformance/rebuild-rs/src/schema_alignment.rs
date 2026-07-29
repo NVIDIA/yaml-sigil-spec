@@ -12,10 +12,13 @@
 //!   `Algorithm` enum (slot `1` = Ed25519, slot `2` = ECDSA).
 //! - `schema/YamlSigilSignature.v1alpha1.schema.json`, which restricts
 //!   the YAML `alg` field to the canonical (non-prefixed) string set.
-//! - `verification-api.md` "Algorithm Policy", which fixes the
-//!   `SignedButAlgorithmUnsupported` outcome for any algorithm name /
-//!   integer that is syntactically valid but not in the supported
-//!   slot table.
+//! - `verification-api.md` "Algorithm Policy", which maps
+//!   schema-unknown names and integers plus `ALGORITHM_UNSPECIFIED`
+//!   to `MalformedAttemptedSigned`. It reserves
+//!   `SignedButAlgorithmUnsupported` for schema-defined algorithms
+//!   that the verifier does not implement. Its runtime ordering also
+//!   maps an empty signature to `MalformedAttemptedSigned` before
+//!   classifying algorithm support.
 //!
 //! ## Why both forms ship per fixture
 //!
@@ -31,7 +34,9 @@
 //! For YAML, the JSON Schema's `enum` constraint rejects strings
 //! outside its set. The fixture matrix covers the recognised slots
 //! plus the unknown-string / unknown-integer / `UNSPECIFIED` cases
-//! that drive each verifier state.
+//! that drive each verifier state. The empty-signature pair pins the
+//! precedence between malformed signature content and runtime
+//! algorithm-support classification across both forms.
 
 use std::path::Path;
 
@@ -45,20 +50,20 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
     let sig = placeholder_sig();
     let sig64 = [0u8; 64];
 
-    let yaml_artifact = |alg_value: &str| -> Vec<u8> {
+    let yaml_artifact = |alg_value: &str, signature_value: &str| -> Vec<u8> {
         format!(
             "payload: example\n\
              ---\n\
              schema: YamlSigilSignature.v1alpha1\n\
              alg: {alg_value}\n\
-             signature: {sig}\n"
+             signature: {signature_value}\n"
         )
         .into_bytes()
     };
 
-    let proto_artifact = |alg_value: u64| -> Vec<u8> {
+    let proto_artifact = |alg_value: u64, signature: &[u8]| -> Vec<u8> {
         let mut inner = varint_field(1, alg_value);
-        inner.extend(lendel(3, &sig64));
+        inner.extend(lendel(3, signature));
         let mut out = lendel(1, PAYLOAD);
         out.extend(lendel(2, &inner));
         out
@@ -81,8 +86,13 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
         ),
     ];
     for (name, alg) in yaml_cases {
-        write_bytes(dir, name, &yaml_artifact(alg))?;
+        write_bytes(dir, name, &yaml_artifact(alg, &sig))?;
     }
+    write_bytes(
+        dir,
+        "yaml-alg-ecdsa-empty-signature.yaml",
+        &yaml_artifact("ECDSA_SECP256R1_SHA256_RAW_RS64", "\"\""),
+    )?;
 
     let proto_cases: &[(&str, u64)] = &[
         ("proto-alg-ed25519.binpb", 1),
@@ -91,8 +101,22 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
         ("proto-alg-unknown-integer.binpb", 42),
     ];
     for (name, alg) in proto_cases {
-        write_bytes(dir, name, &proto_artifact(*alg))?;
+        write_bytes(dir, name, &proto_artifact(*alg, &sig64))?;
     }
+    write_bytes(
+        dir,
+        "proto-alg-ecdsa-empty-signature.binpb",
+        &proto_artifact(2, &[]),
+    )?;
+    write_bytes(
+        dir,
+        "empty-signature-before-unsupported.expected.txt",
+        b"Verifier configuration: ECDSA_SECP256R1_SHA256_RAW_RS64 is schema-defined but not implemented.\n\
+          PreVerify(*, input=yaml-alg-ecdsa-empty-signature.yaml) -> Ok\n\
+          PreVerify(*, input=proto-alg-ecdsa-empty-signature.binpb) -> Ok\n\
+          Verify(*, input=yaml-alg-ecdsa-empty-signature.yaml) -> MalformedAttemptedSigned\n\
+          Verify(*, input=proto-alg-ecdsa-empty-signature.binpb) -> MalformedAttemptedSigned\n",
+    )?;
 
     Ok(())
 }
@@ -114,6 +138,11 @@ mod tests {
         // and value 42 for a non-zero unknown. Both encode cleanly.
         assert_eq!(varint_field(1, 0), vec![0x08, 0x00]);
         assert_eq!(varint_field(1, 42), vec![0x08, 0x2A]);
+    }
+
+    #[test]
+    fn empty_signature_is_explicit_zero_length_bytes() {
+        assert_eq!(lendel(3, &[]), vec![0x1A, 0x00]);
     }
 
     #[test]

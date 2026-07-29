@@ -144,10 +144,11 @@ Artifact Decomposition never produces `Verified`,
 `SignedButAlgorithmUnsupported`, or `SignedButFailedVerification`; those are
 post-decomposition verifier states. Metadata-content failures such as
 invalid or schema-unknown `alg` and base64 decode failure occur after
-decomposition, inside Verification's
-metadata-extraction stage. Empty or algorithm-invalid `signature` octets are
-checked in Verification's later pre-crypto stage. The Transcription API treats
-the signature carrier as opaque bytes and does not surface those failures.
+decomposition, inside Verification's metadata-extraction stage. Empty or
+algorithm-invalid `signature` octets are checked in Verification's later
+pre-crypto stage. The non-empty check precedes runtime algorithm-support
+classification. The Transcription API treats the signature carrier as opaque
+bytes and does not surface those failures.
 
 Schema-unknown YAML `alg` strings are caught during the signature-document
 parse / metadata extraction step inside Verification, not here. Where

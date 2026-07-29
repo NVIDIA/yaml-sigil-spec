@@ -4,11 +4,11 @@
 //! Generator for `conformance/yaml-signature-conformance/` fixtures.
 //!
 //! Drives the [`verification-api.md`](../../verification-api.md)
-//! "Conformance Profiles" section as it manifests on the YAML form —
-//! specifically the duplicate-known-singular-field and unknown-field
-//! rules applied to the YAML signature-document mapping (the
-//! symmetric protobuf-form cases live in
-//! [`crate::protobuf_conformance`]).
+//! "Structural Rules By Form" and "Conformance Profiles" sections as
+//! they manifest on the YAML form. The fixtures cover the required
+//! `schema` identity, duplicate-known-singular-field behavior, and
+//! unknown-field behavior. The symmetric protobuf-form profile cases
+//! live in [`crate::protobuf_conformance`].
 //!
 //! ## YAML 1.2.2 §6.7.2 — duplicate mapping keys
 //!
@@ -38,6 +38,12 @@
 //! (`schema`, `alg`, `keyid`, `signature`). Any mapping key outside
 //! that set is the YAML manifestation of "unknown field" and falls
 //! under the same profile rule.
+//!
+//! ## Schema identity
+//!
+//! `verification-api.md` requires the YAML `schema` value to equal
+//! `YamlSigilSignature.v1alpha1`. A wrong value or missing required
+//! key fails metadata extraction under every conformance profile.
 
 use std::path::Path;
 
@@ -67,6 +73,22 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
          signature: {sig}\n"
     );
     write_bytes(dir, "valid-baseline.yaml", &artifact(&baseline))?;
+
+    // wrong-schema.yaml: the required key is present but declares a
+    // different schema identity.
+    let wrong_schema = format!(
+        "schema: YamlSigilSignature.v2alpha1\n\
+         alg: ED25519_PUREEDDSA_RAW_RS64_CANONICAL\n\
+         signature: {sig}\n"
+    );
+    write_bytes(dir, "wrong-schema.yaml", &artifact(&wrong_schema))?;
+
+    // missing-schema.yaml: the required schema key is absent.
+    let missing_schema = format!(
+        "alg: ED25519_PUREEDDSA_RAW_RS64_CANONICAL\n\
+         signature: {sig}\n"
+    );
+    write_bytes(dir, "missing-schema.yaml", &artifact(&missing_schema))?;
 
     // duplicate-schema.yaml: schema appears twice with matching value.
     let dup_schema = format!(

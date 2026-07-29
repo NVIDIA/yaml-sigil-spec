@@ -73,7 +73,7 @@ and invocation-error distinctions MUST match this model.
 | Invocation validation | Validate caller-provided form, key, trust policy, and parameters known before artifact processing. | `InvocationError`. |
 | Structural separation | Decompose YAML or protobuf form into `(payload_bytes, signature_carrier_bytes)`. | `Unsigned` or structural `MalformedAttemptedSigned`. |
 | Metadata extraction | Decode the signature carrier into typed `alg`, optional `keyid`, and signature octets. | Metadata `MalformedAttemptedSigned`. |
-| Runtime checks | Classify algorithm support, enforce the algorithm-key binding, validate algorithm parameters, and enforce non-empty signature. | `InvocationError`, `MalformedAttemptedSigned`, `SignedButAlgorithmUnsupported`, or `SignedButFailedVerification`. |
+| Runtime checks | Enforce non-empty signature, classify algorithm support, enforce the algorithm-key binding, and validate algorithm parameters. | `InvocationError`, `MalformedAttemptedSigned`, `SignedButAlgorithmUnsupported`, or `SignedButFailedVerification`. |
 | Cryptographic verification | Verify signature over the payload bytes with the configured key and policy. | `Verified` or `SignedButFailedVerification`. |
 
 ## Structural Rules By Form
@@ -98,8 +98,12 @@ After Transcription succeeds, metadata extraction MUST enforce:
 | Present `keyid` is non-empty, at most 1024 UTF-8 octets, and contains no `U+000A` or `U+000D`. | Both. | `MalformedAttemptedSigned`. |
 | YAML `signature` base64-decodes per [Base64 Requirements](./base64-requirements.md); protobuf `signature` carries raw bytes. | YAML decode only. | `MalformedAttemptedSigned`. |
 
-The non-empty and algorithm-specific signature length checks run after metadata
-extraction, before or during cryptographic verification.
+After metadata extraction, the algorithm-independent non-empty `signature`
+check MUST run before runtime algorithm-support classification. Empty signature
+octets therefore return `MalformedAttemptedSigned`, including when `alg` names
+a schema-defined algorithm that the verifier does not implement.
+Algorithm-specific signature length and structure checks run as specified by
+the selected algorithm before or during cryptographic verification.
 
 ## Algorithm Policy
 
@@ -190,6 +194,11 @@ at request validation, before a helper result exists.
 | `CanPreVerify` | Boolean summary of `PreVerify`. `allow_unsigned` controls whether unsigned YAML counts as true. |
 | `PreVerify` | Runs structural processing and unauthenticated signature metadata extraction. It performs no cryptographic verification and does not classify runtime algorithm support. |
 | `VerifyFromPreVerify` | Runs only the verification stage using an opaque successful result produced by the same verifier instance and profile. |
+
+`PreVerify` does not enforce the runtime non-empty `signature` rule. It returns
+`Ok` for otherwise valid metadata containing empty decoded signature octets.
+`Verify` and `VerifyFromPreVerify` then apply the required runtime ordering
+above.
 
 `PreVerifyOutcome` values:
 

@@ -1,0 +1,5 @@
+Verifier configuration: ECDSA_SECP256R1_SHA256_RAW_RS64 is schema-defined but not implemented.
+PreVerify(*, input=yaml-alg-ecdsa-empty-signature.yaml) -> Ok
+PreVerify(*, input=proto-alg-ecdsa-empty-signature.binpb) -> Ok
+Verify(*, input=yaml-alg-ecdsa-empty-signature.yaml) -> MalformedAttemptedSigned
+Verify(*, input=proto-alg-ecdsa-empty-signature.binpb) -> MalformedAttemptedSigned

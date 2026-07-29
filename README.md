@@ -121,7 +121,7 @@ aligned.
 | `schema` | Required scalar. | Message type. | YAML value MUST be `YamlSigilSignature.v1alpha1`. |
 | `alg` | Required scalar. | Required `Algorithm` value. | MUST identify a schema-defined algorithm. |
 | `keyid` | Optional scalar. | Optional string. | When present, MUST be non-empty, at most 1024 UTF-8 octets, and contain no `U+000A` or `U+000D`. It is only a lookup hint. |
-| `signature` | Required base64url scalar. | Required bytes. | YAML uses the profile in [Base64 Requirements](./base64-requirements.md). Decoded signature octets MUST be non-empty before cryptographic verification. |
+| `signature` | Required base64url scalar. | Required bytes. | YAML uses the profile in [Base64 Requirements](./base64-requirements.md). Decoded signature octets MUST be non-empty before runtime algorithm-support classification. |
 
 ### Algorithms
 
@@ -190,6 +190,9 @@ Schema MUST stay aligned by hand until alignment tooling exists.
 | `MalformedAttemptedSigned` | A signing attempt failed structural, metadata, or pre-crypto validation. |
 | `SignedButAlgorithmUnsupported` | The artifact names a valid schema-defined algorithm that this verifier does not implement. |
 | `SignedButFailedVerification` | Cryptographic verification was attempted and failed. |
+
+An empty `signature` is `MalformedAttemptedSigned`, including when `alg` names
+a schema-defined algorithm that the verifier does not implement.
 
 ## APIs
 

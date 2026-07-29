@@ -26,10 +26,11 @@ decoding the YAML-form `signature` scalar:
   extraction. Decode failure (including trailing-bits violation) maps to
   `MalformedAttemptedSigned`. Note: empty decoded octets are **not** a base64
   decode failure under this profile — the empty string is a valid base64
-  encoding of zero bytes. The non-empty `signature` rule is content-layer,
-  enforced by Verification's verification stage alongside algorithm-specific
-  length checks (see [Verification API](./verification-api.md) Structural
-  Rules By Form), not by this decoder.
+  encoding of zero bytes. The non-empty `signature` rule is content-layer and
+  is enforced by Verification before runtime algorithm-support classification.
+  Algorithm-specific length checks follow the selected algorithm's rules (see
+  [Verification API](./verification-api.md) Structural Rules By Form). Neither
+  rule belongs to this decoder.
 - **Signing and transcoding** — encode raw signature octets when emitting the
   YAML-form signature carrier. Canonical carrier emission MUST use this profile;
   see [Transcoding](./transcoding.md) for scalar transport rules (for example,

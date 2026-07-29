@@ -66,19 +66,18 @@ See [protobuf-conformance/README.md](./protobuf-conformance/README.md).
 
 ### YAML signature-document conformance (`yaml-signature-conformance/`)
 
-- **YAML signature-document conformance** — duplicate `schema`,
-  `alg`, `keyid`, `signature` mapping keys; unknown mapping key.
-  The YAML-form symmetric set to the inner-`YamlSigilSignature`
-  cases in `protobuf-conformance/`, driving the
-  [Verification API](../verification-api.md) "Conformance Profiles"
-  rules.
+- **YAML signature-document conformance** — required `schema` identity,
+  duplicate `schema`, `alg`, `keyid`, and `signature` mapping keys, and an
+  unknown mapping key. The YAML-form profile cases are the symmetric set to the
+  inner-`YamlSigilSignature` cases in `protobuf-conformance/`.
 
 See [yaml-signature-conformance/README.md](./yaml-signature-conformance/README.md).
 
 ### Schema alignment (`schema-alignment/`)
 
 - **Schema alignment** — YAML `alg` strings, protobuf enum values,
-  unknown-string behavior, protobuf unknown-integer behavior.
+  unknown-string behavior, protobuf unknown-integer behavior, and
+  empty-signature precedence over runtime algorithm support.
 
 See [schema-alignment/README.md](./schema-alignment/README.md).
 

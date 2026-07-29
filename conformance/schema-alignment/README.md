@@ -1,10 +1,11 @@
 # Schema Alignment Fixtures
 
-Validates that YAML `alg` strings and protobuf `Algorithm` enum
-integers map to the same algorithm, that the
-`ALGORITHM_UNSPECIFIED` / unknown-string / unknown-integer cases are
-rejected consistently across forms, and that the YAML wire form does
-NOT accept the protobuf-prefixed (`ALGORITHM_…`) spelling.
+Validates that YAML `alg` strings and protobuf `Algorithm` enum integers map to
+the same algorithm, that the `ALGORITHM_UNSPECIFIED`, unknown-string, and
+unknown-integer cases are rejected consistently across forms, and that the
+YAML wire form does not accept the protobuf-prefixed (`ALGORITHM_…`) spelling.
+It also pins empty-signature classification before runtime algorithm-support
+classification in both forms.
 
 See [README](../../README.md)'s "The Signature Document" section for
 the authoritative mapping table.
@@ -47,6 +48,7 @@ column.
 | `yaml-alg-unknown-string.yaml` | `FOO_BAR_BAZ` (not in the allowlist) | `MalformedAttemptedSigned` (metadata-extraction failure: schema-unknown string) |
 | `yaml-alg-prefixed-rejected.yaml` | `ALGORITHM_ED25519_PUREEDDSA_RAW_RS64_CANONICAL` (the protobuf-prefixed spelling, which is NOT valid in YAML form) | `MalformedAttemptedSigned` (the YAML wire form rejects the prefix per [README](../../README.md)) |
 | `yaml-alg-unspecified-rejected.yaml` | `ALGORITHM_UNSPECIFIED` (the protobuf zero-value name, which is NOT a valid YAML `alg`) | `MalformedAttemptedSigned` |
+| `yaml-alg-ecdsa-empty-signature.yaml` | `ECDSA_SECP256R1_SHA256_RAW_RS64`, empty decoded signature, verifier does not implement ECDSA | `PreVerify` returns `Ok`; `Verify` returns `MalformedAttemptedSigned` before algorithm-support classification |
 
 ## Protobuf fixtures (`*.binpb`)
 
@@ -56,6 +58,11 @@ column.
 | `proto-alg-ecdsa.binpb` | `2` (`ALGORITHM_ECDSA_SECP256R1_SHA256_RAW_RS64`) | proceeds to verification |
 | `proto-alg-unspecified.binpb` | `0` (`ALGORITHM_UNSPECIFIED`) | `MalformedAttemptedSigned` (runtime classification rejects the zero value) |
 | `proto-alg-unknown-integer.binpb` | `42` (not in the enum) | `MalformedAttemptedSigned` (structural failure: schema-unknown enum integer) |
+| `proto-alg-ecdsa-empty-signature.binpb` | `2` (`ALGORITHM_ECDSA_SECP256R1_SHA256_RAW_RS64`), empty `signature`, verifier does not implement ECDSA | `PreVerify` returns `Ok`; `Verify` returns `MalformedAttemptedSigned` before algorithm-support classification |
+
+The exact verifier configuration and expected calls for the empty-signature
+pair are recorded in
+[`empty-signature-before-unsupported.expected.txt`](./empty-signature-before-unsupported.expected.txt).
 
 ## Note on YAML rejection vs protobuf rejection
 
