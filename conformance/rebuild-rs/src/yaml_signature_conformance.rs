@@ -47,12 +47,16 @@
 
 use std::path::Path;
 
-use crate::b64::placeholder_sig;
+use crate::b64::{placeholder_sig, urlsafe_unpadded};
 use crate::util::write_bytes;
 
 /// The fixtures all use the same payload, marker, and base64
 /// placeholder; only the inner mapping body changes.
 const PAYLOAD: &str = "payload: example\n";
+
+fn alternate_sig() -> String {
+    urlsafe_unpadded(&[1u8; 64])
+}
 
 fn artifact(mapping_body: &str) -> Vec<u8> {
     let mut s = String::from(PAYLOAD);
@@ -122,10 +126,10 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
     write_bytes(dir, "duplicate-keyid.yaml", &artifact(&dup_keyid))?;
 
     // duplicate-signature.yaml: signature appears twice with different
-    // base64 strings. Both decode to 64 zero bytes (the placeholder)
-    // versus a flipped-bits variant. The parser sees two different
-    // scalar values, making effective-value selection observable.
-    let other_sig = "B".repeat(86);
+    // canonical base64 strings. They decode to distinct 64-octet values,
+    // making effective-value selection observable without introducing a
+    // second rejection reason.
+    let other_sig = alternate_sig();
     let dup_signature = format!(
         "schema: YamlSigilSignature.v1alpha1\n\
          alg: ED25519_PUREEDDSA_RAW_RS64_CANONICAL\n\
@@ -160,6 +164,27 @@ mod tests {
         let a = artifact(baseline_body);
         let expected_prefix = b"payload: example\n---\n";
         assert!(a.starts_with(expected_prefix));
+    }
+
+    /// Both duplicate-signature values MUST be canonical base64url
+    /// encodings of 64 octets. For an 86-character encoding, the final
+    /// character's lower four bits are unused and therefore zero.
+    #[test]
+    fn duplicate_signature_values_are_distinct_and_canonical() {
+        let first = placeholder_sig();
+        let second = alternate_sig();
+
+        assert_ne!(first, second);
+        for value in [first, second] {
+            assert_eq!(value.len(), 86);
+            assert!(value
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_')));
+            assert!(matches!(
+                value.as_bytes().last(),
+                Some(b'A' | b'Q' | b'g' | b'w')
+            ));
+        }
     }
 
     /// The four declared schema keys (schema, alg, keyid, signature)

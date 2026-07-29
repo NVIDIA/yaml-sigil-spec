@@ -136,6 +136,15 @@ fn yaml_empty_payload(signature: &[u8]) -> Vec<u8> {
     .into_bytes()
 }
 
+fn signature_with_s(r: &[u8], s: &[u8]) -> Vec<u8> {
+    assert_eq!(r.len(), 32, "R must be 32 octets");
+    assert_eq!(s.len(), 32, "S must be 32 octets");
+    let mut signature = Vec::with_capacity(64);
+    signature.extend_from_slice(r);
+    signature.extend_from_slice(s);
+    signature
+}
+
 pub fn generate(dir: &Path) -> std::io::Result<()> {
     let seed_1 = from_hex(SEED_1_HEX);
     let pub_1 = from_hex(PUB_1_HEX);
@@ -232,8 +241,16 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
     let mut nc_r_sig = nc_r.clone();
     nc_r_sig.extend(std::iter::repeat_n(0u8, 32));
 
-    let mut s_eq_l = vec![0u8; 32];
-    s_eq_l.extend_from_slice(&l_bytes);
+    // Retain the valid R component from RFC 8032 §7.1 Test 1 so these
+    // fixtures isolate the S range violation.
+    let r_1 = &sig_1[..32];
+    assert!(
+        !SMALL_ORDER_POINTS
+            .iter()
+            .any(|point| from_hex(point) == r_1),
+        "RFC 8032 Test 1 R unexpectedly matches a small-order encoding"
+    );
+    let s_eq_l = signature_with_s(r_1, &l_bytes);
 
     let l_plus_1_le = {
         use num_bigint::BigUint;
@@ -242,8 +259,7 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
         bytes.resize(32, 0);
         bytes
     };
-    let mut s_eq_l_plus_1 = vec![0u8; 32];
-    s_eq_l_plus_1.extend_from_slice(&l_plus_1_le);
+    let s_eq_l_plus_1 = signature_with_s(r_1, &l_plus_1_le);
 
     write_bytes(dir, "noncanonical-R.binpb", &proto_artifact(&[], &nc_r_sig))?;
     write_bytes(
@@ -264,6 +280,7 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
                 "# Three canonical-encoding rejection fixtures.\n",
                 "# Provenance: RFC 8032 §§5.1 and 7.1 values; see ../../THIRD_PARTY_NOTICES.md.\n",
                 "# All use payload = (empty), public_key = RFC 8032 §7.1 Test 1's public key.\n",
+                "# The S-boundary fixtures retain Test 1's valid R component.\n",
                 "# public_key: {pub_}\n\n",
                 "Verify(*, input=noncanonical-R.binpb, ...)               -> MalformedAttemptedSigned\n",
                 "Verify(*, input=noncanonical-S-equals-L.binpb, ...)      -> MalformedAttemptedSigned\n",
@@ -367,5 +384,14 @@ mod tests {
             assert_eq!(p.len(), 64);
             assert_eq!(from_hex(p).len(), 32);
         }
+    }
+
+    /// The S-boundary fixtures retain RFC 8032 §7.1 Test 1's valid
+    /// `R`, and that encoding is not one of the eight small-order points.
+    #[test]
+    fn rfc8032_test_1_r_is_not_small_order() {
+        let signature = from_hex(SIG_1_HEX);
+        let r = &signature[..32];
+        assert!(!SMALL_ORDER_POINTS.iter().any(|point| from_hex(point) == r));
     }
 }

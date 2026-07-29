@@ -1,6 +1,7 @@
 # Three canonical-encoding rejection fixtures.
 # Provenance: RFC 8032 §§5.1 and 7.1 values; see ../../THIRD_PARTY_NOTICES.md.
 # All use payload = (empty), public_key = RFC 8032 §7.1 Test 1's public key.
+# The S-boundary fixtures retain Test 1's valid R component.
 # public_key: d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a
 
 Verify(*, input=noncanonical-R.binpb, ...)               -> MalformedAttemptedSigned

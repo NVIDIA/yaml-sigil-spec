@@ -45,9 +45,11 @@ generator.
 Every fixture below carries a valid `payload` and constrained marker. The
 schema-identity cases change or omit only the required `schema` key. The
 profile cases duplicate an otherwise valid mapping key or add a key outside
-the closed schema. The signature octets are the canonical 86-character
-placeholder, URL-safe unpadded base64 of 64 zero bytes. Any rejection before
-the cryptographic stage is therefore attributable to the rule under test.
+the closed schema. Each signature scalar is a canonical 86-character,
+URL-safe unpadded base64 encoding of 64 octets. The
+`duplicate-signature.yaml` values are distinct but independently valid.
+Any rejection before the cryptographic stage is therefore attributable to
+the rule under test.
 
 | File | Targets | `Strict` outcome | `SignatureStrict` outcome | `Permissive` outcome |
 | --- | --- | --- | --- | --- |

@@ -86,6 +86,8 @@ documents the same constraint and the top-level
 
 These bytes are in the artifact, so the rejection is artifact-side
 (`MalformedAttemptedSigned`), not configured-key-side.
+Each `S`-boundary fixture retains the valid `R` component from RFC 8032
+section 7.1 Test 1, so `S >= L` is its only canonical-encoding violation.
 
 ### Configured-key rejection (key material — `KeyResolutionFailure`)
 

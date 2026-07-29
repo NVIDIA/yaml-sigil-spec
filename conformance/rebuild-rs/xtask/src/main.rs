@@ -16,9 +16,9 @@
 //! available on the dev environments this targets.
 
 use std::env;
-use std::fs;
-use std::io;
-use std::path::PathBuf;
+use std::fs::{self, OpenOptions};
+use std::io::{self, Write};
+use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
 /// Pinned upstream commit of `usnistgov/ACVP-Server`. Bump this
@@ -91,39 +91,93 @@ fn parse_update_args<I: Iterator<Item = String>>(mut args: I) -> Result<String, 
 
 fn update_acvp(commit: &str) -> io::Result<()> {
     let root = workspace_root();
-    let vendor_dir = root.join("vendor").join("acvp");
-    fs::create_dir_all(&vendor_dir)?;
+    let vendor_root = root.join("vendor");
+    ensure_directory(&vendor_root)?;
+    let vendor_dir = vendor_root.join("acvp");
+    ensure_directory(&vendor_dir)?;
 
     let url = format!("https://raw.githubusercontent.com/{UPSTREAM_REPO}/{commit}/{UPSTREAM_PATH}");
     let dest = vendor_dir.join(VENDORED_FILE_NAME);
+    let readme_path = vendor_dir.join("README.md");
+    validate_replace_target(&dest)?;
+    validate_replace_target(&readme_path)?;
 
     println!("fetching: {url}");
     println!("dest:     {}", dest.display());
 
-    let status = Command::new("curl")
+    let output = Command::new("curl")
         .arg("--fail")
         .arg("--location")
         .arg("--silent")
         .arg("--show-error")
-        .arg("--output")
-        .arg(&dest)
         .arg(&url)
-        .status()?;
-    if !status.success() {
+        .output()?;
+    if !output.status.success() {
+        let detail = String::from_utf8_lossy(&output.stderr);
         return Err(io::Error::other(format!(
-            "curl exited with status {status}"
+            "curl exited with status {}: {}",
+            output.status,
+            detail.trim()
         )));
     }
 
-    let size = fs::metadata(&dest)?.len();
+    let size = u64::try_from(output.stdout.len())
+        .map_err(|_| io::Error::other("download size does not fit u64"))?;
+    replace_regular_file(&dest, &output.stdout)?;
 
     let readme = render_readme(commit, size);
-    let readme_path = vendor_dir.join("README.md");
-    fs::write(&readme_path, readme)?;
+    replace_regular_file(&readme_path, readme.as_bytes())?;
 
     println!("wrote: {} ({size} bytes)", dest.display());
     println!("wrote: {}", readme_path.display());
     Ok(())
+}
+
+fn ensure_directory(path: &Path) -> io::Result<()> {
+    match fs::symlink_metadata(path) {
+        Ok(metadata) if metadata.file_type().is_dir() => Ok(()),
+        Ok(_) => Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("refusing non-directory or symlink path: {}", path.display()),
+        )),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => fs::create_dir(path),
+        Err(error) => Err(error),
+    }
+}
+
+fn validate_replace_target(path: &Path) -> io::Result<()> {
+    match fs::symlink_metadata(path) {
+        Ok(metadata) if metadata.file_type().is_file() => Ok(()),
+        Ok(_) => Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!(
+                "refusing to replace non-regular vendor path: {}",
+                path.display()
+            ),
+        )),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error),
+    }
+}
+
+fn replace_regular_file(path: &Path, content: &[u8]) -> io::Result<()> {
+    match fs::symlink_metadata(path) {
+        Ok(metadata) if metadata.file_type().is_file() => fs::remove_file(path)?,
+        Ok(_) => {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!(
+                    "refusing to replace non-regular vendor path: {}",
+                    path.display()
+                ),
+            ));
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error),
+    }
+
+    let mut file = OpenOptions::new().write(true).create_new(true).open(path)?;
+    file.write_all(content)
 }
 
 /// Compute the workspace root by walking up from the xtask crate's
@@ -217,6 +271,19 @@ fn render_readme(commit: &str, size: u64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static NEXT_TEST_DIR: AtomicU64 = AtomicU64::new(0);
+
+    fn test_dir(label: &str) -> PathBuf {
+        let sequence = NEXT_TEST_DIR.fetch_add(1, Ordering::Relaxed);
+        let path = env::temp_dir().join(format!(
+            "yamlsigil-xtask-{label}-{}-{sequence}",
+            std::process::id()
+        ));
+        fs::create_dir(&path).expect("create test directory");
+        path
+    }
 
     #[test]
     fn parse_update_uses_default_commit_when_no_args() {
@@ -252,5 +319,45 @@ mod tests {
         assert!(out.contains("0123456789abcdef"));
         assert!(out.contains("42 bytes"));
         assert!(out.contains(UPSTREAM_REPO));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn replace_regular_file_rejects_symlink_destination() {
+        use std::os::unix::fs::symlink;
+
+        let dir = test_dir("reject-destination-symlink");
+        let target = dir.join("target.txt");
+        fs::write(&target, b"keep").expect("write target");
+        let destination = dir.join("destination.txt");
+        symlink(&target, &destination).expect("create destination symlink");
+
+        let error = replace_regular_file(&destination, b"replace")
+            .expect_err("destination symlink must fail");
+
+        assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
+        assert_eq!(fs::read(&target).expect("read target"), b"keep");
+        fs::remove_file(destination).expect("remove destination symlink");
+        fs::remove_file(target).expect("remove target");
+        fs::remove_dir(dir).expect("remove test directory");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn ensure_directory_rejects_symlink() {
+        use std::os::unix::fs::symlink;
+
+        let root = test_dir("reject-directory-symlink");
+        let target = root.join("target");
+        fs::create_dir(&target).expect("create target directory");
+        let linked = root.join("linked");
+        symlink(&target, &linked).expect("create directory symlink");
+
+        let error = ensure_directory(&linked).expect_err("directory symlink must fail");
+
+        assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
+        fs::remove_file(linked).expect("remove directory symlink");
+        fs::remove_dir(target).expect("remove target directory");
+        fs::remove_dir(root).expect("remove test root");
     }
 }
