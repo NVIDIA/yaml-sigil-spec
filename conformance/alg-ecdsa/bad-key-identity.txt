@@ -1,6 +1,7 @@
 # Point at infinity (identity O) — MUST be rejected as KeyResolutionFailure.
 
-# SEC 1 §2.3.3 represents O as the single octet 0x00.
+# Standards for Efficient Cryptography 1 (SEC 1) §2.3.3 represents O as the single octet 0x00.
+# Provenance and patent/IP caveat: see ../../THIRD_PARTY_NOTICES.md.
 Q-encoded-as-O-single-byte: 00
 
 # Some implementations might be presented with an all-zero 65-octet

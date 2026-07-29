@@ -10,6 +10,13 @@ no non-zero trailing bits.
 - [`base64-requirements.md`](../../base64-requirements.md) — the strict
   YamlSigil profile (no padding, no trailing bits)
 
+The RFC-derived rules and test values are third-party standards/test-vector
+material, not material relicensed under Apache-2.0. The applicable copyright,
+copying conditions, attribution, and warranty disclaimer are recorded in
+[`THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md). Each `.txt` file is
+the raw parser input, so attribution remains here and in the generator source
+rather than being inserted into the fixture.
+
 ## How to regenerate
 
 Fixtures are produced by [`conformance/rebuild-rs`](../rebuild-rs/).

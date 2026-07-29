@@ -28,6 +28,11 @@
 //! and elides any `=` padding, matching the "padding can be avoided"
 //! clause above. These are the exact alphabet and padding rules used by
 //! every signature and key encoding in the rebuilder.
+//!
+//! The cited alphabet, rules, and test values are third-party RFC material,
+//! not material relicensed under the Apache-2.0 declaration on this
+//! NVIDIA-authored implementation. See the repository
+//! `THIRD_PARTY_NOTICES.md` for the applicable source attribution and terms.
 
 /// 64-character base64url alphabet from RFC 4648 §5 Table 2.
 ///

@@ -23,6 +23,14 @@ sources:
 - [`algorithms/01-ED25519_PUREEDDSA_RAW_RS64_CANONICAL.md`](../../algorithms/01-ED25519_PUREEDDSA_RAW_RS64_CANONICAL.md)
   — slot specification.
 
+The RFC-derived values are third-party standards/test-vector material, not
+material relicensed under Apache-2.0. The applicable attribution and warranty
+terms are recorded in
+[`THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md). Binary and signed
+YAML fixtures remain exact-byte inputs, so their provenance lives here, in
+comment-capable sidecars, and in the generator source rather than in their
+file bodies.
+
 ## How to regenerate
 
 Fixtures are produced by [`conformance/rebuild-rs`](../rebuild-rs/).

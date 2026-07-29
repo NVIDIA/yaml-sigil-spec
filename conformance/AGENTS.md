@@ -23,8 +23,9 @@ repository's commit history. Concretely:
 1. The fixture's expected outcome is named in the per-directory
    `README.md`.
 2. The fixture's input is regenerable from canonical sources cited
-   in the same `README.md` (RFC 8032, FIPS / NIST CAVP / ACVP, SEC 1,
-   etc.) using the matching generator module under
+   in the same `README.md` (RFC 8032, FIPS / NIST CAVP / ACVP,
+   *Standards for Efficient Cryptography 1 (SEC 1)*, etc.) using the
+   matching generator module under
    [`rebuild-rs/src/`](./rebuild-rs/src/).
 3. Generator dependencies are minimal and exact-pinned in
    `rebuild-rs/Cargo.toml`, grouped by role:
@@ -169,9 +170,10 @@ Every Rust source file under `rebuild-rs/src/` MUST:
    - Link to the upstream as closely as possible. Easier for RFCs
      (deep-linked HTML at `https://www.rfc-editor.org/rfc/rfcN#section-X.Y`)
      than for NIST PDFs; cite the section / subsection in either case.
-   - Quote the upstream paragraph(s) verbatim — Markdown blockquote
-     (`>`) inside the rustdoc. Two or three paragraphs is the cap;
-     longer should be replaced by a tighter excerpt + the link.
+   - Quote only the upstream text needed to establish the behavior or
+     constant. Use a Markdown blockquote (`>`) inside the rustdoc when
+     quoting. Two or three paragraphs is the cap; prefer a tighter excerpt
+     and link over reproducing a full table or section.
    - State explicitly that **these are the exact numbers / methods
      being used** in the implementation that follows.
    - If the citation includes a fenced code block, use ` ```text `
@@ -196,10 +198,10 @@ A generator-anchored approach buys three things:
    output against the shipped fixtures. If anything differs, either
    the generator is wrong or the fixture has been tampered with.
    Both are findings worth surfacing.
-2. **Upstream-source freshness.** When an upstream (RFC, NIST,
-   SEC 1) publishes a new version that affects vectors or rules, the
-   generator is where the change lands first; the fixtures are
-   downstream artifacts that re-derive automatically.
+2. **Upstream-source freshness.** When an upstream (RFC, NIST, or
+   *Standards for Efficient Cryptography 1 (SEC 1)*) publishes a new version
+   that affects vectors or rules, the generator is where the change lands
+   first; the fixtures are downstream artifacts that re-derive automatically.
 3. **Cross-implementation honesty.** Locally-generated fixtures
    (e.g. the ECDSA happy-path with hand-rolled signing) are flagged
    as locally-generated in the `README.md` and the generator carries

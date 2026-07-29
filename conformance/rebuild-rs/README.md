@@ -13,6 +13,11 @@ The full transitive graph is locked in `Cargo.lock`. The Docker image
 defined here packages everything needed to rebuild every fixture in
 `conformance/` bit-identically.
 
+The generator incorporates identified standards and test-vector material that
+is not relicensed under Apache-2.0. Its source attribution, copying conditions,
+warranty disclaimers, and patent/IP caveats are recorded in
+[`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md).
+
 See [`../README.md`](../README.md) for the Docker build and run
 instructions (this directory is the build context).
 

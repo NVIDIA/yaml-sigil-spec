@@ -4,7 +4,9 @@ This document is the normative profile for base64 encoding of the YAML-form
 `signature` field in `YamlSigilSignature.v1alpha1`. Alphabet, padding, and
 bit semantics are defined by [RFC 4648](https://www.rfc-editor.org/rfc/rfc4648)
 section 5; this document only selects the profile conforming implementations
-MUST use.
+MUST use. The applicable source attribution, copying conditions, and warranty
+disclaimer are recorded in
+[`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).
 
 The protobuf form carries raw signature octets on `YamlSigilSignature.signature`
 and is not base64-encoded on the wire.

@@ -30,6 +30,11 @@ The applicable redistribution notices are collected in
 [`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md) and must remain with
 distributed copies of the fixtures and generator.
 
+Exact-byte fixtures do not carry inline attribution when a comment would alter
+the value under test. In those cases, the per-directory `README.md`, any
+comment-capable expected-outcome sidecar, and the authoritative generator
+source carry the provenance together.
+
 ## General Notes
 
 - `.binpb` is used for protobuf-wire-format messages (raw serialized

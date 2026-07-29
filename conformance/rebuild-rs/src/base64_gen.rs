@@ -45,6 +45,12 @@
 //! binary but violates §3.5's canonical-encoding rule. These are the
 //! exact rules the [`crate::b64`] encoder satisfies on output and that
 //! the strict-decoder spec enforces on input.
+//!
+//! The cited rules and test values are third-party RFC material, not material
+//! relicensed under the Apache-2.0 declaration on this NVIDIA-authored
+//! generator. See the repository `THIRD_PARTY_NOTICES.md` for the applicable
+//! source attribution and terms. The raw parser-input fixtures cannot carry
+//! comments without changing the values under test.
 
 use std::path::Path;
 

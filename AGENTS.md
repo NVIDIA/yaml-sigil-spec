@@ -21,6 +21,48 @@ This repository is a **specification**: the normative deliverables are
 Markdown and protobuf schema, not application source code. The day-to-day
 work is reading, writing, and refining those specification documents.
 
+## Third-party material and attribution
+
+`THIRD_PARTY_NOTICES.md` is the canonical attribution and redistribution
+record for standards text, test vectors, parameters, tables, and other
+third-party material included in this repository. NVIDIA-authored material is
+licensed under Apache-2.0; do not describe identified third-party material as
+relicensed under Apache-2.0.
+
+When adding or changing third-party material:
+
+- Update `THIRD_PARTY_NOTICES.md` in the same change. Record the exact source,
+  version, section, copyright holder, applicable copying conditions, warranty
+  disclaimer, and patent or other intellectual-property caveat.
+- Read the source's own copyright notice and terms. For an RFC, check its
+  publication stream and the BCP 78 or IETF Trust terms in effect on its
+  publication date. Do not assume that RFC test data, tables, ABNF, or code
+  blocks are IETF Code Components or covered by a BSD license.
+- Copy only the material needed to specify, implement, or test conformance.
+  Prefer a precise citation and a short excerpt over reproducing a full table
+  or section.
+- Ensure every file or other independently distributed material that mentions
+  or references either SEC source identifies it by its full title:
+  *Standards for Efficient Cryptography 1 (SEC 1)* or
+  *Standards for Efficient Cryptography 2 (SEC 2)*.
+  Use the full title on the first source reference in each file; the `SEC 1`
+  and `SEC 2` short forms may follow within that file.
+- Add a short provenance comment next to copied or derived constants and in
+  generated text when the format permits comments. State when the identified
+  values are not covered by the file's Apache-2.0 declaration.
+- Do not alter semantic fixture bytes to add attribution. For binary files,
+  signed artifacts, parser inputs, or other exact-byte fixtures, put the
+  provenance in the nearest `README.md`, a safe sidecar, and the authoritative
+  generator source.
+- Preserve applicable non-endorsement language. Do not present YamlSigil as an
+  official publication of, or as affiliated with or endorsed by, a cited
+  author, publisher, or standards organization.
+
+Keep these instructions durable and repository-focused. Do not record private
+correspondence, reviewer identities, or approval history in repository
+documentation. After an approved specification change is merged, propagate
+the canonical notice through the documented downstream import workflows.
+
 ## Document hierarchy
 
 The repository contains **normative** documents at two levels of normativity.
@@ -251,9 +293,10 @@ subdirectory maintenance contract; in brief, the fixture subdirectories
 ship only data — a single Rust generator crate at
 [`conformance/rebuild-rs/`](./conformance/rebuild-rs/) reproduces every
 fixture bit-identically, with per-spec-surface modules under its `src/`
-tree. Upstream-source citations (RFC, FIPS, SEC 1, NIST CAVP / ACVP,
-"Taming the Many EdDSAs", etc.) live in the per-subdirectory `README.md`
-and in the rustdoc of the matching `src/` module.
+tree. Upstream-source citations (RFC, FIPS, *Standards for Efficient
+Cryptography 1 (SEC 1)*, NIST CAVP / ACVP, "Taming the Many EdDSAs", etc.)
+live in the per-subdirectory `README.md` and in the rustdoc of the matching
+`src/` module.
 
 **Rule for spec edits:** any change to a normative document that
 alters input bytes, expected outcomes, enum membership, or stage

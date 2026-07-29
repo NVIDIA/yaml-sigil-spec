@@ -1,4 +1,5 @@
 # RFC 8032 §7.1 Test 2 (one-byte message 0x72 = 'r')
+# Provenance: RFC 8032 §7.1 test-vector values; see ../../THIRD_PARTY_NOTICES.md.
 # seed: 4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb
 # public_key: 3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c
 # message (signed bytes): 72

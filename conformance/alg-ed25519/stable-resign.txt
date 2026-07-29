@@ -1,4 +1,5 @@
 # Stable re-signing.
+# Provenance: RFC 8032 §7.1 Test 1 values; see ../../THIRD_PARTY_NOTICES.md.
 # Sign (seed, message) twice; both invocations MUST produce byte-identical signatures.
 
 seed:               9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60

@@ -3,12 +3,18 @@
 
 //! Generator for `conformance/alg-ecdsa/` fixtures.
 //!
-//! This module composes [`crate::p256`] (which carries the SEC 2 v2.0
-//! domain parameters and the SEC 1 v2.0 / FIPS 186-5 point-and-ECDSA
-//! formulae) with SHA-256 from the `sha2` crate. The cryptographic
-//! contracts cited in `p256.rs`'s module docstring apply transitively
-//! and are not repeated here; what follows are the rules that are
-//! specific to this generator.
+//! This module composes [`crate::p256`] with SHA-256 from the `sha2` crate.
+//! The P-256 module carries Version 2.0 domain parameters from *Standards for
+//! Efficient Cryptography 2 (SEC 2)* and Version 2.0 point-and-ECDSA formulae
+//! from *Standards for Efficient Cryptography 1 (SEC 1)* and FIPS 186-5. The
+//! cryptographic contracts cited in `p256.rs`'s module docstring apply
+//! transitively and are not repeated here; what follows are the rules that
+//! are specific to this generator.
+//!
+//! The cited SEC material is third-party standards material, not material
+//! relicensed under the Apache-2.0 declaration on this NVIDIA-authored
+//! generator. See the repository `THIRD_PARTY_NOTICES.md` for source notices
+//! and patent/IP caveats.
 //!
 //! ## Hash function — FIPS 180-4 §6.2 / RFC 6234
 //!
@@ -311,7 +317,8 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
         &format!(
             concat!(
                 "# Point at infinity (identity O) — MUST be rejected as KeyResolutionFailure.\n\n",
-                "# SEC 1 §2.3.3 represents O as the single octet 0x00.\n",
+                "# Standards for Efficient Cryptography 1 (SEC 1) §2.3.3 represents O as the single octet 0x00.\n",
+                "# Provenance and patent/IP caveat: see ../../THIRD_PARTY_NOTICES.md.\n",
                 "Q-encoded-as-O-single-byte: 00\n\n",
                 "# Some implementations might be presented with an all-zero 65-octet\n",
                 "# string (04 || 0...0 || 0...0). This is also NOT a valid public key\n",

@@ -44,6 +44,12 @@
 //! given as `p - 3`; we store it as `(-3) mod p`, which equals that
 //! number.
 //!
+//! The cited SEC 1 operations and encodings and SEC 2 domain parameters are
+//! third-party standards material, not material relicensed under the
+//! Apache-2.0 declaration on this NVIDIA-authored implementation. See the
+//! repository `THIRD_PARTY_NOTICES.md` for source notices and patent/IP
+//! caveats.
+//!
 //! ## Point operations — Standards for Efficient Cryptography 1 (SEC 1)
 //!
 //! [Standards for Efficient Cryptography 1 (SEC 1), Version 2.0](https://www.secg.org/sec1-v2.pdf)

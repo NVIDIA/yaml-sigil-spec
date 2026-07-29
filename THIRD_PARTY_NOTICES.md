@@ -1,8 +1,14 @@
 # Third-Party Notices
 
-YamlSigil is licensed under the Apache License 2.0. The following notices
-apply only to the third-party material identified below and do not change the
-license for NVIDIA-authored material.
+NVIDIA-authored YamlSigil material is licensed under the Apache License 2.0.
+The following notices apply only to the identified third-party material.
+That material remains subject to its source terms and is not relicensed under
+Apache-2.0.
+
+Identification of a source does not imply affiliation with or endorsement by
+its authors, publishers, standards organizations, or copyright holders.
+YamlSigil is not an IETF RFC, an IRTF publication, or a Standards for
+Efficient Cryptography Group (SECG) publication.
 
 ## NIST ACVP-Server test data
 
@@ -66,49 +72,54 @@ Republished courtesy of the National Institute of Standards and Technology.
 NIST technical publications and data are provided as-is, without warranties,
 and NIST does not grant patent rights through publication.
 
-## RFC 8032 Code Components
+## RFC 8032 test-vector material
 
 The conformance generator, fixtures, and tests use Ed25519 test-vector values
-from RFC 8032 section 7.1. These values are treated as IETF Code Components
-under the Revised BSD License in the IETF Trust Legal Provisions.
+from RFC 8032 section 7.1. RFC 8032 is an IRTF Stream RFC. Section 8(g) of the
+IETF Trust Legal Provisions in effect when RFC 8032 was published states that
+the provisions for IETF Code Components do not apply to documents in the IRTF
+Document Stream. Accordingly, this project does not characterize the section
+7.1 values as IETF Code Components or apply the Revised BSD License to them.
+They are third-party RFC test-vector material used with attribution under the
+applicable BCP 78 and IETF Trust framework.
 
-Copyright (c) 2017 IETF Trust and the persons identified as authors of the
-code. All rights reserved.
+Copyright (c) 2017 IETF Trust and the persons identified as the document
+authors. All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+RFC 8032 states that the document is subject to BCP 78 and the IETF Trust's
+Legal Provisions Relating to IETF Documents in effect on its publication
+date. Section 7(a) of those provisions supplies this warranty disclaimer:
 
-- Redistributions of source code must retain the above copyright notice,
-  this list of conditions and the following disclaimer.
-- Redistributions in binary form must reproduce the above copyright notice,
-  this list of conditions and the following disclaimer in the documentation
-  and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the names of
-  specific contributors, may be used to endorse or promote products derived
-  from this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
+> ALL DOCUMENTS AND THE INFORMATION CONTAINED THEREIN ARE PROVIDED ON AN
+> "AS IS" BASIS AND THE CONTRIBUTOR, THE ORGANIZATION HE/SHE REPRESENTS OR
+> IS SPONSORED BY (IF ANY), THE INTERNET SOCIETY, THE IETF TRUST, THE
+> INTERNET ENGINEERING TASK FORCE AND ANY APPLICABLE MANAGERS OF ALTERNATE
+> STREAM DOCUMENTS, AS DEFINED IN SECTION 8 BELOW, DISCLAIM ALL WARRANTIES,
+> EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTY THAT THE USE
+> OF THE INFORMATION THEREIN WILL NOT INFRINGE ANY RIGHTS OR ANY IMPLIED
+> WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
 
 Source: Simon Josefsson and Ilari Liusvaara, RFC 8032, *Edwards-Curve Digital
-Signature Algorithm (EdDSA)*, January 2017,
-<https://www.rfc-editor.org/info/rfc8032/>. The RFC copyright notice and its
-reference to the applicable IETF Trust Legal Provisions appear on that page.
+Signature Algorithm (EdDSA)*, January 2017:
+
+- RFC information and copyright notice:
+  <https://www.rfc-editor.org/info/rfc8032/>.
+- Section 7.1 test vectors:
+  <https://www.rfc-editor.org/rfc/rfc8032#section-7.1>.
+- BCP 78: <https://www.rfc-editor.org/info/bcp78>.
+- IETF Trust Legal Provisions, version 5.0:
+  <https://trustee.ietf.org/documents/trust-legal-provisions/tlp-5/>.
+
+The names of the document authors, the Crypto Forum Research Group, the IRTF,
+the IETF, the IETF Trust, and the RFC Editor are not used to endorse or promote
+YamlSigil. No affiliation, sponsorship, or endorsement is claimed or implied.
 
 ## RFC 4648 material
 
-The conformance generator uses the base64url alphabet and test values from
-RFC 4648 sections 5 and 10. RFC 4648 section 15 provides these copying
-conditions for the abstract and sections 1, 3, 8, 10, 12, 13, and 14:
+The specification and conformance generator use the canonical-encoding rules,
+base64url alphabet, and test values from RFC 4648 sections 3, 5, and 10.
+RFC 4648 section 15 provides these copying conditions for the abstract and
+sections 1, 3, 8, 10, 12, 13, and 14:
 
 > Copyright (c) 2000-2006 Simon Josefsson
 >
@@ -123,10 +134,25 @@ conditions for the abstract and sections 1, 3, 8, 10, 12, 13, and 14:
 > IETF RFC documents. Derivative works need not be licensed under similar
 > terms.
 
-RFC 4648 is Copyright (C) The Internet Society (2006). The document and its
-information are provided on an as-is basis without warranties. This project
-identifies its derived implementation and tests as YamlSigil material and does
-not represent them as an IETF RFC.
+RFC 4648 also includes this full copyright and warranty statement:
+
+> Copyright (C) The Internet Society (2006).
+>
+> This document is subject to the rights, licenses and restrictions contained
+> in BCP 78, and except as set forth therein, the authors retain all their
+> rights.
+>
+> This document and the information contained herein are provided on an
+> "AS IS" basis and THE CONTRIBUTOR, THE ORGANIZATION HE/SHE REPRESENTS OR
+> IS SPONSORED BY (IF ANY), THE INTERNET SOCIETY AND THE INTERNET ENGINEERING
+> TASK FORCE DISCLAIM ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+> LIMITED TO ANY WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT
+> INFRINGE ANY RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS
+> FOR A PARTICULAR PURPOSE.
+
+This project identifies its derived specification, implementation, and tests
+as YamlSigil material and does not represent them as an IETF RFC. It reproduces
+only the RFC material needed to explain and test conformance.
 
 Source: Simon Josefsson, RFC 4648, *The Base16, Base32, and Base64 Data
 Encodings*, October 2006, <https://www.rfc-editor.org/rfc/rfc4648>.
@@ -138,20 +164,61 @@ The conformance generator uses elliptic-curve operations and encodings from
 secp256r1 domain parameters from *Standards for Efficient Cryptography 2
 (SEC 2)*, Version 2.0.
 
-Copyright (c) 2009 Certicom Corp. License to copy the SEC 1 document is
-granted provided it is identified as "Standards for Efficient Cryptography 1
-(SEC 1)" in all material mentioning or referencing it.
+The front page of *Standards for Efficient Cryptography 1 (SEC 1)* carries
+this notice:
 
-Copyright (c) 2010 Certicom Corp. License to copy the SEC 2 document is
-granted provided it is identified as "Standards for Efficient Cryptography 2
-(SEC 2)" in all material mentioning or referencing it.
+> Copyright © 2009 Certicom Corp.
+>
+> License to copy this document is granted provided it is identified as
+> "Standards for Efficient Cryptography 1 (SEC 1)", in all material mentioning
+> or referencing it.
+
+The front page of *Standards for Efficient Cryptography 2 (SEC 2)* carries
+this notice:
+
+> Copyright © 2010 Certicom Corp.
+>
+> License to copy this document is granted provided it is identified as
+> "Standards for Efficient Cryptography 2 (SEC 2)", in all material mentioning
+> or referencing it.
+
+Section 1.5, "Intellectual Property," of *Standards for Efficient Cryptography
+1 (SEC 1)* states:
+
+> The reader's attention is called to the possibility that compliance with
+> this document may require use of an invention covered by patent rights. By
+> publication of this document, no position is taken with respect to the
+> validity of this claim or of any patent rights in connection therewith. The
+> patent holder(s) may have filed with the SECG a statement of willingness to
+> grant a license under these rights on reasonable and nondiscriminatory terms
+> and conditions to applicants desiring to obtain such a license. Additional
+> details may be obtained from the patent holder and from the SECG website,
+> <http://www.secg.org>.
+
+Section 1.4, "Intellectual Property," of *Standards for Efficient Cryptography
+2 (SEC 2)* states:
+
+> The reader's attention is called to the possibility that compliance with
+> this document may require use of an invention covered by patent rights. By
+> publication of this document, no position is taken with respect to the
+> validity of this claim or of any patent rights in connection therewith. The
+> patent holder(s) may have filed with the SECG a statement of willingness to
+> grant a license under these rights on fair, reasonable and nondiscriminatory
+> terms and conditions to applicants desiring to obtain such a license.
+> Additional details may be obtained from the patent holder and from the SECG
+> website, <http://www.secg.org>.
 
 Sources:
 
 - *Standards for Efficient Cryptography 1 (SEC 1): Elliptic Curve
-  Cryptography*, Version 2.0, <https://www.secg.org/sec1-v2.pdf>.
+  Cryptography*, Version 2.0, May 21, 2009,
+  <https://www.secg.org/sec1-v2.pdf>.
 - *Standards for Efficient Cryptography 2 (SEC 2): Recommended Elliptic Curve
-  Domain Parameters*, Version 2.0, <https://www.secg.org/sec2-v2.pdf>.
+  Domain Parameters*, Version 2.0, January 27, 2010,
+  <https://www.secg.org/sec2-v2.pdf>.
+
+The SEC 1 and SEC 2 material is not relicensed under Apache-2.0. YamlSigil is
+not affiliated with, sponsored by, or endorsed by SECG or Certicom Corp.
 
 ## Ed25519 small-order point data
 

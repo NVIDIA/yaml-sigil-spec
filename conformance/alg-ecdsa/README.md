@@ -13,17 +13,26 @@ subsection for the locally-generated caveat.
 - [FIPS 186-5](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf) —
   ECDSA (§6); nonce generation (§6.3); signature generation and verification
   (§6.4); CSPRNG requirements (§A.2).
-- [SEC 1 v2.0](https://www.secg.org/sec1-v2.pdf) — point encoding (§2.3.3),
-  point decoding (§2.3.4), public-key admissibility (§3.2.2), ECDSA (§4.1),
-  fixed-width `R ‖ S` (§C.5).
-- [SEC 2 v2.0](https://www.secg.org/sec2-v2.pdf) — secp256r1 / NIST P-256
-  domain parameters (`P`, `A`, `B`, `N`, `Gx`, `Gy`); copied verbatim into
-  the generator.
+- [*Standards for Efficient Cryptography 1 (SEC 1): Elliptic Curve
+  Cryptography*, Version 2.0](https://www.secg.org/sec1-v2.pdf) — point
+  encoding (§2.3.3), point decoding (§2.3.4), public-key admissibility
+  (§3.2.2), ECDSA (§4.1), fixed-width `R ‖ S` (§C.5).
+- [*Standards for Efficient Cryptography 2 (SEC 2): Recommended Elliptic Curve
+  Domain Parameters*, Version 2.0](https://www.secg.org/sec2-v2.pdf) —
+  secp256r1 / NIST P-256 domain parameters (`P`, `A`, `B`, `N`, `Gx`, `Gy`);
+  copied verbatim into the generator.
 - [NIST CAVP — Digital Signatures](https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/digital-signatures)
   and [NIST ACVP](https://pages.nist.gov/ACVP/) — official P-256 test vectors.
   **NOT pinned in this directory.** Auditors targeting FIPS conformance MUST
   additionally run against the CAVP / ACVP vector files.
 - [`algorithms/02-ECDSA_SECP256R1_SHA256_RAW_RS64.md`](../../algorithms/02-ECDSA_SECP256R1_SHA256_RAW_RS64.md) — slot specification.
+
+The SEC-derived operations, encodings, and parameters are third-party
+standards material, not material relicensed under Apache-2.0. The applicable
+source notices and patent/IP caveats are recorded in
+[`THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md). Binary and signed
+YAML fixtures remain exact-byte inputs, so their provenance lives here, in
+safe text sidecars, and in the generator source.
 
 ## How to regenerate
 

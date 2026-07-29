@@ -136,3 +136,4 @@ SHOULD cover:
 - [FIPS 186-5](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf).
 - ["Taming the Many EdDSAs"](https://eprint.iacr.org/2020/1244).
 - [Base64 Requirements](../base64-requirements.md).
+- [Third-Party Notices](../THIRD_PARTY_NOTICES.md).

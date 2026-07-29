@@ -42,6 +42,10 @@
 //!
 //! These are the exact bytes loaded by [`SEED_1_HEX`], [`PUB_1_HEX`],
 //! [`SIG_1_HEX`], [`SEED_2_HEX`], [`PUB_2_HEX`], and [`SIG_2_HEX`].
+//! They are third-party RFC test-vector material, not material relicensed
+//! under the Apache-2.0 declaration on this NVIDIA-authored generator.
+//! See the repository `THIRD_PARTY_NOTICES.md` for the applicable source
+//! attribution and terms.
 //!
 //! ## Group order `L` — RFC 8032 §5.1
 //!
@@ -170,6 +174,7 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
         &format!(
             concat!(
                 "# RFC 8032 §7.1 Test 1 (empty message)\n",
+                "# Provenance: RFC 8032 §7.1 test-vector values; see ../../THIRD_PARTY_NOTICES.md.\n",
                 "# seed: {seed}\n",
                 "# public_key: {pub_}\n",
                 "# message (signed bytes): (empty)\n",
@@ -199,6 +204,7 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
         &format!(
             concat!(
                 "# RFC 8032 §7.1 Test 2 (one-byte message 0x72 = 'r')\n",
+                "# Provenance: RFC 8032 §7.1 test-vector values; see ../../THIRD_PARTY_NOTICES.md.\n",
                 "# seed: {seed}\n",
                 "# public_key: {pub_}\n",
                 "# message (signed bytes): {msg}\n",
@@ -256,6 +262,7 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
         &format!(
             concat!(
                 "# Three canonical-encoding rejection fixtures.\n",
+                "# Provenance: RFC 8032 §§5.1 and 7.1 values; see ../../THIRD_PARTY_NOTICES.md.\n",
                 "# All use payload = (empty), public_key = RFC 8032 §7.1 Test 1's public key.\n",
                 "# public_key: {pub_}\n\n",
                 "Verify(*, input=noncanonical-R.binpb, ...)               -> MalformedAttemptedSigned\n",
@@ -294,6 +301,7 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
         &format!(
             concat!(
                 "# Stable re-signing.\n",
+                "# Provenance: RFC 8032 §7.1 Test 1 values; see ../../THIRD_PARTY_NOTICES.md.\n",
                 "# Sign (seed, message) twice; both invocations MUST produce byte-identical signatures.\n\n",
                 "seed:               {seed}\n",
                 "public_key:         {pub_}\n",

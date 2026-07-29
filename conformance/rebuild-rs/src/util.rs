@@ -7,8 +7,9 @@
 //! `0-9a-f` (lower-case). This is the de-facto convention shared by
 //! every spec the rebuilder consumes — RFC 8032 §7.1 publishes its
 //! test vectors in lower-case hex, FIPS 186-5 CAVP / ACVP vector
-//! files use lower-case hex, and SEC 2 v2.0 prints curve parameters
-//! in lower-case hex. No fancier format is involved.
+//! files use lower-case hex, and *Standards for Efficient Cryptography 2
+//! (SEC 2)* Version 2.0 prints curve parameters in lower-case hex. No
+//! fancier format is involved.
 
 use std::fs::{self, OpenOptions};
 use std::io::{self, Write};

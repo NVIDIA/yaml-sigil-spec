@@ -21,7 +21,7 @@ and a fixed 64-octet raw `R || S` signature layout.
 | Signature layout | `R` (32 octets) followed by `S` (32 octets), fixed-width big-endian. |
 | Component range | `0 < R < n` and `0 < S < n`. |
 | S-component policy | High-S accepted. Low-S normalization is optional for signers. |
-| Public-key encoding | Uncompressed SEC 1 point only: 65 octets, `0x04 || X || Y`. |
+| Public-key encoding | Uncompressed *Standards for Efficient Cryptography 1 (SEC 1)* point only: 65 octets, `0x04 || X || Y`. |
 | `algorithm_parameters` | No parameters. Absent or zero-length only. |
 | Signature octet identity | Not stable. Repeated signing MAY produce different signature octets. |
 
@@ -131,7 +131,8 @@ cover:
 - [FIPS 186-5](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf).
 - [NIST CAVP Digital Signatures](https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/digital-signatures).
 - [NIST ACVP](https://pages.nist.gov/ACVP/).
-- [SEC 1 v2.0](https://www.secg.org/sec1-v2.pdf).
-- [SEC 2 v2.0](https://www.secg.org/sec2-v2.pdf).
+- [*Standards for Efficient Cryptography 1 (SEC 1): Elliptic Curve Cryptography*, Version 2.0](https://www.secg.org/sec1-v2.pdf).
+- [*Standards for Efficient Cryptography 2 (SEC 2): Recommended Elliptic Curve Domain Parameters*, Version 2.0](https://www.secg.org/sec2-v2.pdf).
 - [RFC 7518 section 3.4](https://www.rfc-editor.org/rfc/rfc7518#section-3.4).
 - [Base64 Requirements](../base64-requirements.md).
+- [Third-Party Notices](../THIRD_PARTY_NOTICES.md).
