@@ -177,7 +177,10 @@ writes regenerated fixtures into a mounted `conformance/` tree.
 **Build (run from the repository root):**
 
 ```sh
-docker build -t yamlsigil-conformance-rebuild-rs conformance/rebuild-rs
+docker build \
+    -f conformance/rebuild-rs/Dockerfile \
+    -t yamlsigil-conformance-rebuild-rs \
+    .
 ```
 
 **Rebuild every fixture in place (run from `conformance/`):**
@@ -188,6 +191,13 @@ docker run --rm \
     -v "$(pwd):/work" \
     yamlsigil-conformance-rebuild-rs
 ```
+
+The image carries the repository `LICENSE`, `THIRD_PARTY_NOTICES.md`, the
+license files automatically collected from the locked Cargo dependencies, and
+the pinned Rust standard-library notice under
+`/usr/share/doc/yamlsigil-conformance-rebuild/`. Debian packages already
+install their notices under `/usr/share/doc/<package>/copyright`; the
+Dockerfile preserves them without maintaining a separate Debian inventory.
 
 **Running without Docker (local `cargo`):**
 

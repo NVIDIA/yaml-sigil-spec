@@ -17,8 +17,9 @@ sources:
   equation.
 - Chalkias, Garillot, Nikolaenko,
   ["Taming the Many EdDSAs"](https://eprint.iacr.org/2020/1244) —
-  Algorithm 2 (strict variant), Table 5 (the eight small-order public-key
-  encodings recorded as numeric conformance data in the generator). See
+  Algorithm 2 (strict variant), Table 1 and Appendix B (the eight small-order
+  public-key encodings recorded as numeric conformance data in the
+  generator). See
   [`THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md).
 - [`algorithms/01-ED25519_PUREEDDSA_RAW_RS64_CANONICAL.md`](../../algorithms/01-ED25519_PUREEDDSA_RAW_RS64_CANONICAL.md)
   — slot specification.
@@ -30,6 +31,10 @@ terms are recorded in
 YAML fixtures remain exact-byte inputs, so their provenance lives here, in
 comment-capable sidecars, and in the generator source rather than in their
 file bodies.
+
+The notice also records how the paper's point ordering and presentation and
+Algorithm 2 terminology were adapted for these fixtures and the algorithm
+specification.
 
 ## How to regenerate
 

@@ -29,6 +29,11 @@
 //! > 0000 0800-0000 FFFF | 1110xxxx 10xxxxxx 10xxxxxx
 //! > 0001 0000-0010 FFFF | 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
 //!
+//! This excerpt and table are RFC material, not material relicensed under
+//! the Apache-2.0 declaration on this NVIDIA-authored generator. See the
+//! repository `THIRD_PARTY_NOTICES.md` for the source attribution, copying
+//! conditions, warranty disclaimer, and intellectual-property caveat.
+//!
 //! The multibyte fixtures below use `U+1F600` (😀, falling in the
 //! 4-octet range), giving exactly 4 UTF-8 octets per code point.
 //! This drives a wedge between octet-counting and code-point-counting

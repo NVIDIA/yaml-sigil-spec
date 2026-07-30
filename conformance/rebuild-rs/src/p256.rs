@@ -50,6 +50,9 @@
 //! repository `THIRD_PARTY_NOTICES.md` for source notices and patent/IP
 //! caveats.
 //!
+//! The cited FIPS 186-5 procedures are also third-party standards material
+//! covered by the repository notice.
+//!
 //! ## Point operations — Standards for Efficient Cryptography 1 (SEC 1)
 //!
 //! [Standards for Efficient Cryptography 1 (SEC 1), Version 2.0](https://www.secg.org/sec1-v2.pdf)

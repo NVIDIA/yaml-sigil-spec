@@ -59,6 +59,28 @@ The National Institute of Standards and Technology is explicitly acknowledged
 as the source of this ACVP test data. The local file name was changed; its
 contents were not modified.
 
+The local generator in `conformance/rebuild-rs/src/acvp.rs` and
+`conformance/rebuild-rs/src/alg_ecdsa.rs` selects and repackages one record
+into
+`conformance/alg-ecdsa/acvp-fips186-5-p256-sha256-tc131.binpb` and its
+expected-result sidecar. Those derived formats are not NIST publications, and
+NIST does not endorse them.
+
+## NIST FIPS 180-4
+
+The ECDSA algorithm specification requires SHA-256 as defined in section 6.2
+of:
+
+> National Institute of Standards and Technology (2015), *Secure Hash
+> Standard (SHS)*, Federal Information Processing Standards Publication
+> FIPS 180-4, <https://doi.org/10.6028/NIST.FIPS.180-4>.
+
+The local uses are in
+`algorithms/02-ECDSA_SECP256R1_SHA256_RAW_RS64.md` and
+`conformance/rebuild-rs/src/alg_ecdsa.rs`. The generator calls the locked
+`sha2` crate rather than copying FIPS 180-4's implementation tables. That
+crate's automatic notice collection is described below.
+
 ## NIST FIPS 186-5
 
 The conformance generator implements ECDSA operations and cites test
@@ -71,6 +93,13 @@ requirements from FIPS 186-5:
 Republished courtesy of the National Institute of Standards and Technology.
 NIST technical publications and data are provided as-is, without warranties,
 and NIST does not grant patent rights through publication.
+
+The FIPS 186-5 uses are in
+`algorithms/02-ECDSA_SECP256R1_SHA256_RAW_RS64.md`,
+`conformance/rebuild-rs/src/p256.rs`, and
+`conformance/rebuild-rs/src/alg_ecdsa.rs`. NIST's general copyright and
+disclaimer policy is <https://www.nist.gov/copyrights-disclaimers>. These
+YamlSigil adaptations are not NIST publications and are not endorsed by NIST.
 
 ## RFC 8032 test-vector material
 
@@ -114,6 +143,16 @@ The names of the document authors, the Crypto Forum Research Group, the IRTF,
 the IETF, the IETF Trust, and the RFC Editor are not used to endorse or promote
 YamlSigil. No affiliation, sponsorship, or endorsement is claimed or implied.
 
+The algorithm specification and generator also use RFC 8032 sections 5.1,
+5.1.2, 5.1.5, 5.1.6, and 5.1.7 for Ed25519 parameters, encodings, signing and
+verification procedures, the group order, and the cofactor. Section 3(c) of
+the IETF Trust Legal Provisions, version 5.0, addresses reproduction outside
+the IETF Standards Process. Section 5(a) states that no patent license is
+granted, and sections 7(b) through 7(d) provide the
+intellectual-property-rights caveat. RFC test-vector octets remain unchanged;
+Rust literals, YAML base64, protobuf framing, sidecars, and YamlSigil state
+terminology are identified adaptations.
+
 ## RFC 4648 material
 
 The specification and conformance generator use the canonical-encoding rules,
@@ -156,6 +195,119 @@ only the RFC material needed to explain and test conformance.
 
 Source: Simon Josefsson, RFC 4648, *The Base16, Base32, and Base64 Data
 Encodings*, October 2006, <https://www.rfc-editor.org/rfc/rfc4648>.
+
+The RFC's intellectual-property notice states that the IETF takes no position
+on the validity or scope of asserted rights or their availability for license,
+has made no independent effort to identify such rights, and invites rights
+holders to disclose them through the IETF process.
+
+## RFC 3629 UTF-8 material
+
+The `keyid` conformance generator reproduces the UTF-8 octet-count sentence
+and four-row encoding table from section 3 of:
+
+> François Yergeau, RFC 3629, *UTF-8, a transformation format of ISO 10646*,
+> November 2003, <https://www.rfc-editor.org/rfc/rfc3629.html>.
+
+The local excerpt is in `conformance/rebuild-rs/src/key_id.rs`. It supports
+the `U+1F600` 1024-octet and 1028-octet boundary fixtures under
+`conformance/key-id/`.
+
+RFC 3629 section 18 states:
+
+> Copyright (C) The Internet Society (2003). All Rights Reserved.
+>
+> This document and translations of it may be copied and furnished to
+> others, and derivative works that comment on or otherwise explain it or
+> assist in its implementation may be prepared, copied, published and
+> distributed, in whole or in part, without restriction of any kind,
+> provided that the above copyright notice and this paragraph are included
+> on all such copies and derivative works. However, this document itself may
+> not be modified in any way, such as by removing the copyright notice or
+> references to the Internet Society or other Internet organizations, except
+> as needed for the purpose of developing Internet standards in which case
+> the procedures for copyrights defined in the Internet Standards process
+> must be followed, or as required to translate it into languages other than
+> English.
+>
+> The limited permissions granted above are perpetual and will not be
+> revoked by the Internet Society or its successors or assigns.
+>
+> This document and the information contained herein is provided on an "AS
+> IS" basis and THE INTERNET SOCIETY AND THE INTERNET ENGINEERING TASK FORCE
+> DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+> ANY WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+> RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+> PARTICULAR PURPOSE.
+
+Section 16 states that the IETF takes no position on the validity or scope of
+asserted intellectual-property rights or their availability for license, has
+made no effort to identify such rights, and invites rights holders to disclose
+them through the IETF process. The local generator is an independently
+identified implementation aid and is not represented as an RFC.
+
+## Protocol Buffers documentation
+
+The conformance generator quotes and adapts behavior from the Protocol
+Buffers encoding and proto3 language documentation:
+
+- Upstream repository: <https://github.com/protocolbuffers/protocolbuffers.github.io>.
+- Pinned repository revision:
+  [`881cf1e4cfe0a6bd74ac7d63ceed7a92398e35b7`](https://github.com/protocolbuffers/protocolbuffers.github.io/tree/881cf1e4cfe0a6bd74ac7d63ceed7a92398e35b7).
+- Encoding source:
+  `content/programming-guides/encoding.md`, including varints, record tags,
+  length-delimited records, repeated singular fields, and worked examples.
+- Proto3 source:
+  `content/programming-guides/proto3.md`, including unknown-field
+  preservation and unknown enum values.
+- Local files: `conformance/rebuild-rs/src/wire.rs`,
+  `conformance/rebuild-rs/src/protobuf_conformance.rs`, and
+  `conformance/rebuild-rs/src/schema_alignment.rs`.
+- Derived data: `conformance/protobuf-conformance/`,
+  `conformance/schema-alignment/`, and every generated `.binpb` fixture that
+  uses the shared wire helpers.
+
+The documentation repository supplies the following three-clause BSD license:
+
+```text
+Copyright 2021 Google Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+   * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+   * Neither the name of Google Inc. nor the names of its
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+Code generated by the Protocol Buffer compiler is owned by the owner
+of the input file used when generating it. This code is not
+standalone and requires a support library to be linked with it. This
+support library is itself covered by the above license.
+```
+
+The local `.proto` files are NVIDIA-authored inputs and this repository does
+not check in code generated by the Protocol Buffer compiler. The final
+paragraph is preserved because it is part of the upstream license, not because
+generated Protocol Buffers code is redistributed here. Google, the Protocol
+Buffers project, and their contributors do not endorse YamlSigil.
 
 ## Standards for Efficient Cryptography
 
@@ -223,7 +375,7 @@ not affiliated with, sponsored by, or endorsed by SECG or Certicom Corp.
 ## Ed25519 small-order point data
 
 The conformance generator uses the eight numeric encodings of the
-edwards25519 small-order points reported in Table 5 of:
+edwards25519 small-order points reported in Table 1 and Appendix B of:
 
 > Konstantinos Chalkias, Francois Garillot, and Valeria Nikolaenko, *Taming
 > the Many EdDSAs*, IACR Cryptology ePrint Archive, Report 2020/1244,
@@ -232,10 +384,12 @@ edwards25519 small-order points reported in Table 5 of:
 The ePrint file is licensed under the Creative Commons Attribution 4.0
 International license (CC BY 4.0):
 <https://creativecommons.org/licenses/by/4.0/>. This project extracts the eight
-numeric encodings from Table 5, removes the table formatting, represents the
-unchanged values as hexadecimal Rust string literals, and emits them as a
-newline-delimited conformance fixture. No endorsement by the authors or IACR
-is implied.
+numeric encodings from Table 1 and Appendix B, removes whitespace and table
+formatting, lowercases and reorders the values, represents them as hexadecimal
+Rust string literals, and emits them as a newline-delimited conformance
+fixture. The numeric values are unchanged. The algorithm specification also
+adapts Algorithm 2 into YamlSigil terminology and failure mappings. No
+endorsement by the authors or IACR is implied.
 
 The complete CC BY 4.0 legal code follows.
 
@@ -637,3 +791,61 @@ public licenses.
 Creative Commons may be contacted at creativecommons.org.
 
 ```
+
+## Rust crates in the conformance rebuilder
+
+`conformance/rebuild-rs/Cargo.lock` pins the complete external Cargo dependency
+graph used to build the conformance rebuilder. The repository does not vendor
+those crate sources. During an image build, Cargo downloads the exact locked
+versions and the Dockerfile automatically collects every top-level
+`LICENSE*`, `COPYRIGHT*`, and `NOTICE*` file supplied by those crates. The
+collected files travel with the binary under:
+
+```text
+/usr/share/doc/yamlsigil-conformance-rebuild/cargo/<crate-version>/
+```
+
+This avoids maintaining a hand-copied dependency-license inventory in this
+file. A `Cargo.lock` change changes the collected set automatically and still
+requires review before an image is distributed.
+
+## Rust standard library in the container image
+
+The container builds with `rust:1.95.0-trixie`. The inspected toolchain
+reports Rust `1.95.0`, source commit
+`59807616e1fa2540724bfbac14d7976d7e4a3860`, dated April 14, 2026. Rust
+standard-library code is statically linked into `rebuild_all`.
+
+Rust is primarily distributed under the MIT and Apache-2.0 licenses, with
+additional third-party terms applying to identified library components. The
+Rust project maintains its license explanation at
+<https://www.rust-lang.org/policies/licenses> and its source at
+<https://github.com/rust-lang/rust>.
+
+The Docker build copies the pinned toolchain's complete
+`share/doc/rust/COPYRIGHT-library.html` into the final image at:
+
+```text
+/usr/share/doc/yamlsigil-conformance-rebuild/rust/COPYRIGHT-library.html
+```
+
+That upstream-generated file is the authoritative component-by-component
+copyright and license inventory for the exact Rust standard library linked for
+the image's target platform. It includes the full applicable license texts.
+The image also carries this file and the repository `LICENSE` in
+`/usr/share/doc/yamlsigil-conformance-rebuild/`.
+
+## Debian runtime packages in the container image
+
+The runtime stage uses `debian:trixie-slim` and installs
+`ca-certificates`. The final binary dynamically uses runtime libraries
+provided by the Debian image. Debian packages automatically install their
+copyright and license records in:
+
+```text
+/usr/share/doc/<package>/copyright
+```
+
+The Dockerfile preserves those package-supplied files. It does not generate,
+copy, enumerate, or require manual maintenance of Debian notices in this
+repository.

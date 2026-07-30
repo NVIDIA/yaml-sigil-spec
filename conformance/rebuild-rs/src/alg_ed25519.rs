@@ -64,13 +64,17 @@
 //! ## Small-order points — Chalkias / Garillot / Nikolaenko (2020)
 //!
 //! Chalkias, Garillot, and Nikolaenko, ["Taming the Many EdDSAs"](https://eprint.iacr.org/2020/1244)
-//! (IACR ePrint 2020/1244), Table 5 reports the eight small-order
-//! encodings on edwards25519. Those numeric 32-octet hex strings are
-//! recorded in [`SMALL_ORDER_POINTS`]; the `configured-key-small-order`
-//! fixture writes them out for verifier-side `KeyResolutionFailure`
-//! tests. The strict-variant verification rule (Algorithm 2 in the
-//! same paper) is the rule this crate's spec adopts. See the repository
-//! `THIRD_PARTY_NOTICES.md` for source attribution.
+//! (IACR ePrint 2020/1244), Table 1 and Appendix B report the eight
+//! small-order encodings on edwards25519. Those numeric 32-octet hex
+//! strings are recorded in [`SMALL_ORDER_POINTS`]; the
+//! `configured-key-small-order` fixture writes them out for verifier-side
+//! `KeyResolutionFailure` tests. The strict-variant verification rule
+//! (Algorithm 2 in the same paper) is the rule this crate's spec adapts.
+//! The values and algorithm description are CC BY 4.0 material, not
+//! material relicensed under the Apache-2.0 declaration on this
+//! NVIDIA-authored generator. See the repository
+//! `THIRD_PARTY_NOTICES.md` for the precise transformations, source
+//! attribution, license, and disclaimer.
 
 use crate::b64::urlsafe_unpadded;
 use crate::util::{from_hex, hex_lower, write_bytes, write_text};
@@ -104,7 +108,8 @@ pub const SIG_2_HEX: &str = concat!(
 pub const L_HEX: &str = "edd3f55c1a631258d69cf7a2def9de1400000000000000000000000000000010";
 
 /// The eight numeric 32-octet small-order edwards25519 point encodings
-/// reported in Table 5 of "Taming the Many EdDSAs" (IACR ePrint 2020/1244).
+/// reported in Table 1 and Appendix B of "Taming the Many EdDSAs"
+/// (IACR ePrint 2020/1244).
 pub const SMALL_ORDER_POINTS: &[&str] = &[
     "0100000000000000000000000000000000000000000000000000000000000000",
     "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
@@ -302,7 +307,8 @@ pub fn generate(dir: &PinnedDir) -> std::io::Result<()> {
                 "# Eight small-order public-key encodings on edwards25519.\n",
                 "# Each line is a 32-octet public key in hex (lower-case).\n",
                 "# Source: Chalkias, Garillot, Nikolaenko, \"Taming the Many EdDSAs\"\n",
-                "# (IACR ePrint 2020/1244) Table 5.\n\n",
+                "# (IACR ePrint 2020/1244) Table 1 and Appendix B.\n",
+                "# Reordered from the paper; see ../../THIRD_PARTY_NOTICES.md.\n\n",
                 "# Expected: a verifier configured with any of these as\n",
                 "# config.public_key_handle MUST return KeyResolutionFailure.\n\n",
                 "{small_order_lines}",
@@ -374,7 +380,7 @@ mod tests {
         assert_eq!(l, expected);
     }
 
-    /// Table 5 of "Taming the Many EdDSAs" lists exactly eight
+    /// Table 1 and Appendix B of "Taming the Many EdDSAs" list exactly eight
     /// small-order encodings, each 32 octets (64 hex characters).
     #[test]
     fn small_order_table_has_eight_32_octet_entries() {

@@ -5,6 +5,9 @@ This algorithm is Ed25519 PureEdDSA per
 over the payload byte string, with the RFC 8032 64-octet raw `R || S`
 signature layout and strict canonical-encoding verification from
 ["Taming the Many EdDSAs"](https://eprint.iacr.org/2020/1244) Algorithm 2.
+RFC 8032 and "Taming the Many EdDSAs" are third-party material, not material
+relicensed under Apache-2.0. [Third-Party Notices](../THIRD_PARTY_NOTICES.md)
+records their source terms and identifies the adaptations made here.
 
 | Identity | Value |
 | --- | --- |

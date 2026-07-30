@@ -9,14 +9,14 @@
 //!
 //! ## File shape (relevant subset)
 //!
-//! The ACVP `internalProjection.json` exposes test groups, each with
-//! a curve / hash combination and a list of test cases. Per the
-//! [ACVP ECDSA spec](https://pages.nist.gov/ACVP/draft-fussell-acvp-ecdsa.html):
-//!
-//! > Each test group has a curve and hashAlg, and a `tests` array
-//! > containing test cases. AFT (Algorithm Functional Test) cases
-//! > carry `(tcId, k, message, r, s)`. The group carries `(d, qx, qy)`
-//! > shared across its cases.
+//! The pinned ACVP-Server `internalProjection.json` exposes test groups,
+//! each with a curve/hash combination and a `tests` array. In the vendored
+//! file, the selected AFT groups carry `d`, `qx`, and `qy`, and each case
+//! carries `tcId`, `k`, `message`, `r`, and `s`. This is an NVIDIA-authored
+//! summary of the pinned JSON shape, not a quotation from the evolving
+//! [ACVP ECDSA draft](https://pages.nist.gov/ACVP/draft-fussell-acvp-ecdsa.html).
+//! The exact vendored source and NIST terms are recorded in the repository
+//! `THIRD_PARTY_NOTICES.md`.
 //!
 //! For the `verify-happy-path` conformance artifact we use the first
 //! AFT test case of the first `curve = "P-256" / hashAlg = "SHA2-256"`

@@ -8,6 +8,11 @@
 //! The [Protocol Buffers encoding spec](https://protobuf.dev/programming-guides/encoding/#optional)
 //! defines the runtime rule for repeated occurrences of singular
 //! fields:
+//! The quoted and adapted documentation is third-party material licensed
+//! under the three-clause BSD license, not material relicensed under the
+//! Apache-2.0 declaration on this NVIDIA-authored generator. See the
+//! repository `THIRD_PARTY_NOTICES.md` for the pinned source revision,
+//! copyright notice, license, and disclaimer.
 //!
 //! > Normally, an encoded message would never have more than one
 //! > instance of a non-repeated field. However, parsers are expected
@@ -21,14 +26,15 @@
 //!
 //! ## Unknown field handling
 //!
-//! From the same spec, on unknown fields:
+//! The Protocol Buffers proto3 language guide defines unknown fields:
 //!
-//! > A new parser version may add a new field to a message. When the
-//! > new parser parses a message produced by an older binary, those
-//! > old binaries' fields will be unknown to the new parser. Older
-//! > parsers will likewise see fields added by newer binaries as
-//! > unknown. In either case, parsers MUST preserve unknown fields
-//! > or surface them; behaviour is implementation-defined.
+//! > Unknown fields are well-formed protocol buffer serialized data
+//! > representing fields that the parser does not recognize. For example,
+//! > when an old binary parses data sent by a new binary with new fields,
+//! > those new fields become unknown fields in the old binary.
+//!
+//! > Proto3 messages preserve unknown fields and include them during
+//! > parsing and in the serialized output, which matches proto2 behavior.
 //!
 //! `transcription-api.md` (the repo-level spec) interprets that
 //! latitude with `OuterConformance` levels (`STRICT`, `PERMISSIVE`,

@@ -16,6 +16,9 @@
 //! generator. See the repository `THIRD_PARTY_NOTICES.md` for source notices
 //! and patent/IP caveats.
 //!
+//! The cited FIPS 180-4 and FIPS 186-5 material is also third-party standards
+//! material covered by the repository notice.
+//!
 //! ## Hash function — FIPS 180-4 §6.2 / RFC 6234
 //!
 //! ECDSA with `SECP256R1_SHA256_RAW_RS64` hashes the message with

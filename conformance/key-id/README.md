@@ -11,10 +11,13 @@ Exercises the `keyid` constraints pinned in
 - [`schema/YamlSigilSignature.v1alpha1.schema.json`](../../schema/YamlSigilSignature.v1alpha1.schema.json)
   — `maxLength: 1024` and the CR/LF exclusion
 - [`signing-api.md`](../../signing-api.md) — `InvalidKeyid` invocation-error category
-- The multibyte test uses U+1F600 (4 UTF-8 octets per code point); see
-  [Unicode](https://www.unicode.org/charts/) /
-  [RFC 3629](https://www.rfc-editor.org/rfc/rfc3629) for the UTF-8 encoding
-  rules.
+- The multibyte test uses U+1F600, which is four UTF-8 octets per code point
+  under [RFC 3629 section 3](https://www.rfc-editor.org/rfc/rfc3629#section-3).
+
+The RFC excerpt and encoding table in the generator are third-party standards
+material, not material relicensed under Apache-2.0. Their source, copying
+conditions, disclaimer, and intellectual-property caveat are recorded in
+[`THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md).
 
 ## How to regenerate
 

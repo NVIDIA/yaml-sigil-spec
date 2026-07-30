@@ -34,6 +34,9 @@ source notices and patent/IP caveats are recorded in
 YAML fixtures remain exact-byte inputs, so their provenance lives here, in
 safe text sidecars, and in the generator source.
 
+The same notice file records the NIST terms for the FIPS procedures and ACVP
+test data used by these fixtures.
+
 ## How to regenerate
 
 Fixtures are produced by [`conformance/rebuild-rs`](../rebuild-rs/).

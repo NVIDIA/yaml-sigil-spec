@@ -128,6 +128,13 @@ For any spec change that touches conformance behavior:
    `cargo clippy --workspace --all-targets`, and
    `cargo test --workspace`. All three MUST be clean before landing the
    change.
+8. If `Cargo.toml`, `Cargo.lock`, a container base image, or an installed
+   container package changes, audit the resulting build and runtime
+   dependency graph. The Docker build automatically collects registry-crate
+   license files and preserves Debian package notices. Verify that collection,
+   and update the repository-root `THIRD_PARTY_NOTICES.md` when the change
+   adds checked-in or derived third-party material or requires a
+   repository-level explanation.
 
 ## What requires a conformance update
 

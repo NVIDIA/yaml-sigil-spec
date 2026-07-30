@@ -21,7 +21,15 @@ warranty disclaimers, and patent/IP caveats are recorded in
 [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md).
 
 See [`../README.md`](../README.md) for the Docker build and run
-instructions (this directory is the build context).
+instructions. The repository root is the build context so the image can
+include `LICENSE` and `THIRD_PARTY_NOTICES.md`.
+
+The image carries those two files, license files collected automatically from
+the locked Cargo dependencies, and the exact pinned Rust standard-library
+notice bundle under `/usr/share/doc/yamlsigil-conformance-rebuild/`. Notices
+installed by Debian packages remain under
+`/usr/share/doc/<package>/copyright`; the Dockerfile does not copy or maintain
+them separately.
 
 See [`../AGENTS.md`](../AGENTS.md) for the maintenance contract,
 including the rustdoc-citation, testing, and `cargo fmt` / `clippy` /

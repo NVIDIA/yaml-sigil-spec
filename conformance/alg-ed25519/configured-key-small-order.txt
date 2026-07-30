@@ -1,7 +1,8 @@
 # Eight small-order public-key encodings on edwards25519.
 # Each line is a 32-octet public key in hex (lower-case).
 # Source: Chalkias, Garillot, Nikolaenko, "Taming the Many EdDSAs"
-# (IACR ePrint 2020/1244) Table 5.
+# (IACR ePrint 2020/1244) Table 1 and Appendix B.
+# Reordered from the paper; see ../../THIRD_PARTY_NOTICES.md.
 
 # Expected: a verifier configured with any of these as
 # config.public_key_handle MUST return KeyResolutionFailure.

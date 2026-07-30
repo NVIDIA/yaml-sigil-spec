@@ -26,10 +26,18 @@
 //! (protobuf) for the same logical algorithm slot. The protobuf enum
 //! field is a varint per the
 //! [Protocol Buffers spec](https://protobuf.dev/programming-guides/proto3/#enum):
+//! This quoted documentation is third-party material licensed under the
+//! three-clause BSD license, not material relicensed under the Apache-2.0
+//! declaration on this NVIDIA-authored generator. See the repository
+//! `THIRD_PARTY_NOTICES.md` for the pinned source revision, copyright
+//! notice, license, and disclaimer.
 //!
-//! > During deserialization, unrecognized enum values are preserved
-//! > in the message... If the message is serialized again, the
-//! > unrecognized value is still serialized with the message.
+//! > During deserialization, unrecognized enum values are preserved in the
+//! > message, though how this is represented when the message is
+//! > deserialized is language-dependent.
+//!
+//! > In all cases, if the message is serialized the unrecognized value is
+//! > still serialized with the message.
 //!
 //! For YAML, the JSON Schema's `enum` constraint rejects strings
 //! outside its set. The fixture matrix covers the recognised slots

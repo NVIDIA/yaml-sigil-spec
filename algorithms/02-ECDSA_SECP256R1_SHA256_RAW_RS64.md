@@ -4,6 +4,10 @@ This algorithm is ECDSA over secp256r1, also known as NIST P-256, with
 SHA-256 over the payload byte string, a non-deterministic ephemeral nonce per
 [FIPS 186-5 section 6.3](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf),
 and a fixed 64-octet raw `R || S` signature layout.
+The cited NIST and Standards for Efficient Cryptography material is
+third-party material, not material relicensed under Apache-2.0.
+[Third-Party Notices](../THIRD_PARTY_NOTICES.md) records the exact sources,
+terms, and intellectual-property caveats.
 
 | Identity | Value |
 | --- | --- |

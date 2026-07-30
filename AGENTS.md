@@ -29,11 +29,33 @@ third-party material included in this repository. NVIDIA-authored material is
 licensed under Apache-2.0; do not describe identified third-party material as
 relicensed under Apache-2.0.
 
+Classify a use before treating it as added or changed third-party material:
+
+- Copied or closely adapted expressive text, code, test vectors, tables,
+  non-trivial data, or constants require a source and terms review.
+- A citation, hyperlink, standard or dependency name, interface identifier,
+  interoperability requirement, or statement of a conventional technical fact
+  does not by itself require a `THIRD_PARTY_NOTICES.md` entry. Keep a precise
+  citation near the use when it helps implementers or auditors.
+- Do not duplicate a complete, self-contained notice merely to catalog it.
+  Material that already carries its source, copyright notice, and copying
+  condition in the same independently distributed file does not need a second
+  entry unless its terms require one. In particular, the complete unchanged
+  Developer Certificate of Origin in `CONTRIBUTING.md` does not need a
+  duplicate entry.
+- For dependencies and container base packages, prefer exact upstream notice
+  files collected or installed automatically from the locked build. Keep the
+  repository notice attached to a distributed binary, but do not maintain a
+  hand-copied crate or operating-system package inventory when those exact
+  notices travel with the artifact automatically.
+
 When adding or changing third-party material:
 
 - Update `THIRD_PARTY_NOTICES.md` in the same change. Record the exact source,
   version, section, copyright holder, applicable copying conditions, warranty
   disclaimer, and patent or other intellectual-property caveat.
+- Record only terms the source actually states. Do not add speculative
+  boilerplate about absent terms.
 - Read the source's own copyright notice and terms. For an RFC, check its
   publication stream and the BCP 78 or IETF Trust terms in effect on its
   publication date. Do not assume that RFC test data, tables, ABNF, or code

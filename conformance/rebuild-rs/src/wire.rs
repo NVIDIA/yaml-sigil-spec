@@ -7,13 +7,19 @@
 //! the published Protocol Buffers wire format without trusting a
 //! library. All encoding rules below come from the canonical
 //! [Protocol Buffers encoding spec](https://protobuf.dev/programming-guides/encoding/).
+//! The quoted and adapted documentation is third-party material licensed
+//! under the three-clause BSD license, not material relicensed under the
+//! Apache-2.0 declaration on this NVIDIA-authored generator. See the
+//! repository `THIRD_PARTY_NOTICES.md` for the pinned source revision,
+//! copyright notice, license, and disclaimer.
 //!
 //! ## Wire types and tag encoding (relevant excerpt)
 //!
-//! > Each field in a Protobuf message has a wire type. Each tag is
-//! > built from a field number and a wire type. The wire type is
-//! > stored in the bottom three bits of the tag. The remaining bits
-//! > encode the field number.
+//! > The "tag" of a record is encoded as a varint formed from the field
+//! > number and wire type via `(field_number << 3) | wire_type`. In other
+//! > words, after decoding the varint representing a field, the low 3 bits
+//! > tell us the wire type, and the rest of the integer tells us the field
+//! > number.
 //!
 //! Wire types used by this crate:
 //!
@@ -35,8 +41,9 @@
 //!
 //! ## Length-delimited fields (relevant excerpt)
 //!
-//! > LEN-encoded records start with a VARINT-encoded length, followed
-//! > by the specified amount of data.
+//! A `LEN` record carries a varint length followed by exactly that many
+//! payload bytes. This sentence summarizes the upstream rule rather than
+//! quoting it.
 //!
 //! The three helpers below ([`varint`], [`tag`], [`lendel`]) are direct
 //! implementations of those three rules; the message-shape helpers
@@ -148,8 +155,9 @@ pub fn yaml_artifact(
 mod tests {
     use super::*;
 
-    /// Known-answer varint vectors from the encoding spec's worked
-    /// examples (1 -> 0x01; 150 -> 0x96 0x01; 300 -> 0xAC 0x02).
+    /// Known-answer varint vectors. The encoding spec works through
+    /// `1 -> 0x01` and `150 -> 0x96 0x01`; `300 -> 0xAC 0x02` is an
+    /// additional locally calculated boundary check.
     #[test]
     fn varint_known_values() {
         assert_eq!(varint(0), vec![0x00]);
