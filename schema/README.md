@@ -30,6 +30,12 @@ JSON Schema's fit for a YAML-rooted format is imperfect:
 - It is JSON-rooted formalism. The YAML mapping it validates is
   what an implementation's YAML parser produced; JSON Schema does
   not see the original YAML bytes.
+- Verification applies the bounded
+  [YAML signature-carrier safety requirements](../verification-api.md#yaml-signature-carrier-safety)
+  before JSON Schema validation. They cover the 16,384-octet limit,
+  implementation-documented parser-resource bounds, duplicate known keys,
+  safe tag handling, and the single-document-through-EOF rule. JSON Schema
+  does not express these parser and source-byte requirements.
 - This file represents the `Strict` and `SignatureStrict` unknown-key
   posture. `Permissive` decoders apply its declared constraints to known
   fields but accept unknown mapping keys as specified by the

@@ -72,11 +72,10 @@
 //! same paper) is the rule this crate's spec adopts. See the repository
 //! `THIRD_PARTY_NOTICES.md` for source attribution.
 
-use std::path::Path;
-
 use crate::b64::urlsafe_unpadded;
 use crate::util::{from_hex, hex_lower, write_bytes, write_text};
 use crate::wire::{lendel, varint_field};
+use yamlsigil_pinned_dir::PinnedDir;
 
 const ED25519_ALG: u64 = 1;
 
@@ -145,7 +144,7 @@ fn signature_with_s(r: &[u8], s: &[u8]) -> Vec<u8> {
     signature
 }
 
-pub fn generate(dir: &Path) -> std::io::Result<()> {
+pub fn generate(dir: &PinnedDir) -> std::io::Result<()> {
     let seed_1 = from_hex(SEED_1_HEX);
     let pub_1 = from_hex(PUB_1_HEX);
     let sig_1 = from_hex(SIG_1_HEX);

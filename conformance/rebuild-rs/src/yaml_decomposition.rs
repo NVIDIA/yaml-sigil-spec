@@ -30,14 +30,16 @@
 //! encoding preconditions, the empty-payload edge (marker at offset 0),
 //! the no-marker edge (which decomposes to `Unsigned`), and the "extra
 //! marker inside the signature carrier" case (which validates the
-//! *last* marker is the decomposition point).
-
-use std::path::Path;
+//! *last* marker is the decomposition point). The marker-dense fixture
+//! exercises the same selection rule across many candidates. The
+//! implementation must retain only the latest candidate rather than a
+//! collection of marker offsets.
 
 use crate::b64::placeholder_sig;
 use crate::util::write_bytes;
+use yamlsigil_pinned_dir::PinnedDir;
 
-pub fn generate(dir: &Path) -> std::io::Result<()> {
+pub fn generate(dir: &PinnedDir) -> std::io::Result<()> {
     let sig = placeholder_sig();
     assert_eq!(sig.len(), 86);
 
@@ -63,7 +65,7 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
     );
     write_bytes(dir, "signed-single-crlf.yaml", f2.as_bytes())?;
 
-    // 3. signed-multi.yaml — two payload docs + final marker (M = max(S))
+    // 3. signed-multi.yaml — two payload docs + final marker
     let f3 = format!(
         "some: random\n\
          yaml: document\n\
@@ -93,7 +95,7 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
         b"some: random\nyaml: document\nmore: payload\n",
     )?;
 
-    // 6. extra-marker-inside-carrier.yaml — tests M = max(S) selection
+    // 6. extra-marker-inside-carrier.yaml — tests last-marker selection
     let f6 = format!(
         "some: random\n\
          yaml: document\n\
@@ -146,6 +148,21 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
         b"\xEF\xBB\xBFsome: random\nyaml: document\n",
     )?;
 
+    // 12. marker-dense.yaml — many earlier markers remain payload.
+    //     Functional fixtures cannot measure allocation directly, but
+    //     this input exercises last-marker selection without granting a
+    //     reason to retain the earlier 256 candidate offsets.
+    let mut f12 = String::new();
+    for i in 0..=256 {
+        f12.push_str(&format!("part: {i}\n---\n"));
+    }
+    f12.push_str(&format!(
+        "schema: YamlSigilSignature.v1alpha1\n\
+         alg: ED25519_PUREEDDSA_RAW_RS64_CANONICAL\n\
+         signature: {sig}\n"
+    ));
+    write_bytes(dir, "marker-dense.yaml", f12.as_bytes())?;
+
     Ok(())
 }
 
@@ -169,5 +186,15 @@ mod tests {
         invalid_utf8.push(b'\n');
         assert!(std::str::from_utf8(&invalid_utf8).is_err());
         assert_eq!(&b"\xEF\xBB\xBF"[..], &[0xEF, 0xBB, 0xBF]);
+    }
+
+    #[test]
+    fn marker_dense_shape_has_256_payload_candidates_and_one_final_marker() {
+        let mut artifact = String::new();
+        for i in 0..=256 {
+            artifact.push_str(&format!("part: {i}\n---\n"));
+        }
+        artifact.push_str("schema: YamlSigilSignature.v1alpha1\n");
+        assert_eq!(artifact.match_indices("\n---\n").count(), 257);
     }
 }

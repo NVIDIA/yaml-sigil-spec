@@ -16,7 +16,7 @@
 # bit-identical output to what's already shipped; any diff is a
 # generator / spec drift to investigate.
 
-FROM rust:1.95.0-trixie AS builder
+FROM docker.io/library/rust:1.95.0-trixie AS builder
 
 # Non-root build user; owns /src so cargo can write target/.
 RUN useradd --uid 1000 --create-home --shell /bin/bash builder \
@@ -24,6 +24,7 @@ RUN useradd --uid 1000 --create-home --shell /bin/bash builder \
 
 WORKDIR /src
 COPY --chown=builder:builder Cargo.toml Cargo.lock /src/
+COPY --chown=builder:builder pinned-dir /src/pinned-dir
 COPY --chown=builder:builder xtask /src/xtask
 COPY --chown=builder:builder vendor /src/vendor
 COPY --chown=builder:builder src /src/src
@@ -40,7 +41,7 @@ RUN cargo build --release --locked -p yamlsigil-conformance-rebuild
 # libc (Rust links libstd statically by default). Use a minimal
 # Trixie runtime image so the dynamic loader, libc, and libgcc match.
 
-FROM debian:trixie-slim
+FROM docker.io/library/debian:trixie-slim
 
 # CA certificates for any future net-fetching steps; ca-certificates is
 # tiny and keeps the image generally useful.

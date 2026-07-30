@@ -38,11 +38,10 @@
 //! (still passes the schema) but 1028 UTF-8 octets (over the limit).
 //! The fixtures' purpose is to surface that disagreement.
 
-use std::path::Path;
-
 use crate::b64::placeholder_sig;
 use crate::util::write_bytes;
 use crate::wire::{lendel, varint_field};
+use yamlsigil_pinned_dir::PinnedDir;
 
 const PAYLOAD: &[u8] = b"payload: example\n";
 
@@ -91,7 +90,7 @@ fn marker_injection_carrier(sig: &str) -> Vec<u8> {
     .into_bytes()
 }
 
-pub fn generate(dir: &Path) -> std::io::Result<()> {
+pub fn generate(dir: &PinnedDir) -> std::io::Result<()> {
     let sig = placeholder_sig();
 
     let key_1024: String = "a".repeat(1024);
@@ -106,7 +105,7 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
     assert_eq!(key_mb_under.chars().count(), 256);
     assert_eq!(key_mb_over.chars().count(), 257);
 
-    let write_pair = |dir: &Path,
+    let write_pair = |dir: &PinnedDir,
                       stem: &str,
                       yaml_keyid_line: Option<&str>,
                       proto_keyid: Option<&str>|

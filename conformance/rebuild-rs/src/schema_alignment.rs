@@ -38,15 +38,14 @@
 //! precedence between malformed signature content and runtime
 //! algorithm-support classification across both forms.
 
-use std::path::Path;
-
 use crate::b64::placeholder_sig;
 use crate::util::write_bytes;
 use crate::wire::{lendel, varint_field};
+use yamlsigil_pinned_dir::PinnedDir;
 
 const PAYLOAD: &[u8] = b"hello: world\n";
 
-pub fn generate(dir: &Path) -> std::io::Result<()> {
+pub fn generate(dir: &PinnedDir) -> std::io::Result<()> {
     let sig = placeholder_sig();
     let sig64 = [0u8; 64];
 

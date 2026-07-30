@@ -88,6 +88,17 @@ matches what their parser does by default), not `Unspecified`.
 | `inner-strict-duplicate-alg.binpb` | Inner `YamlSigilSignature` has two `alg` varint occurrences. | `MalformedAttemptedSigned` (inner `Strict` rejects) | `MalformedAttemptedSigned` (inner `SignatureStrict` rejects) | `Ok`, last-wins on inner scalar duplicates (inner `Permissive`) |
 | `present-empty-outer-signature.binpb` | Outer `signature` submessage is present but its length-delimited body is zero-length. | `Ok` at Decompose with empty `signature_carrier`; later `MalformedAttemptedSigned` at Verification's verification stage (non-empty `signature` rule) | same as `Strict` | same as `Strict` |
 | `binary-payload-no-yaml-fit.binpb` | Payload is a single octet `0x72` — a valid protobuf-form payload (the protobuf `bytes` carries arbitrary octets) that violates the YAML envelope's structural rules (non-empty, no trailing `0A` / `0D 0A`). Exercises the protobuf-vs-YAML payload-byte carve-out documented in `verification-api.md`'s metadata-extraction table and `transcoding.md`'s round-trip table. | `Ok` at Decompose; verifier MUST NOT raise YAML-envelope payload checks. Result is whatever the signed `(payload, signature, key)` triple verifies to — `MalformedAttemptedSigned` is the wrong category here. | same as `Strict` | same as `Strict` |
+| `invalid-field-zero.binpb` | A complete baseline is followed by a length-delimited field with field number zero. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
+| `out-of-range-field-number.binpb` | A complete baseline is followed by field number `2^29`, the first value outside protobuf's field-number range. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
+| `overflowing-tag-varint.binpb` | A complete baseline is followed by a ten-octet tag varint whose final payload overflows `uint64`. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
+| `oversized-length.binpb` | An unknown length-delimited field declares `2^32 + 5` octets but supplies one octet. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
+| `invalid-wire-type-6.binpb` | A complete baseline is followed by an unknown field whose tag declares wire type `6`. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
+| `invalid-wire-type-7.binpb` | A complete baseline is followed by an unknown field whose tag declares wire type `7`. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
+
+The six malformed-wire fixtures reject before outer conformance checks.
+Implementations MUST consume and validate the entire envelope through EOF;
+successfully extracting the known fields does not permit ignoring a malformed
+trailing record.
 
 `Permissive`-only behavior is on the wire by default in any
 protobuf parser. `Strict` and `SignatureStrict` are the pairings that

@@ -19,6 +19,12 @@ when cryptographic verification succeeds.
 | `config.trust_policy` | Opaque trust-policy reference or material. Interpretation is deployment-specific. |
 | `include_parser_observations` | Optional opt-in for implementation-specific decode observations. It MUST NOT affect the verifier state, verified payload bytes, or cryptographic verification. |
 
+The caller selects `form` from deployment policy before the verifier examines
+artifact bytes. A deployment that supports both forms MUST bind each artifact
+source, route, or storage class to one accepted form. It MUST NOT auto-detect
+the form from the bytes or retry the other form after a structural or
+verification failure.
+
 Raw YAML `alg` text and raw protobuf enum integers are boundary inputs only.
 YAML strings that do not map to the closed `Algorithm` enum and protobuf
 integers outside the enum fail before the API exposes a typed `alg`.
@@ -88,6 +94,49 @@ Protobuf-form Verification calls
 signature-carrier bytes are decoded as `YamlSigilSignature` under the
 verifier's advertised conformance profile.
 
+### YAML Signature-Carrier Safety
+
+Before constructing application objects or extracting fields, YAML-form
+Verification MUST validate the markerless `signature_carrier_bytes` against
+all of these rules:
+
+1. The carrier contains at most 16,384 octets.
+2. The carrier parses as exactly one YAML document through EOF, and its root is
+   a mapping.
+3. The declared `schema`, `alg`, `keyid`, and `signature` values are YAML
+   scalar strings. A verifier MAY reject non-canonical scalar spellings that
+   its YAML 1.2 parser does not materialize as strings.
+4. Duplicate occurrences of the known `schema`, `alg`, `keyid`, and
+   `signature` mapping keys are invalid under every conformance profile.
+5. The parser does not invoke application-defined constructors for explicit
+   tags.
+6. The implementation enforces finite hard limits on nesting depth,
+   constructed node count, and alias expansion. The numeric limits and the
+   parser concepts they count are implementation-defined and MUST appear in
+   human-readable implementation documentation.
+
+The resource limits MUST admit a canonical carrier whose fields satisfy this
+specification.
+
+Parser APIs differ. An implementation MAY enforce a resource dimension by
+rejecting the corresponding construct, such as anchors and aliases or nested
+collection values, before expansion or object construction. If a high-level
+object API collapses duplicate mapping keys, the implementation MUST use a
+duplicate-reject option or inspect parser tokens, events, or nodes before that
+collapse. The specification requires the outcome and the bounds, not a
+particular parser interface.
+
+The canonical carrier emitted by Transcoding contains no anchors, aliases,
+custom tags, or nested collections, and it uses unambiguous string spellings.
+The safety requirements do not require verifiers to accept every non-canonical
+YAML surface spelling on which common YAML libraries differ.
+
+A safety or duplicate-key failure occurs during metadata extraction.
+`PreVerify` returns
+`MetadataParseFailure`, and Verification returns
+`MalformedAttemptedSigned`. Transcription continues to treat the carrier as
+opaque bytes and does not apply these requirements.
+
 After Transcription succeeds, metadata extraction MUST enforce:
 
 | Check | Applies to | Failure mapping |
@@ -155,19 +204,14 @@ signature-document decode. The same profile applies to all supported forms.
 | Profile | Inner signature-document rule | Expected protobuf outer conformance |
 | --- | --- | --- |
 | `Strict` | Reject unknown fields and duplicate known singular fields. | `OUTER_CONFORMANCE_STRICT`. |
-| `Permissive` | Apply the form's documented decode semantics, including permitted YAML duplicate rejection. | Caller-determined. |
+| `Permissive` | Accept unknown fields. Reject duplicate known YAML mapping keys; apply protobuf's documented singular-field decode semantics. | Caller-determined. |
 | `SignatureStrict` | Reject unknown fields and duplicate known singular fields. | `OUTER_CONFORMANCE_SIGNATURE_STRICT`. |
 
-Under `Permissive`, a YAML decoder MAY reject duplicate known mapping keys or
-accept them according to its decode semantics. An implementation advertising
-`Permissive` MUST state in human-readable implementation documentation whether
-it rejects those duplicates and, if it accepts them, the exact rule used to
-select each effective field value. Naming the parser library or relying on
-source code alone does not satisfy this requirement.
-
-A YAML artifact containing duplicate known mapping keys has no portable
-`Permissive` interpretation. `Strict` and `SignatureStrict` MUST reject it as
-`MalformedAttemptedSigned`.
+The YAML signature-carrier safety requirements are invariant across the three
+conformance profiles. `Permissive` changes only unknown-field handling for
+YAML; it does not permit duplicate known YAML mapping keys or relax parser
+resource bounds. For protobuf, `Permissive` retains the documented decoder
+semantics for duplicate known singular fields and unknown fields.
 
 Only these profiles are conforming. A verifier supporting both wire forms MUST
 advertise one profile for both. Advertising different profiles per form is

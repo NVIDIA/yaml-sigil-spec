@@ -41,18 +41,19 @@ has propagated through the generator.
 | --- | --- | --- | --- |
 | `signed-single-lf.yaml` | `Ok` | proceeds to verification | One-document payload + LF marker (`---\n`) + carrier. The signature octets are a placeholder (all-zero); these fixtures exercise byte-level decomposition only and do NOT exercise cryptographic verification. |
 | `signed-single-crlf.yaml` | `Ok` | proceeds to verification | Same artifact shape as `signed-single-lf` but every line terminator is CRLF (`\r\n`) and the marker is `---\r\n`. |
-| `signed-multi.yaml` | `Ok` | proceeds to verification | Multi-document payload (two YAML docs) + LF marker + carrier. Exercises `M = max(S)` — an earlier `---` inside the payload range is NOT the signing marker. |
+| `signed-multi.yaml` | `Ok` | proceeds to verification | Multi-document payload (two YAML docs) + LF marker + carrier. Exercises last-marker selection; an earlier `---` inside the payload range is not the signing marker. |
 | `empty-payload.yaml` | `Ok` (payload empty) | proceeds to verification | Artifact starts immediately with `---\n` at offset 0 → `payload_range = [0, 0)`. |
-| `no-marker.yaml` | `Unsigned` | `Unsigned` | YAML stream with no constrained `---` marker anywhere. `|S| = 0`. |
-| `extra-marker-inside-carrier.yaml` | `Ok` at Decompose; `MalformedAttemptedSigned` at Verification | `MalformedAttemptedSigned` | Tests `M = max(S)` selection. Two constrained markers are present; an implementation that incorrectly selected the FIRST marker would return a carrier that parses as a valid `YamlSigilSignature.v1alpha1`. The correct algorithm selects the LAST marker, yielding a carrier (`extra: trailer\n`) that fails Verification's metadata-extraction stage because it lacks the required `schema` / `alg` / `signature` fields. |
+| `no-marker.yaml` | `Unsigned` | `Unsigned` | YAML stream with no constrained `---` marker anywhere. |
+| `extra-marker-inside-carrier.yaml` | `Ok` at Decompose; `MalformedAttemptedSigned` at Verification | `MalformedAttemptedSigned` | Tests last-marker selection. Two constrained markers are present; an implementation that incorrectly selects the first marker returns a carrier that parses as a valid `YamlSigilSignature.v1alpha1`. The correct algorithm selects the last marker, yielding a carrier (`extra: trailer\n`) that fails Verification's metadata-extraction stage because it lacks the required `schema`, `alg`, and `signature` fields. |
 | `marker-at-eof-empty-body.yaml` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | Marker present, but `signature_carrier_range` is empty (no body after the marker through EOF). Step 6 of the algorithm: `T = |A|` → `MalformedAttemptedSigned`. |
 | `invalid-utf8-no-marker.yaml` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | Invalid UTF-8 fails the encoding precondition before marker scanning. It MUST NOT be reported as `Unsigned`. |
 | `invalid-utf8-before-marker.yaml` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | Invalid UTF-8 before an otherwise valid marker fails before marker selection. |
 | `bom-signed.yaml` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | UTF-8 BOM octets `EF BB BF` at offset 0 fail before signed artifact processing. |
 | `bom-no-marker.yaml` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | UTF-8 BOM octets `EF BB BF` at offset 0 fail before no-marker handling. It MUST NOT be reported as `Unsigned`. |
+| `marker-dense.yaml` | `Ok` | proceeds to verification | Contains 256 earlier constrained markers in the payload and one final signing marker. Decompose selects the final marker. Implementations must not accumulate the earlier offsets. |
 
 Artifact Decomposition defines no artifact condition for an additional
-constrained marker inside `signature_carrier_range`. Correct `M = max(S)`
+constrained marker inside `signature_carrier_range`. Correct last-marker
 selection makes that condition unreachable. An implementation can retain an
 internal assertion for scan consistency, but an assertion failure indicates an
 implementation defect rather than a fixture outcome.

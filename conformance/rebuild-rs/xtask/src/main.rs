@@ -16,10 +16,10 @@
 //! available on the dev environments this targets.
 
 use std::env;
-use std::fs::{self, OpenOptions};
-use std::io::{self, Write};
-use std::path::{Path, PathBuf};
+use std::io;
+use std::path::PathBuf;
 use std::process::{Command, ExitCode};
+use yamlsigil_pinned_dir::PinnedDir;
 
 /// Pinned upstream commit of `usnistgov/ACVP-Server`. Bump this
 /// constant (or pass `--commit <hash>`) when refreshing the vendored
@@ -90,17 +90,14 @@ fn parse_update_args<I: Iterator<Item = String>>(mut args: I) -> Result<String, 
 }
 
 fn update_acvp(commit: &str) -> io::Result<()> {
-    let root = workspace_root();
-    let vendor_root = root.join("vendor");
-    ensure_directory(&vendor_root)?;
-    let vendor_dir = vendor_root.join("acvp");
-    ensure_directory(&vendor_dir)?;
+    let root = workspace_root().canonicalize()?;
+    let root_dir = PinnedDir::open(&root)?;
+    let vendor_root = root_dir.ensure_child("vendor")?;
+    let vendor_dir = vendor_root.ensure_child("acvp")?;
 
     let url = format!("https://raw.githubusercontent.com/{UPSTREAM_REPO}/{commit}/{UPSTREAM_PATH}");
-    let dest = vendor_dir.join(VENDORED_FILE_NAME);
-    let readme_path = vendor_dir.join("README.md");
-    validate_replace_target(&dest)?;
-    validate_replace_target(&readme_path)?;
+    let dest = root.join("vendor/acvp").join(VENDORED_FILE_NAME);
+    let readme_path = root.join("vendor/acvp/README.md");
 
     println!("fetching: {url}");
     println!("dest:     {}", dest.display());
@@ -123,61 +120,14 @@ fn update_acvp(commit: &str) -> io::Result<()> {
 
     let size = u64::try_from(output.stdout.len())
         .map_err(|_| io::Error::other("download size does not fit u64"))?;
-    replace_regular_file(&dest, &output.stdout)?;
+    vendor_dir.replace_regular_file(VENDORED_FILE_NAME, &output.stdout)?;
 
     let readme = render_readme(commit, size);
-    replace_regular_file(&readme_path, readme.as_bytes())?;
+    vendor_dir.replace_regular_file("README.md", readme.as_bytes())?;
 
     println!("wrote: {} ({size} bytes)", dest.display());
     println!("wrote: {}", readme_path.display());
     Ok(())
-}
-
-fn ensure_directory(path: &Path) -> io::Result<()> {
-    match fs::symlink_metadata(path) {
-        Ok(metadata) if metadata.file_type().is_dir() => Ok(()),
-        Ok(_) => Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!("refusing non-directory or symlink path: {}", path.display()),
-        )),
-        Err(error) if error.kind() == io::ErrorKind::NotFound => fs::create_dir(path),
-        Err(error) => Err(error),
-    }
-}
-
-fn validate_replace_target(path: &Path) -> io::Result<()> {
-    match fs::symlink_metadata(path) {
-        Ok(metadata) if metadata.file_type().is_file() => Ok(()),
-        Ok(_) => Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!(
-                "refusing to replace non-regular vendor path: {}",
-                path.display()
-            ),
-        )),
-        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(error),
-    }
-}
-
-fn replace_regular_file(path: &Path, content: &[u8]) -> io::Result<()> {
-    match fs::symlink_metadata(path) {
-        Ok(metadata) if metadata.file_type().is_file() => fs::remove_file(path)?,
-        Ok(_) => {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!(
-                    "refusing to replace non-regular vendor path: {}",
-                    path.display()
-                ),
-            ));
-        }
-        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
-        Err(error) => return Err(error),
-    }
-
-    let mut file = OpenOptions::new().write(true).create_new(true).open(path)?;
-    file.write_all(content)
 }
 
 /// Compute the workspace root by walking up from the xtask crate's
@@ -271,6 +221,7 @@ fn render_readme(commit: &str, size: u64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
     use std::sync::atomic::{AtomicU64, Ordering};
 
     static NEXT_TEST_DIR: AtomicU64 = AtomicU64::new(0);
@@ -331,12 +282,15 @@ mod tests {
         fs::write(&target, b"keep").expect("write target");
         let destination = dir.join("destination.txt");
         symlink(&target, &destination).expect("create destination symlink");
+        let pinned = PinnedDir::open(&dir).expect("pin vendor directory");
 
-        let error = replace_regular_file(&destination, b"replace")
+        let error = pinned
+            .replace_regular_file("destination.txt", b"replace")
             .expect_err("destination symlink must fail");
 
         assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
         assert_eq!(fs::read(&target).expect("read target"), b"keep");
+        drop(pinned);
         fs::remove_file(destination).expect("remove destination symlink");
         fs::remove_file(target).expect("remove target");
         fs::remove_dir(dir).expect("remove test directory");
@@ -352,10 +306,14 @@ mod tests {
         fs::create_dir(&target).expect("create target directory");
         let linked = root.join("linked");
         symlink(&target, &linked).expect("create directory symlink");
+        let pinned = PinnedDir::open(&root).expect("pin workspace root");
 
-        let error = ensure_directory(&linked).expect_err("directory symlink must fail");
+        let error = pinned
+            .ensure_child("linked")
+            .expect_err("directory symlink must fail");
 
         assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
+        drop(pinned);
         fs::remove_file(linked).expect("remove directory symlink");
         fs::remove_dir(target).expect("remove target directory");
         fs::remove_dir(root).expect("remove test root");

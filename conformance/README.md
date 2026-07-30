@@ -57,7 +57,7 @@ source carry the provenance together.
 
 - **YAML decomposition** — markerless carrier, LF and CRLF markers,
   UTF-8 and BOM preconditions, empty payload, extra marker inside
-  carrier, no-marker artifact, marker at EOF.
+  carrier, marker-dense payload, no-marker artifact, marker at EOF.
 
 See [yaml-decomposition/README.md](./yaml-decomposition/README.md).
 
@@ -65,16 +65,18 @@ See [yaml-decomposition/README.md](./yaml-decomposition/README.md).
 
 - **Protobuf conformance** — duplicate outer `payload`, duplicate
   outer `signature`, unknown outer fields, inner strict / permissive
-  duplicate handling, present-empty outer `signature` submessage.
+  duplicate handling, present-empty outer `signature` submessage, malformed
+  field numbers, wire types, and tag varints, and oversized length-delimited
+  fields.
 
 See [protobuf-conformance/README.md](./protobuf-conformance/README.md).
 
 ### YAML signature-document conformance (`yaml-signature-conformance/`)
 
 - **YAML signature-document conformance** — required `schema` identity,
-  duplicate `schema`, `alg`, `keyid`, and `signature` mapping keys, and an
-  unknown mapping key. The YAML-form profile cases are the symmetric set to the
-  inner-`YamlSigilSignature` cases in `protobuf-conformance/`.
+  duplicate known mapping keys, profile-specific unknown fields, and the
+  universal carrier byte limit. Parser-resource counters remain
+  implementation-defined and are tested by each implementation.
 
 See [yaml-signature-conformance/README.md](./yaml-signature-conformance/README.md).
 
@@ -188,6 +190,9 @@ docker run --rm \
 ```
 
 **Running without Docker (local `cargo`):**
+
+The native flow requires Linux with `/proc` mounted. Use the Docker flow on
+other host operating systems.
 
 ```sh
 cd conformance/rebuild-rs

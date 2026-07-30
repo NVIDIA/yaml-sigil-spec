@@ -1,13 +1,15 @@
 # conformance/rebuild-rs
 
-Generator source for `conformance/` fixtures. Cargo crate; dependencies
-are minimal and exact-pinned in `Cargo.toml`, grouped by role:
+Generator source for `conformance/` fixtures. External Cargo dependencies are
+minimal and exact-pinned in `Cargo.toml`, grouped by role:
 
 - Crypto primitives (used by the hand-rolled implementations against
   cited upstream specs): `sha2`, `num-bigint`, `num-integer`,
   `num-traits`.
 - Vendored ACVP test-vector ingestion (JSON parsing of the pinned NIST
   ACVP-Server snapshot under `vendor/`): `serde`, `serde_json`.
+- Output isolation: the repository-local `yamlsigil-pinned-dir` crate pins
+  output directories before replacing fixture or vendor files.
 
 The full transitive graph is locked in `Cargo.lock`. The Docker image
 defined here packages everything needed to rebuild every fixture in
@@ -49,6 +51,7 @@ rebuild-rs/
 │   ├── base64_gen.rs
 │   ├── alg_ed25519.rs        (RFC 8032 §7.1 vectors verbatim)
 │   └── alg_ecdsa.rs          (uses sha2 for SHA-256, p256.rs for the curve)
+├── pinned-dir/         (repository-local pinned-directory write helper)
 ├── xtask/              (developer-only tasks; see below)
 └── vendor/
     └── acvp/           (vendored NIST ACVP-Server vectors)
@@ -75,6 +78,9 @@ the pin is always self-describing.
 
 ## Running locally without Docker
 
+The native flow requires Linux and a mounted `/proc`. Use the Docker workflow
+from [`../README.md`](../README.md) on other host operating systems.
+
 ```sh
 cd conformance/rebuild-rs
 CONFORMANCE_ROOT="$(realpath ..)" cargo run --release --locked
@@ -86,9 +92,9 @@ it explicitly when running outside the container.
 ## Local toolchain checks
 
 ```sh
-cargo fmt --check
-cargo clippy --all-targets
-cargo test
+cargo fmt --all --check
+cargo clippy --workspace --all-targets
+cargo test --workspace
 ```
 
 All three MUST be clean before a change can land.

@@ -116,6 +116,19 @@ locates the `payload` bytes and the length-delimited body of the outer
 `signature` submessage, and returns both verbatim. It MUST NOT decode the
 inner `YamlSigilSignature` at this layer.
 
+Before applying an outer conformance mode, Protobuf Decompose MUST reject any
+input that is not a well-formed protobuf wire encoding. Invalid cases include
+field number zero, a field number greater than `2^29 - 1`, wire type `6` or
+`7`, a truncated or overflowing tag or length varint, and a length-delimited
+field whose declared length exceeds the remaining input. These failures map
+to `MalformedAttemptedSigned` under every outer conformance mode.
+
+Protobuf runtimes differ in which layer validates each malformed case.
+Decompose MAY rely on its decoder for cases the decoder rejects. If a decoder
+accepts a prohibited encoding or aliases it to a valid field number, Decompose
+MUST add a raw-wire preflight for that case. This requirement does not change
+protobuf's permitted unknown-field or duplicate-singular-field behavior.
+
 Outer-envelope conformance applies only to protobuf Decompose:
 
 | Mode | Outer `SignedYamlArtifact` behavior |

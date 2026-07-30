@@ -11,74 +11,19 @@
 //! (SEC 2)* Version 2.0 prints curve parameters in lower-case hex. No
 //! fancier format is involved.
 
-use std::fs::{self, OpenOptions};
-use std::io::{self, Write};
-use std::path::{Component, Path};
+use std::io;
+use yamlsigil_pinned_dir::PinnedDir;
 
-/// Replace the regular file at `<dir>/<name>` without following symlinks and
+/// Replace a regular fixture through an already-pinned directory handle and
 /// emit a one-line progress log to stdout.
-///
-/// Rust documents [`OpenOptions::create_new`] as an atomic existence check:
-///
-/// > No file is allowed to exist at the target location, also no (dangling)
-/// > symlink.
-///
-/// The helper removes an existing regular fixture first. If any entry appears
-/// before creation, `create_new` fails instead of opening that entry for output.
-///
-/// [`OpenOptions::create_new`]: https://doc.rust-lang.org/std/fs/struct.OpenOptions.html#method.create_new
-pub fn write_bytes(dir: &Path, name: &str, content: &[u8]) -> io::Result<()> {
-    let mut components = Path::new(name).components();
-    if !matches!(
-        (components.next(), components.next()),
-        (Some(Component::Normal(_)), None)
-    ) {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!("fixture name is not a single path component: {name}"),
-        ));
-    }
-
-    let dir_metadata = fs::symlink_metadata(dir)?;
-    if !dir_metadata.file_type().is_dir() {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!(
-                "fixture directory is not a non-symlink directory: {}",
-                dir.display()
-            ),
-        ));
-    }
-
-    let path = dir.join(name);
-    match fs::symlink_metadata(&path) {
-        Ok(metadata) if metadata.file_type().is_file() => {
-            fs::remove_file(&path)?;
-        }
-        Ok(_) => {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!(
-                    "refusing to replace non-regular fixture path: {}",
-                    path.display()
-                ),
-            ));
-        }
-        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
-        Err(error) => return Err(error),
-    }
-
-    let mut file = OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(&path)?;
-    file.write_all(content)?;
+pub fn write_bytes(dir: &PinnedDir, name: &str, content: &[u8]) -> io::Result<()> {
+    dir.replace_regular_file(name, content)?;
     println!("  {}: {} bytes", name, content.len());
     Ok(())
 }
 
 /// Same as [`write_bytes`] but accepts a UTF-8 `&str`.
-pub fn write_text(dir: &Path, name: &str, content: &str) -> io::Result<()> {
+pub fn write_text(dir: &PinnedDir, name: &str, content: &str) -> io::Result<()> {
     write_bytes(dir, name, content.as_bytes())
 }
 
@@ -113,6 +58,7 @@ pub fn from_hex(s: &str) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
     use std::path::PathBuf;
     use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -133,10 +79,12 @@ mod tests {
         let dir = test_dir("replace-regular");
         let path = dir.join("fixture.txt");
         fs::write(&path, b"old").expect("write original fixture");
+        let pinned = PinnedDir::open(&dir).expect("pin fixture directory");
 
-        write_bytes(&dir, "fixture.txt", b"new").expect("replace fixture");
+        write_bytes(&pinned, "fixture.txt", b"new").expect("replace fixture");
 
         assert_eq!(fs::read(&path).expect("read fixture"), b"new");
+        drop(pinned);
         fs::remove_file(path).expect("remove fixture");
         fs::remove_dir(dir).expect("remove test directory");
     }
@@ -144,11 +92,13 @@ mod tests {
     #[test]
     fn write_bytes_rejects_nested_fixture_name() {
         let dir = test_dir("reject-nested-name");
+        let pinned = PinnedDir::open(&dir).expect("pin fixture directory");
 
-        let error = write_bytes(&dir, "../outside.txt", b"content")
+        let error = write_bytes(&pinned, "../outside.txt", b"content")
             .expect_err("nested fixture name must fail");
 
         assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
+        drop(pinned);
         fs::remove_dir(dir).expect("remove test directory");
     }
 
@@ -164,8 +114,9 @@ mod tests {
         fs::write(&target, b"keep").expect("write symlink target");
         let destination = output_dir.join("fixture.txt");
         symlink(&target, &destination).expect("create destination symlink");
+        let pinned = PinnedDir::open(&output_dir).expect("pin output directory");
 
-        let error = write_bytes(&output_dir, "fixture.txt", b"replace")
+        let error = write_bytes(&pinned, "fixture.txt", b"replace")
             .expect_err("destination symlink must fail");
 
         assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
@@ -174,6 +125,7 @@ mod tests {
             .expect("inspect destination")
             .file_type()
             .is_symlink());
+        drop(pinned);
         fs::remove_file(destination).expect("remove destination symlink");
         fs::remove_file(target).expect("remove target");
         fs::remove_dir(output_dir).expect("remove output directory");
@@ -191,10 +143,9 @@ mod tests {
         let linked_dir = root.join("linked");
         symlink(&real_dir, &linked_dir).expect("create directory symlink");
 
-        let error = write_bytes(&linked_dir, "fixture.txt", b"content")
-            .expect_err("directory symlink must fail");
+        let error = PinnedDir::open(&linked_dir).expect_err("directory symlink must fail");
 
-        assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
+        assert!(error.raw_os_error().is_some());
         assert!(!real_dir.join("fixture.txt").exists());
         fs::remove_file(linked_dir).expect("remove directory symlink");
         fs::remove_dir(real_dir).expect("remove real directory");

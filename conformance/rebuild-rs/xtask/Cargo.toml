@@ -13,7 +13,5 @@ description = "Developer-only tasks (vendor refresh, etc.) for rebuild-rs."
 name = "xtask"
 path = "src/main.rs"
 
-# Intentionally dependency-free: the xtask shells out to `curl`
-# rather than carrying an HTTP/TLS stack, so the only thing it
-# locks against the lockfile is the standard library.
 [dependencies]
+yamlsigil-pinned-dir = { path = "../pinned-dir" }

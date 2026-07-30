@@ -27,7 +27,7 @@ repository's commit history. Concretely:
    *Standards for Efficient Cryptography 1 (SEC 1)*, etc.) using the
    matching generator module under
    [`rebuild-rs/src/`](./rebuild-rs/src/).
-3. Generator dependencies are minimal and exact-pinned in
+3. External generator dependencies are minimal and exact-pinned in
    `rebuild-rs/Cargo.toml`, grouped by role:
    - Crypto primitives (used by the hand-rolled implementations
      against cited upstream specs): `sha2`, `num-bigint`,
@@ -35,6 +35,9 @@ repository's commit history. Concretely:
    - Vendored ACVP test-vector ingestion (JSON parsing of the
      pinned NIST ACVP-Server snapshot under `rebuild-rs/vendor/`):
      `serde`, `serde_json`.
+   - Output isolation uses the repository-local
+     `yamlsigil-pinned-dir` crate. It pins each output directory before
+     replacing a fixture or vendor file.
 
    No wholesale crypto library is trusted for fixture content;
    ECDSA point arithmetic and Ed25519 vector handling are
@@ -80,6 +83,7 @@ conformance/
 │   │   ├── base64_gen.rs
 │   │   ├── alg_ed25519.rs
 │   │   └── alg_ecdsa.rs
+│   ├── pinned-dir/            (repository-local pinned-directory writes)
 │   ├── vendor/                (pinned upstream snapshots)
 │   │   └── acvp/              (NIST ACVP-Server ECDSA SigGen vectors)
 │   └── xtask/                 (developer-only commands; workspace member,
@@ -119,9 +123,11 @@ For any spec change that touches conformance behavior:
    `jq empty`, `rumdl check`, link sweep). Conformance fixtures are downstream of
    the IDL and schema; a fixture cannot be valid if the upstream
    artifacts don't parse.
-7. Run the Rust-toolchain checks: `cargo fmt`, `cargo clippy`, and
-   `cargo test` from inside `rebuild-rs/`. All three MUST be clean
-   before landing the change.
+7. Run the Rust-toolchain checks from inside `rebuild-rs/`:
+   `cargo fmt --all --check`,
+   `cargo clippy --workspace --all-targets`, and
+   `cargo test --workspace`. All three MUST be clean before landing the
+   change.
 
 ## What requires a conformance update
 
@@ -132,8 +138,8 @@ followed by a conformance pass in the affected subdirectory:
 | Spec change | Affected subdirectory |
 | --- | --- |
 | Constrained marker profile, decomposition algorithm, payload-range rules | `yaml-decomposition/` |
-| Outer `SignedYamlArtifact` wire layout, `OuterConformance` enum values, Conformance Profile rules as they manifest on the protobuf `YamlSigilSignature` decode | `protobuf-conformance/` |
-| YAML signature-document mapping rules (duplicate keys, unknown keys) under any conformance profile | `yaml-signature-conformance/` |
+| Outer `SignedYamlArtifact` wire layout, malformed protobuf wire rules, `OuterConformance` enum values, Conformance Profile rules as they manifest on the protobuf `YamlSigilSignature` decode | `protobuf-conformance/` |
+| YAML signature-carrier safety rules, including byte and parser-resource bounds, duplicate known keys, unknown keys, and tag handling | `yaml-signature-conformance/` |
 | `Algorithm` enum membership, YAML `alg` string mapping, schema-unknown handling | `schema-alignment/` |
 | `keyid` bounds, structural rules, JSON Schema vs decoder-level enforcement | `key-id/` |
 | `base64-requirements.md` (alphabet, padding, trailing-bits rule) | `base64/` |

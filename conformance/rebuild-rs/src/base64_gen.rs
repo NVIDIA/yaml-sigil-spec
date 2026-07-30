@@ -52,12 +52,11 @@
 //! source attribution and terms. The raw parser-input fixtures cannot carry
 //! comments without changing the values under test.
 
-use std::path::Path;
-
 use crate::b64::urlsafe_unpadded;
 use crate::util::write_bytes;
+use yamlsigil_pinned_dir::PinnedDir;
 
-pub fn generate(dir: &Path) -> std::io::Result<()> {
+pub fn generate(dir: &PinnedDir) -> std::io::Result<()> {
     // 86-char URL-safe unpadded base64 of 64 zero bytes (all 'A')
     let valid = urlsafe_unpadded(&[0u8; 64]).into_bytes();
     assert_eq!(valid.len(), 86);

@@ -63,8 +63,6 @@
 //! verifier might see (single-byte `0x00` and a 65-octet all-zero
 //! string) and pins the expected `KeyResolutionFailure` outcome.
 
-use std::path::Path;
-
 use num_bigint::BigInt;
 use num_integer::Integer;
 use num_traits::Zero;
@@ -75,6 +73,7 @@ use crate::b64::urlsafe_unpadded;
 use crate::p256;
 use crate::util::{from_hex, hex_lower, write_bytes, write_text};
 use crate::wire::{lendel, varint_field};
+use yamlsigil_pinned_dir::PinnedDir;
 
 const ECDSA_ALG: u64 = 2;
 
@@ -130,7 +129,7 @@ fn parse_hex(s: &str) -> BigInt {
     BigInt::parse_bytes(s.as_bytes(), 16).expect("hex literal parses")
 }
 
-pub fn generate(dir: &Path) -> std::io::Result<()> {
+pub fn generate(dir: &PinnedDir) -> std::io::Result<()> {
     let d = parse_hex(D_HEX);
     let k1 = parse_hex(K1_HEX);
     let k2 = parse_hex(K2_HEX);
@@ -440,7 +439,7 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
 /// replays `sign(d, SHA-256(message), k)` and we assert byte-equality
 /// against the published `(r, s)` before writing the fixture — so
 /// fixture generation is itself a NIST-vector conformance check.
-fn emit_acvp_anchored_fixture(dir: &Path) -> std::io::Result<()> {
+fn emit_acvp_anchored_fixture(dir: &PinnedDir) -> std::io::Result<()> {
     let file = acvp::load();
     let group = acvp::p256_sha256_aft_groups(&file)
         .next()

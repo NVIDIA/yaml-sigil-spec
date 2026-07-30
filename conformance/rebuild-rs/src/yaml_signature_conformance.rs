@@ -5,31 +5,11 @@
 //!
 //! Drives the [`verification-api.md`](../../verification-api.md)
 //! "Structural Rules By Form" and "Conformance Profiles" sections as
-//! they manifest on the YAML form. The fixtures cover the required
-//! `schema` identity, duplicate-known-singular-field behavior, and
-//! unknown-field behavior. The symmetric protobuf-form profile cases
-//! live in [`crate::protobuf_conformance`].
-//!
-//! ## YAML 1.2.2 §6.7.2 — duplicate mapping keys
-//!
-//! YAML 1.2.2 requires mapping keys to be unique but allows a processor
-//! to continue after reporting a duplicate-key error:
-//!
-//! > The content of a mapping node is an unordered set of key:value
-//! > node pairs, with the restriction that each of the keys is unique.
-//! > YAML places no further restrictions on the nodes. In particular,
-//! > keys may be arbitrary nodes...
-//! >
-//! > It is an error for two equal keys to appear in the same mapping
-//! > node. In such a case, the YAML processor may continue, ignoring
-//! > the second `key:value` pair and issuing an appropriate warning.
-//! > This strategy preserves a consistent information model for
-//! > applications that do not wish to recognize duplicate keys.
-//!
-//! Under `Permissive`, `YamlSigil.v1alpha1` permits a YAML decoder to
-//! reject duplicate known mapping keys or accept them according to its
-//! documented decode semantics. `Strict` and `SignatureStrict` reject
-//! them and map the rejection to `MalformedAttemptedSigned`.
+//! they manifest on the YAML form. The fixtures cover the YAML
+//! signature-carrier byte limit, required `schema` identity, duplicate
+//! known-key rejection, and profile-specific unknown-field behavior. The
+//! symmetric protobuf-form profile cases live in
+//! [`crate::protobuf_conformance`].
 //!
 //! ## Schema closed-key set
 //!
@@ -39,20 +19,25 @@
 //! that set is the YAML manifestation of "unknown field" and falls
 //! under the same profile rule.
 //!
+//! ## Bounded carrier profile
+//!
+//! `verification-api.md` limits the markerless carrier to 16,384 octets
+//! and requires implementation-documented parser-resource bounds.
+//!
 //! ## Schema identity
 //!
 //! `verification-api.md` requires the YAML `schema` value to equal
 //! `YamlSigilSignature.v1alpha1`. A wrong value or missing required
 //! key fails metadata extraction under every conformance profile.
 
-use std::path::Path;
-
 use crate::b64::{placeholder_sig, urlsafe_unpadded};
 use crate::util::write_bytes;
+use yamlsigil_pinned_dir::PinnedDir;
 
 /// The fixtures all use the same payload, marker, and base64
 /// placeholder; only the inner mapping body changes.
 const PAYLOAD: &str = "payload: example\n";
+const MAX_CARRIER_BYTES: usize = 16 * 1024;
 
 fn alternate_sig() -> String {
     urlsafe_unpadded(&[1u8; 64])
@@ -65,7 +50,7 @@ fn artifact(mapping_body: &str) -> Vec<u8> {
     s.into_bytes()
 }
 
-pub fn generate(dir: &Path) -> std::io::Result<()> {
+pub fn generate(dir: &PinnedDir) -> std::io::Result<()> {
     let sig = placeholder_sig();
 
     // valid-baseline.yaml: every key appears once. Exists so an
@@ -104,9 +89,8 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
     write_bytes(dir, "duplicate-schema.yaml", &artifact(&dup_schema))?;
 
     // duplicate-alg.yaml: alg appears twice with DIFFERENT values.
-    // This is the load-bearing attacker case. A Permissive decoder
-    // that accepts the fixture must document which alg is effective;
-    // different choices can swap signing algorithm interpretation.
+    // This is the load-bearing attacker case. Every profile rejects it
+    // before effective-value selection can change the algorithm.
     let dup_alg = format!(
         "schema: YamlSigilSignature.v1alpha1\n\
          alg: ED25519_PUREEDDSA_RAW_RS64_CANONICAL\n\
@@ -148,6 +132,11 @@ pub fn generate(dir: &Path) -> std::io::Result<()> {
          signature: {sig}\n"
     );
     write_bytes(dir, "unknown-key.yaml", &artifact(&unknown_key))?;
+
+    // oversized-carrier.yaml: a comment keeps the mapping itself valid
+    // while making the markerless carrier exceed 16,384 octets.
+    let oversized_carrier = format!("#{}\n{baseline}", "x".repeat(MAX_CARRIER_BYTES));
+    write_bytes(dir, "oversized-carrier.yaml", &artifact(&oversized_carrier))?;
 
     Ok(())
 }
@@ -200,5 +189,17 @@ mod tests {
         for k in declared {
             assert_ne!(*k, "bogus");
         }
+    }
+
+    #[test]
+    fn oversized_carrier_exceeds_the_normative_limit() {
+        let baseline = format!(
+            "schema: YamlSigilSignature.v1alpha1\n\
+             alg: ED25519_PUREEDDSA_RAW_RS64_CANONICAL\n\
+             signature: {}\n",
+            placeholder_sig()
+        );
+        let carrier = format!("#{}\n{baseline}", "x".repeat(MAX_CARRIER_BYTES));
+        assert!(carrier.len() > MAX_CARRIER_BYTES);
     }
 }

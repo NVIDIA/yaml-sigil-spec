@@ -307,7 +307,7 @@ subdirectories. The cross-table:
 | --- | --- |
 | `artifact-decomposition.md`, README's artifact-layout examples, constrained marker profile | `yaml-decomposition/` |
 | `transcription-api.md`, `transcription.proto`, `yaml_sigil.proto` wire shape, `OuterConformance` enum, protobuf-form inner conformance rules | `protobuf-conformance/` |
-| `verification-api.md` "Conformance Profiles" rules as they apply to the YAML signature-document mapping (duplicate keys, unknown keys) | `yaml-signature-conformance/` |
+| `verification-api.md` YAML signature-carrier safety and Conformance Profile rules (bounds, duplicate known keys, unknown keys, parser resources, tags) | `yaml-signature-conformance/` |
 | `Algorithm` enum membership, YAML `alg` string mapping, README's "The Signature Document" alg table | `schema-alignment/` |
 | `keyid` constraints (README, `yaml_sigil.proto`, `signing.proto`, `verification.proto`, JSON Schema) | `key-id/` |
 | `base64-requirements.md` | `base64/` |

@@ -81,19 +81,21 @@ Each step is normative.
 
 2. **Handle empty input.** If `|A| = 0`, return `Unsigned`.
 
-3. **Enumerate markers.** Build `S`, the set of offsets `i` where a constrained
-   marker occurs. An offset `i` is in `S` iff:
+3. **Locate the last marker.** Find the greatest offset `M` where a constrained
+   marker occurs. An offset `i` is a candidate for `M` iff:
    - `i` is a line start;
    - `A[i .. i+3] = 2D 2D 2D`; and
    - either LF form holds (`i + 4 <= |A|` and `A[i+3] = 0A`) or CRLF form holds
      (`i + 5 <= |A|` and `A[i+3 .. i+5] = 0D 0A`).
 
-   Implementations MAY scan forward or backward; the resulting `S` MUST be the
-   same.
+   Implementations MAY scan forward and retain only the latest candidate, or
+   scan backward and stop at the first candidate. Marker discovery MUST retain
+   at most one candidate offset and marker form. It MUST NOT allocate storage
+   proportional to artifact length or the number of candidate markers.
 
 4. **Select signing attempt.**
-   - If `|S| = 0`, return `Unsigned`.
-   - Otherwise let `M = max(S)`. The marker at `M` starts the signature
+   - If no candidate exists, return `Unsigned`.
+   - Otherwise, the marker at `M` starts the signature
      document. Any earlier constrained marker belongs to the signed payload.
 
 5. **Assign ranges.** Set `payload_range = [0, M)` and
@@ -172,8 +174,8 @@ portable across languages.
   preceding `0D` is sufficient.
 - As a non-normative implementation assertion, an implementation can verify
   that no constrained marker occurs inside `signature_carrier_range`. Correct
-  `M = max(S)` selection makes the condition unreachable. An assertion failure
-  indicates inconsistent marker enumeration or selection, which is an
+  last-marker selection makes the condition unreachable. An assertion failure
+  indicates inconsistent marker discovery or selection, which is an
   implementation defect rather than an artifact condition. The specification
   defines no artifact state or `DecomposeOutcome` for it.
 - Implementations SHOULD apply a maximum artifact size before scanning. A
@@ -190,7 +192,9 @@ cover:
 2. Every reachable structural failure maps to a named verifier state.
 3. The stage only separates byte ranges; it does not parse YAML, extract
    metadata, or declare anything verified.
-4. Empty artifact and no-marker artifact both produce
+4. Marker discovery retains only one candidate and does not accumulate marker
+   offsets.
+5. Empty artifact and no-marker artifact both produce
    `DecomposeOutcome.Unsigned`, which the [Verification API](./verification-api.md)
    maps to the verifier-state `Unsigned`; marker at offset 0 produces
    `DecomposeOutcome.Ok` with an empty payload range and proceeds to metadata

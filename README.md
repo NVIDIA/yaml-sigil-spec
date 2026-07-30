@@ -50,6 +50,13 @@ document carries verification inputs: `schema`, `alg`, `keyid`, and
 `v1alpha1` defines no magic bytes, registered media type, or required file
 extension. Callers identify the form out of band.
 
+Form selection is deployment policy, not content sniffing. A deployment that
+supports both forms MUST bind each artifact source, route, or storage class to
+one accepted form before processing artifact bytes. It MUST NOT retry the same
+bytes under the other form after a structural or verification failure, and it
+MUST NOT carry a verification decision into a consumer that interprets those
+bytes under a different form.
+
 ### YAML Form
 
 A YAML-form signed artifact is a UTF-8 byte sequence whose last constrained
@@ -149,8 +156,15 @@ Verifiers advertise one inner-signature-document conformance profile.
 | Profile | Inner signature-document rule |
 | --- | --- |
 | `Strict` | Reject unknown fields and duplicate known singular fields. |
-| `Permissive` | Apply each wire form's documented decode semantics. YAML duplicates may be rejected or decoder-resolved. |
+| `Permissive` | Accept unknown fields. Reject duplicate known YAML mapping keys; apply protobuf's documented singular-field decode semantics. |
 | `SignatureStrict` | Reject unknown fields and duplicate known singular fields on the inner signature document, while using the matching signature-strict protobuf outer-envelope mode. |
+
+Every profile applies the same YAML signature-carrier safety requirements
+before field extraction. They limit the markerless carrier to 16,384 octets,
+require hard parser-resource bounds, disable application-defined tag
+constructors, and reject duplicate known mapping keys. The specification does
+not prescribe one parser library or one library-specific resource counter.
+Full rules are in [Verification API](./verification-api.md).
 
 The advertised profile is a ceiling on permissiveness. A verifier MAY behave
 stricter than it advertises, but MUST NOT advertise a stricter profile than it
@@ -169,6 +183,8 @@ actually enforces. Full profile rules are in
   marker at a line-start position.
 - Implementations MUST run form-appropriate structural separation before
   cryptographic verification.
+- YAML Verification MUST apply the YAML signature-carrier safety requirements
+  before constructing application objects or extracting fields.
 - Verifiers MUST return verified payload bytes only for `Verified`.
 - Consumers MUST parse only verified payload bytes returned by the verifier,
   not the original artifact.
@@ -244,15 +260,24 @@ the payload and validate it after verification. Removing the YAML signature
 document produces `Unsigned`; callers that require authentication MUST accept
 only `Verified`.
 
-This specification sets no universal size limit. Implementations SHOULD bound
-artifact, payload, and signature-carrier sizes before buffering, scanning, or
-parsing attacker-controlled input.
+The artifact form is out-of-band and is not signed. Bind the selected form to
+the artifact's trust-domain routing or storage metadata before verification.
+Do not auto-detect a form from artifact bytes or fall back to another form
+after failure.
 
-Signature-carrier byte limits alone do not bound YAML parser work. Before
-parsing unauthenticated YAML signature-carrier bytes, implementations SHOULD
-bound nesting depth, constructed node count, and alias expansion independently.
-Implementations MUST disable application-defined constructors for custom tags
-on those bytes.
+This specification sets no universal artifact or payload size limit.
+Implementations SHOULD bound artifact and payload sizes before buffering or
+scanning attacker-controlled input.
+
+Verification imposes a universal 16,384-octet limit on unauthenticated YAML
+signature-carrier bytes. Before or during parsing, implementations MUST also
+enforce hard limits on nesting depth, constructed node count, and alias
+expansion. Parser libraries expose different controls and count these
+dimensions differently, so the numeric limits are implementation-defined and
+MUST be documented. If a parser cannot bound a dimension, the implementation
+MUST reject the corresponding construct before expansion or object
+construction. Implementations MUST disable application-defined tag
+constructors.
 
 ## License
 

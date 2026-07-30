@@ -2,17 +2,17 @@
 
 YAML-form fixtures driving the [Verification API](../../verification-api.md)
 required `schema` identity and "Conformance Profiles" rules. The profile cases
-cover duplicate-known-singular-field and unknown-field behavior in the YAML
-signature-document mapping. The protobuf-form symmetric profile cases live
-under [`../protobuf-conformance/`](../protobuf-conformance/).
+cover the YAML signature-carrier byte limit, universal duplicate-known-key
+rejection, and unknown-field behavior in the YAML signature-document mapping.
+The protobuf-form symmetric profile cases live under
+[`../protobuf-conformance/`](../protobuf-conformance/).
 
 ## Upstream sources
 
 - [YAML 1.2.2 §6.7.2](https://yaml.org/spec/1.2.2/#672-mapping-key) —
-  mapping-key duplicate handling ("should warn" guidance).
+  mapping-key syntax.
 - [`verification-api.md`](../../verification-api.md) — "Structural Rules By
-  Form" and "Conformance Profiles": required schema identity and Strict /
-  Permissive / SignatureStrict definitions.
+  Form," "YAML Signature-Carrier Safety," and "Conformance Profiles."
 - [`schema/YamlSigilSignature.v1alpha1.schema.json`](../../schema/YamlSigilSignature.v1alpha1.schema.json)
   — `additionalProperties: false` is the JSON-Schema-side expression of the
   "unknown field" rule.
@@ -42,44 +42,33 @@ generator.
 
 ## Fixtures
 
-Every fixture below carries a valid `payload` and constrained marker. The
-schema-identity cases change or omit only the required `schema` key. The
-profile cases duplicate an otherwise valid mapping key or add a key outside
-the closed schema. Each signature scalar is a canonical 86-character,
+Every fixture below carries a valid `payload` and constrained marker. Each
+signature scalar that reaches field extraction is a canonical 86-character,
 URL-safe unpadded base64 encoding of 64 octets. The
 `duplicate-signature.yaml` values are distinct but independently valid.
-Any rejection before the cryptographic stage is therefore attributable to
-the rule under test.
 
 | File | Targets | `Strict` outcome | `SignatureStrict` outcome | `Permissive` outcome |
 | --- | --- | --- | --- | --- |
 | `valid-baseline.yaml` | Sanity baseline: each mapping key appears exactly once. | Decode reaches the verification stage. | Same. | Same. |
 | `wrong-schema.yaml` | `schema` declares `YamlSigilSignature.v2alpha1`. `PreVerify` returns `MetadataParseFailure`. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
 | `missing-schema.yaml` | Required `schema` key is absent. `PreVerify` returns `MetadataParseFailure`. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
-| `duplicate-schema.yaml` | `schema` key appears twice with matching values. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | The decoder may reject or accept using its documented effective value. |
-| `duplicate-alg.yaml` | `alg` key appears twice with **different** values; an attacker is the model. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | The decoder may reject or accept using its documented effective value. |
-| `duplicate-keyid.yaml` | `keyid` key appears twice with different values. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | The decoder may reject or accept using its documented effective value. |
-| `duplicate-signature.yaml` | `signature` key appears twice with different base64 strings. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | The decoder may reject or accept using its documented effective value. |
+| `duplicate-schema.yaml` | `schema` key appears twice with matching values. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
+| `duplicate-alg.yaml` | `alg` key appears twice with different values. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
+| `duplicate-keyid.yaml` | `keyid` key appears twice with different values. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
+| `duplicate-signature.yaml` | `signature` key appears twice with different base64 strings. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
 | `unknown-key.yaml` | An extra mapping key (`bogus`) not declared in the schema. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | Accept; the unknown key is dropped at parse. |
-
-`Permissive` does not prescribe one duplicate-key outcome. An implementation
-advertising `Permissive` MUST document in human-readable implementation
-documentation whether its YAML decoder rejects duplicate known mapping keys
-and, if it accepts them, the exact rule used to select each effective field
-value. Naming the parser library or relying on source code alone does not
-satisfy this requirement.
-
-The `Permissive` column records both permitted outcomes. A decoder that rejects
-duplicates returns `MalformedAttemptedSigned`. A decoder that accepts them
-continues with its documented effective field values. Conformance drivers
-SHOULD compare the observed behavior with the implementation's prose
-documentation.
+| `oversized-carrier.yaml` | Markerless carrier exceeds 16,384 octets while retaining a valid mapping after a comment. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
 
 ## Notes
 
-A YAML parser whose API exposes raw mapping-key occurrences can
-implement Strict / SignatureStrict by rejecting on the second occurrence.
-A parser that accepts duplicates before exposing the mapping to the caller MUST
-document its exact effective-value rule and SHOULD surface discarded duplicate
-occurrences through the `parser_observations` channel when the caller opts in
-via `include_parser_observations`.
+Duplicate-known-key rejection and the carrier byte limit apply before
+profile-specific unknown-field handling. An implementation MUST inspect raw
+mapping-key occurrences before a decoder collapses them into an object.
+`PreVerify` reports every safety failure in this table as
+`MetadataParseFailure`.
+
+Nesting, constructed-node, and alias-expansion limits are mandatory, but their
+numeric values and counters are implementation-defined because common parser
+APIs expose different controls. Implementations test those limits locally and
+document them; this portable fixture directory does not prescribe one
+library-specific counter model.

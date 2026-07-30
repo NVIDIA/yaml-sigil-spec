@@ -16,9 +16,9 @@
 //! (run from inside `conformance/rebuild-rs/`).
 
 use std::env;
-use std::fs;
 use std::path::PathBuf;
 use std::process::ExitCode;
+use yamlsigil_pinned_dir::PinnedDir;
 
 mod acvp;
 mod alg_ecdsa;
@@ -34,7 +34,7 @@ mod wire;
 mod yaml_decomposition;
 mod yaml_signature_conformance;
 
-type Generator = fn(&std::path::Path) -> std::io::Result<()>;
+type Generator = fn(&PinnedDir) -> std::io::Result<()>;
 
 const SUBDIRS: &[(&str, Generator)] = &[
     ("yaml-decomposition", yaml_decomposition::generate),
@@ -59,22 +59,21 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    for (name, generator) in SUBDIRS {
-        let subdir = root.join(name);
-        match fs::symlink_metadata(&subdir) {
-            Ok(metadata) if metadata.file_type().is_dir() => {}
-            Ok(_) => {
-                eprintln!(
-                    "subdirectory is not a non-symlink directory: {}",
-                    subdir.display()
-                );
-                return ExitCode::FAILURE;
-            }
-            Err(e) => {
-                eprintln!("cannot inspect subdirectory {}: {e}", subdir.display());
-                return ExitCode::FAILURE;
-            }
+    let root_dir = match PinnedDir::open(&root) {
+        Ok(dir) => dir,
+        Err(e) => {
+            eprintln!("cannot pin work root {}: {e}", root.display());
+            return ExitCode::FAILURE;
         }
+    };
+    for (name, generator) in SUBDIRS {
+        let subdir = match root_dir.open_child(name) {
+            Ok(dir) => dir,
+            Err(e) => {
+                eprintln!("cannot pin subdirectory {}: {e}", root.join(name).display());
+                return ExitCode::FAILURE;
+            }
+        };
         println!("=== {name} ===");
         if let Err(e) = generator(&subdir) {
             eprintln!("{name}: {e}");

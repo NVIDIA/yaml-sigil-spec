@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: Copyright 2026 NVIDIA CORPORATION & AFFILIATES
+# SPDX-License-Identifier: Apache-2.0
+
+[package]
+name = "yamlsigil-pinned-dir"
+version = "0.0.0"
+edition = "2021"
+publish = false
+license = "Apache-2.0"
+description = "Repository-local pinned-directory writes for conformance tooling."
+
+[lib]
+path = "src/lib.rs"
