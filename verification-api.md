@@ -42,8 +42,10 @@ preserve all five distinctions.
 | `SignedButAlgorithmUnsupported` | Artifact is structurally valid and uses a valid schema-defined algorithm that this verifier does not implement. | None. |
 | `SignedButFailedVerification` | Artifact is structurally valid and uses an implemented algorithm, but local policy rejects the algorithm-key binding or cryptographic verification fails. | None. |
 
-`Verified` means the returned payload bytes were signed. It is not a YAML parse
-claim or application-schema claim.
+`Verified` means the returned payload bytes were signed. It is a
+payload-signature result, not a claim of application authorization, purpose,
+context, freshness, replay safety, YAML validity, or application-schema
+validity.
 
 ## Invocation Errors
 

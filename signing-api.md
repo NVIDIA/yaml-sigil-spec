@@ -8,6 +8,9 @@ The API signs payload bytes and emits exactly one artifact in the requested
 output form. A deployment may expose the API over gRPC, in-process calls, or
 another binding, but the validation and output contract remains the same.
 
+The deployment authorizes the signing key for its intended purpose and places
+any required application context in the payload.
+
 ## Inputs
 
 | Input | Contract |

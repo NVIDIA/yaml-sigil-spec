@@ -45,6 +45,16 @@ In both forms the signature covers only the payload bytes. The signature
 document carries verification inputs: `schema`, `alg`, `keyid`, and
 `signature`. Those fields are not authenticated claims.
 
+> [!IMPORTANT]
+> `YamlSigil.v1alpha1` defines a payload-signature layer, not a complete
+> application security protocol. A `Verified` result authenticates exact
+> payload bytes under the verifier's configured key and algorithm policy.
+>
+> Your human-readable YAML payload can carry purpose and freshness claims. Your
+> operating context authorizes the verification key, validates those claims,
+> enforces replay policy, and assigns meaning to the verified payload bytes.
+
+
 ## Artifact Forms
 
 `v1alpha1` defines no magic bytes, registered media type, or required file
