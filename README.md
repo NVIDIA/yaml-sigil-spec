@@ -54,7 +54,6 @@ document carries verification inputs: `schema`, `alg`, `keyid`, and
 > operating context authorizes the verification key, validates those claims,
 > enforces replay policy, and assigns meaning to the verified payload bytes.
 
-
 ## Artifact Forms
 
 `v1alpha1` defines no magic bytes, registered media type, or required file
@@ -135,10 +134,10 @@ aligned.
 
 | Field | YAML form | Protobuf form | Rule |
 | --- | --- | --- | --- |
-| `schema` | Required scalar. | Message type. | YAML value MUST be `YamlSigilSignature.v1alpha1`. |
-| `alg` | Required scalar. | Required `Algorithm` value. | MUST identify a schema-defined algorithm. |
-| `keyid` | Optional scalar. | Optional string. | When present, MUST be non-empty, at most 1024 UTF-8 octets, and contain no `U+000A` or `U+000D`. It is only a lookup hint. |
-| `signature` | Required base64url scalar. | Required bytes. | YAML uses the profile in [Base64 Requirements](./base64-requirements.md). Decoded signature octets MUST be non-empty before runtime algorithm-support classification. |
+| `schema` | Required string scalar. | Message type. | YAML value MUST be `YamlSigilSignature.v1alpha1`. |
+| `alg` | Required string scalar. | Required `Algorithm` value. | MUST identify a schema-defined algorithm. |
+| `keyid` | Optional string scalar. | Optional string. | When present, MUST be non-empty, at most 1024 UTF-8 octets, and contain no `U+000A` or `U+000D`. It is only a lookup hint. |
+| `signature` | Required base64url string scalar. | Required bytes. | YAML uses the profile in [Base64 Requirements](./base64-requirements.md). Decoded signature octets MUST be non-empty before runtime algorithm-support classification. |
 
 ### Algorithms
 

@@ -43,14 +43,14 @@ carrier is not signed.
 | Item | Requirement |
 | --- | --- |
 | Field order | `schema`, `alg`, `keyid` if present, `signature`. |
-| Field separator | One field per line, each terminated by `\n`. |
-| Key/value syntax | `key: value\n` with one space after `:`. |
+| Field separator | One field per line, each terminated by an LF octet (`0A`). |
+| Key/value syntax | Follow each key with `:`, one space, and its scalar value. |
 | YAML features | No anchors, aliases, custom tags, comments, flow form, or block scalars. |
-| String values | Emit `schema`, `alg`, and `signature` as plain scalars. Emit `keyid` as a double-quoted scalar with required YAML escapes. |
+| String values | Emit `schema`, `alg`, `keyid` when present, and `signature` as YAML strings. Any scalar presentation permitted by this profile MAY be used. |
 | `alg` value | Canonical name from [README](./README.md). |
-| Signature encoding | Base64 per [Base64 Requirements](./base64-requirements.md), no line wrapping. |
+| Signature value | The `signature` string MUST equal the encoding of the signature octets defined by [Base64 Requirements](./base64-requirements.md). |
 | Envelope safety | No constrained marker at a carrier line-start position. |
-| EOF | Exactly one trailing `\n` after the last field and no additional octets. |
+| EOF | End the final field with one LF octet (`0A`) and emit no additional octets. |
 
 The constrained marker is not part of the carrier. Compose owns the marker.
 
@@ -80,3 +80,11 @@ Transcoding depends on these normative commitments:
 | Closed `alg` allowlist. | [README](./README.md). |
 | YAML `signature` base64 profile. | [Base64 Requirements](./base64-requirements.md). |
 | Verifier states. | [Verification API](./verification-api.md). |
+
+## Conformance Fixtures
+
+Paired YAML and protobuf fixtures for empty, Boolean-like, null-like, and
+numeric-looking `signature` string values live under
+[`conformance/transcoding/`](./conformance/transcoding/). They test semantic
+field and signature-octet preservation without prescribing emitted YAML scalar
+presentation.

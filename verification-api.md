@@ -129,7 +129,9 @@ collapse. The specification requires the outcome and the bounds, not a
 particular parser interface.
 
 The canonical carrier emitted by Transcoding contains no anchors, aliases,
-custom tags, or nested collections, and it uses unambiguous string spellings.
+custom tags, or nested collections. It represents the declared `schema`,
+`alg`, optional `keyid`, and `signature` values as YAML strings, but it does
+not require one scalar presentation for those strings.
 The safety requirements do not require verifiers to accept every non-canonical
 YAML surface spelling on which common YAML libraries differ.
 
