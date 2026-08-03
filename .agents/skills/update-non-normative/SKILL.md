@@ -93,6 +93,7 @@ Do not hide a normative contract change inside a non-normative cleanup.
    | Signing, Transcription, or Verification API method changes | `DIAGRAM.md`, `images/api-flow.svg`, `images/api-flow.png`, API companion links. |
    | Verifier states, invocation errors, `DecomposeOutcome`, `PreVerifyOutcome`, or stage attribution | `DIAGRAM.md`, `conformance/README.md`, affected conformance subdirectory `README.md` files. |
    | Artifact decomposition ranges, constrained marker rules, or YAML artifact shapes | `images/yaml-artifact-transcription-diagram.svg`, its PNG sibling, `DIAGRAM.md`, `conformance/yaml-decomposition/README.md`. |
+   | Canonical YAML carrier string values or YAML ↔ protobuf round-trip rules | `conformance/transcoding/README.md` and its paired fixtures. |
    | `YamlSigilSignature.v1alpha1`, `Algorithm`, `alg`, `keyid`, or `signature` shape changes | `schema/README.md`, `conformance/schema-alignment/README.md`, `conformance/key-id/README.md`, affected algorithm and base64 fixture documentation. |
    | Algorithm rule changes | Affected `alg-*` conformance `README.md` files, upstream-source citations, documented fixture compromises. |
    | Conformance fixture or generator changes | `conformance/README.md`, affected subdirectory `README.md` files, `conformance/AGENTS.md` when maintenance rules change. |

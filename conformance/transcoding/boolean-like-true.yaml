@@ -1,0 +1,5 @@
+payload: example
+---
+schema: YamlSigilSignature.v1alpha1
+alg: ED25519_PUREEDDSA_RAW_RS64_CANONICAL
+signature: "true"

@@ -88,6 +88,15 @@ See [yaml-signature-conformance/README.md](./yaml-signature-conformance/README.m
 
 See [schema-alignment/README.md](./schema-alignment/README.md).
 
+### Transcoding (`transcoding/`)
+
+- **Transcoding** — paired YAML and protobuf artifacts with empty,
+  Boolean-like, null-like, and numeric-looking base64url `signature` strings.
+  The fixtures test semantic string and signature-octet preservation without
+  prescribing emitted YAML scalar presentation.
+
+See [transcoding/README.md](./transcoding/README.md).
+
 ### `keyid` Conformance (`key-id/`)
 
 - **`keyid`** — absent, present-empty, exactly 1024 UTF-8 octets,
