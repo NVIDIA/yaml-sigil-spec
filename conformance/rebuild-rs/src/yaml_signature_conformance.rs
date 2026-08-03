@@ -6,9 +6,10 @@
 //! Drives the [`verification-api.md`](../../verification-api.md)
 //! "Structural Rules By Form" and "Conformance Profiles" sections as
 //! they manifest on the YAML form. The fixtures cover the YAML
-//! signature-carrier byte limit, required `schema` identity, duplicate
-//! known-key rejection, and profile-specific unknown-field behavior. The
-//! symmetric protobuf-form profile cases live in
+//! signature-carrier byte limit, required `schema` identity, document count,
+//! mapping root, string field types, duplicate known-key rejection, and
+//! profile-specific unknown-field behavior. The symmetric protobuf-form
+//! profile cases live in
 //! [`crate::protobuf_conformance`].
 //!
 //! ## Schema closed-key set
@@ -22,7 +23,11 @@
 //! ## Bounded carrier profile
 //!
 //! `verification-api.md` limits the markerless carrier to 16,384 octets
-//! and requires implementation-documented parser-resource bounds.
+//! and requires implementation-documented parser-resource bounds. It also
+//! requires exactly one YAML document through EOF, a mapping root, and YAML
+//! string values for the declared fields. YAML document markers and explicit
+//! standard tags follow
+//! [YAML 1.2.2](https://yaml.org/spec/1.2.2/#91-documents).
 //!
 //! ## Schema identity
 //!
@@ -48,6 +53,13 @@ fn artifact(mapping_body: &str) -> Vec<u8> {
     s.push_str("---\n");
     s.push_str(mapping_body);
     s.into_bytes()
+}
+
+fn sequence_root(sig: &str) -> String {
+    format!(
+        "- schema: YamlSigilSignature.v1alpha1\n  alg: \
+         ED25519_PUREEDDSA_RAW_RS64_CANONICAL\n  signature: {sig}\n"
+    )
 }
 
 pub fn generate(dir: &PinnedDir) -> std::io::Result<()> {
@@ -138,6 +150,67 @@ pub fn generate(dir: &PinnedDir) -> std::io::Result<()> {
     let oversized_carrier = format!("#{}\n{baseline}", "x".repeat(MAX_CARRIER_BYTES));
     write_bytes(dir, "oversized-carrier.yaml", &artifact(&oversized_carrier))?;
 
+    // document-end-at-eof.yaml: an explicit YAML document-end marker
+    // terminates the one permitted document and is followed only by EOF.
+    let document_end_at_eof = format!("{baseline}...\n");
+    write_bytes(
+        dir,
+        "document-end-at-eof.yaml",
+        &artifact(&document_end_at_eof),
+    )?;
+
+    // document-end-with-second-document.yaml: the commented document-start
+    // spelling is valid YAML but is not a constrained YamlSigil marker. It
+    // therefore remains inside the carrier and makes it a two-document stream.
+    let second_document = format!(
+        "{baseline}...\n\
+         --- # second YAML document\n\
+         trailing: value\n"
+    );
+    write_bytes(
+        dir,
+        "document-end-with-second-document.yaml",
+        &artifact(&second_document),
+    )?;
+
+    // non-mapping-root.yaml: the declared fields occur inside a sequence
+    // item, leaving the signature document itself with a sequence root.
+    let non_mapping_root = sequence_root(&sig);
+    write_bytes(dir, "non-mapping-root.yaml", &artifact(&non_mapping_root))?;
+
+    // Each declared field must be a YAML string scalar. Explicit standard
+    // tags make the non-string type independent of implicit resolution rules.
+    let non_string_schema = format!(
+        "schema: !!int 1\n\
+         alg: ED25519_PUREEDDSA_RAW_RS64_CANONICAL\n\
+         signature: {sig}\n"
+    );
+    write_bytes(dir, "non-string-schema.yaml", &artifact(&non_string_schema))?;
+
+    let non_string_alg = format!(
+        "schema: YamlSigilSignature.v1alpha1\n\
+         alg: !!bool true\n\
+         signature: {sig}\n"
+    );
+    write_bytes(dir, "non-string-alg.yaml", &artifact(&non_string_alg))?;
+
+    let non_string_keyid = format!(
+        "schema: YamlSigilSignature.v1alpha1\n\
+         alg: ED25519_PUREEDDSA_RAW_RS64_CANONICAL\n\
+         keyid: !!int 1234\n\
+         signature: {sig}\n"
+    );
+    write_bytes(dir, "non-string-keyid.yaml", &artifact(&non_string_keyid))?;
+
+    let non_string_signature = "schema: YamlSigilSignature.v1alpha1\n\
+         alg: ED25519_PUREEDDSA_RAW_RS64_CANONICAL\n\
+         signature: !!int 1234\n";
+    write_bytes(
+        dir,
+        "non-string-signature.yaml",
+        &artifact(non_string_signature),
+    )?;
+
     Ok(())
 }
 
@@ -201,5 +274,32 @@ mod tests {
         );
         let carrier = format!("#{}\n{baseline}", "x".repeat(MAX_CARRIER_BYTES));
         assert!(carrier.len() > MAX_CARRIER_BYTES);
+    }
+
+    #[test]
+    fn commented_document_start_is_not_a_constrained_marker() {
+        let carrier = "...\n--- # second YAML document\ntrailing: value\n";
+        assert!(carrier.contains("--- #"));
+        assert!(!carrier
+            .as_bytes()
+            .windows(4)
+            .any(|window| window == b"---\n"));
+    }
+
+    #[test]
+    fn explicit_standard_tags_make_non_string_cases_unambiguous() {
+        for tagged in ["!!int 1", "!!bool true", "!!int 1234"] {
+            assert!(tagged.starts_with("!!"));
+        }
+    }
+
+    #[test]
+    fn sequence_root_keeps_mapping_fields_indented() {
+        let body = sequence_root(&placeholder_sig());
+        let mut lines = body.lines();
+        assert!(lines
+            .next()
+            .is_some_and(|line| line.starts_with("- schema:")));
+        assert!(lines.all(|line| line.starts_with("  ")));
     }
 }

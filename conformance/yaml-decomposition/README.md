@@ -51,6 +51,7 @@ has propagated through the generator.
 | `bom-signed.yaml` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | UTF-8 BOM octets `EF BB BF` at offset 0 fail before signed artifact processing. |
 | `bom-no-marker.yaml` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | UTF-8 BOM octets `EF BB BF` at offset 0 fail before no-marker handling. It MUST NOT be reported as `Unsigned`. |
 | `marker-dense.yaml` | `Ok` | proceeds to verification | Contains 256 earlier constrained markers in the payload and one final signing marker. Decompose selects the final marker. Implementations must not accumulate the earlier offsets. |
+| `document-end-in-payload.yaml` | `Ok` | proceeds to verification | The payload ends with the YAML document-end marker `...`. It remains in `payload_range`; only the later constrained `---\n` marker determines the split. |
 
 Artifact Decomposition defines no artifact condition for an additional
 constrained marker inside `signature_carrier_range`. Correct last-marker

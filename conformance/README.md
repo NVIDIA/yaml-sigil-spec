@@ -57,7 +57,8 @@ source carry the provenance together.
 
 - **YAML decomposition** — markerless carrier, LF and CRLF markers,
   UTF-8 and BOM preconditions, empty payload, extra marker inside
-  carrier, marker-dense payload, no-marker artifact, marker at EOF.
+  carrier, marker-dense payload, payload-side document-end marker, no-marker
+  artifact, marker at EOF.
 
 See [yaml-decomposition/README.md](./yaml-decomposition/README.md).
 
@@ -74,6 +75,7 @@ See [protobuf-conformance/README.md](./protobuf-conformance/README.md).
 ### YAML signature-document conformance (`yaml-signature-conformance/`)
 
 - **YAML signature-document conformance** — required `schema` identity,
+  single-document-through-EOF and mapping-root rules, string field types,
   duplicate known mapping keys, profile-specific unknown fields, and the
   universal carrier byte limit. Parser-resource counters remain
   implementation-defined and are tested by each implementation.

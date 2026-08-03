@@ -30,10 +30,11 @@
 //! encoding preconditions, the empty-payload edge (marker at offset 0),
 //! the no-marker edge (which decomposes to `Unsigned`), and the "extra
 //! marker inside the signature carrier" case (which validates the
-//! *last* marker is the decomposition point). The marker-dense fixture
-//! exercises the same selection rule across many candidates. The
-//! implementation must retain only the latest candidate rather than a
-//! collection of marker offsets.
+//! *last* marker is the decomposition point). A payload-side YAML
+//! document-end marker exercises the rule that `...` has no byte-layer
+//! significance. The marker-dense fixture exercises the same selection rule
+//! across many candidates. The implementation must retain only the latest
+//! candidate rather than a collection of marker offsets.
 
 use crate::b64::placeholder_sig;
 use crate::util::write_bytes;
@@ -163,6 +164,18 @@ pub fn generate(dir: &PinnedDir) -> std::io::Result<()> {
     ));
     write_bytes(dir, "marker-dense.yaml", f12.as_bytes())?;
 
+    // 13. document-end-in-payload.yaml — `...` remains payload bytes and
+    //     does not compete with the final constrained signing marker.
+    let f13 = format!(
+        "some: random\n\
+         ...\n\
+         ---\n\
+         schema: YamlSigilSignature.v1alpha1\n\
+         alg: ED25519_PUREEDDSA_RAW_RS64_CANONICAL\n\
+         signature: {sig}\n"
+    );
+    write_bytes(dir, "document-end-in-payload.yaml", f13.as_bytes())?;
+
     Ok(())
 }
 
@@ -196,5 +209,12 @@ mod tests {
         }
         artifact.push_str("schema: YamlSigilSignature.v1alpha1\n");
         assert_eq!(artifact.match_indices("\n---\n").count(), 257);
+    }
+
+    #[test]
+    fn document_end_marker_is_not_a_constrained_marker() {
+        let artifact = "some: random\n...\n---\nschema: value\n";
+        assert!(artifact.contains("\n...\n"));
+        assert_eq!(artifact.match_indices("\n---\n").count(), 1);
     }
 }
