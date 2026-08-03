@@ -66,8 +66,8 @@ See [yaml-decomposition/README.md](./yaml-decomposition/README.md).
 - **Protobuf conformance** — duplicate outer `payload`, duplicate
   outer `signature`, unknown outer fields, inner strict / permissive
   duplicate handling, present-empty outer `signature` submessage, malformed
-  field numbers, wire types, and tag varints, and oversized length-delimited
-  fields.
+  field numbers, wire types, tag and length varints, and length-delimited
+  fields that exceed the remaining input.
 
 See [protobuf-conformance/README.md](./protobuf-conformance/README.md).
 

@@ -91,11 +91,14 @@ matches what their parser does by default), not `Unspecified`.
 | `invalid-field-zero.binpb` | A complete baseline is followed by a length-delimited field with field number zero. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
 | `out-of-range-field-number.binpb` | A complete baseline is followed by field number `2^29`, the first value outside protobuf's field-number range. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
 | `overflowing-tag-varint.binpb` | A complete baseline is followed by a ten-octet tag varint whose final payload overflows `uint64`. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
+| `truncated-tag-varint.binpb` | A complete baseline is followed by a tag varint that reaches EOF with its continuation bit set. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
+| `truncated-length-varint.binpb` | An unknown length-delimited field reaches EOF while its length varint still has the continuation bit set. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
+| `overflowing-length-varint.binpb` | An unknown length-delimited field carries a ten-octet length varint whose final payload overflows `uint64`. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
 | `oversized-length.binpb` | An unknown length-delimited field declares `2^32 + 5` octets but supplies one octet. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
 | `invalid-wire-type-6.binpb` | A complete baseline is followed by an unknown field whose tag declares wire type `6`. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
 | `invalid-wire-type-7.binpb` | A complete baseline is followed by an unknown field whose tag declares wire type `7`. | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` | `MalformedAttemptedSigned` |
 
-The six malformed-wire fixtures reject before outer conformance checks.
+The nine malformed-wire fixtures reject before outer conformance checks.
 Implementations MUST consume and validate the entire envelope through EOF;
 successfully extracting the known fields does not permit ignoring a malformed
 trailing record.
