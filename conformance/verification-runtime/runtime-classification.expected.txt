@@ -1,0 +1,38 @@
+# Locally generated Verification runtime classification matrix.
+# ECDSA procedures and parameters derive from FIPS 186-5, Standards for
+# Efficient Cryptography 1 (SEC 1), and Standards for Efficient
+# Cryptography 2 (SEC 2). They are not relicensed under Apache-2.0.
+# See ../../THIRD_PARTY_NOTICES.md for source terms and caveats.
+# The test-only private scalar, nonce, and payloads are locally selected.
+
+algorithm: ECDSA_SECP256R1_SHA256_RAW_RS64
+private scalar d (hex): 0000000000000000000000000000000000000000000000000000000000000007
+ephemeral nonce k (hex): 000000000000000000000000000000000000000000000000000000000000000b
+public key Q, uncompressed (hex): 048e533b6fa0bf7b4625bb30667c01fb607ef9f8b8a80fef5b300628703187b2a373eb1dbde03318366d069f83a6f5900053c73633cb041b21c55e1a86c1f400b4
+signature R || S (hex): 3ed113b7883b4c590638379db0c21cda16742ed0255048bf433391d374bc21d13da288e159ae43096f15f6e5edb4068c5f7c0ce2fcf6e5d3f0efc547fdcd7032
+valid payload (hex): 7061796c6f61643a2072756e74696d6520636c617373696669636174696f6e0a
+mismatch payload (hex): 7061796c6f61643a2072756e74696d6520636c617373696669636174696f6f0a
+
+Map the public key below into the implementation's key representation and
+resolution mechanism. No literal public_key_handle encoding is prescribed.
+Run each case for both the .yaml and .binpb member.
+
+supported-algorithm:
+  implemented algorithms include ECDSA_SECP256R1_SHA256_RAW_RS64
+  key resolution returns Q above
+  PreVerify(valid) -> Ok
+  Verify(valid) -> Verified
+  verified_payload_bytes -> valid payload above
+
+unsupported-algorithm:
+  ECDSA_SECP256R1_SHA256_RAW_RS64 is schema-defined but not implemented
+  caller configuration passes invocation validation
+  PreVerify(valid) -> Ok
+  Verify(valid) -> SignedButAlgorithmUnsupported
+  verified_payload_bytes -> absent
+
+cryptographic-mismatch:
+  use the supported-algorithm configuration
+  PreVerify(cryptographic-mismatch) -> Ok
+  Verify(cryptographic-mismatch) -> SignedButFailedVerification
+  verified_payload_bytes -> absent

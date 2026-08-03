@@ -31,6 +31,7 @@ mod protobuf_conformance;
 mod schema_alignment;
 mod transcoding;
 mod util;
+mod verification_runtime;
 mod wire;
 mod yaml_decomposition;
 mod yaml_signature_conformance;
@@ -46,6 +47,7 @@ const SUBDIRS: &[(&str, Generator)] = &[
     ),
     ("schema-alignment", schema_alignment::generate),
     ("transcoding", transcoding::generate),
+    ("verification-runtime", verification_runtime::generate),
     ("key-id", key_id::generate),
     ("base64", base64_gen::generate),
     ("alg-ed25519", alg_ed25519::generate),

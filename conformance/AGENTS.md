@@ -80,6 +80,7 @@ conformance/
 │   │   ├── yaml_signature_conformance.rs
 │   │   ├── schema_alignment.rs
 │   │   ├── transcoding.rs
+│   │   ├── verification_runtime.rs
 │   │   ├── key_id.rs
 │   │   ├── base64_gen.rs
 │   │   ├── alg_ed25519.rs
@@ -148,6 +149,7 @@ followed by a conformance pass in the affected subdirectory:
 | Constrained marker profile, decomposition algorithm, payload-range rules | `yaml-decomposition/` |
 | Outer `SignedYamlArtifact` wire layout, malformed protobuf wire rules, `OuterConformance` enum values, Conformance Profile rules as they manifest on the protobuf `YamlSigilSignature` decode | `protobuf-conformance/` |
 | YAML signature-carrier safety rules, including byte and parser-resource bounds, duplicate known keys, unknown keys, and tag handling | `yaml-signature-conformance/` |
+| Runtime algorithm support and cryptographic result mapping | `verification-runtime/` |
 | Canonical YAML carrier and YAML ↔ protobuf round-trip rules | `transcoding/` |
 | `Algorithm` enum membership, YAML `alg` string mapping, schema-unknown handling | `schema-alignment/` |
 | `keyid` bounds, structural rules, JSON Schema vs decoder-level enforcement | `key-id/` |

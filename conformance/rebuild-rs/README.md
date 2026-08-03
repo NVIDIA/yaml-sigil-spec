@@ -56,6 +56,7 @@ rebuild-rs/
 │   ├── yaml_signature_conformance.rs
 │   ├── schema_alignment.rs
 │   ├── transcoding.rs
+│   ├── verification_runtime.rs
 │   ├── key_id.rs
 │   ├── base64_gen.rs
 │   ├── alg_ed25519.rs        (RFC 8032 §7.1 vectors verbatim)

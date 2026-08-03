@@ -40,7 +40,7 @@ preserve all five distinctions.
 | `Unsigned` | YAML form contains no constrained marker. Protobuf form does not produce this state. | None. |
 | `MalformedAttemptedSigned` | Artifact carries a signing attempt but fails structural validation, metadata validation, the protobuf `..._UNSPECIFIED` zero value for `alg`, schema-unknown `alg`, empty signature, or another pre-crypto rule. | None. |
 | `SignedButAlgorithmUnsupported` | Artifact is structurally valid and uses a valid schema-defined algorithm that this verifier does not implement. | None. |
-| `SignedButFailedVerification` | Artifact is structurally valid and uses an implemented algorithm, but local policy rejects the algorithm-key binding or cryptographic verification fails. | None. |
+| `SignedButFailedVerification` | Artifact is structurally valid, the verifier implements the algorithm, and cryptographic verification was attempted but failed. | None. |
 
 `Verified` means the returned payload bytes were signed. It is a
 payload-signature result, not a claim of application authorization, purpose,
@@ -81,8 +81,8 @@ and invocation-error distinctions MUST match this model.
 | Invocation validation | Validate caller-provided form, key, trust policy, and parameters known before artifact processing. | `InvocationError`. |
 | Structural separation | Decompose YAML or protobuf form into `(payload_bytes, signature_carrier_bytes)`. | `Unsigned` or structural `MalformedAttemptedSigned`. |
 | Metadata extraction | Decode the signature carrier into typed `alg`, optional `keyid`, and signature octets. | Metadata `MalformedAttemptedSigned`. |
-| Runtime checks | Enforce non-empty signature, classify algorithm support, enforce the algorithm-key binding, and validate algorithm parameters. | `InvocationError`, `MalformedAttemptedSigned`, `SignedButAlgorithmUnsupported`, or `SignedButFailedVerification`. |
-| Cryptographic verification | Verify signature over the payload bytes with the configured key and policy. | `Verified` or `SignedButFailedVerification`. |
+| Runtime checks | Enforce non-empty signature, classify algorithm support, and validate algorithm parameters. | `InvocationError`, `MalformedAttemptedSigned`, or `SignedButAlgorithmUnsupported`. |
+| Cryptographic verification | Verify signature over the payload bytes with the resolved verification key. | `Verified` or `SignedButFailedVerification`. |
 
 ## Structural Rules By Form
 
@@ -168,13 +168,12 @@ Verification classifies encountered algorithm values as follows.
 | Protobuf zero value `ALGORITHM_UNSPECIFIED`. | `MalformedAttemptedSigned`. |
 | Schema-unknown protobuf enum integer or YAML `alg` string. | `MalformedAttemptedSigned`. |
 | Schema-defined algorithm not implemented by this verifier. | `SignedButAlgorithmUnsupported`. |
-| Schema-defined algorithm implemented by this verifier. | Enforce the local algorithm-key binding, then attempt cryptographic verification. |
+| Schema-defined algorithm implemented by this verifier. | Attempt cryptographic verification. |
 
-Local trust policy MUST select or authorize the verification key and bind it
-to allowed `Algorithm` values. Artifact `keyid` MAY narrow only the keys that
-policy already authorizes. If the artifact `alg` is not allowed for the
-resolved key, the verifier MUST return `SignedButFailedVerification` without
-attempting cryptographic verification.
+`config.trust_policy` may participate in deployment-specific key selection or
+other caller-input validation. `v1alpha1` does not require a separately
+configurable algorithm-to-key authorization layer or define a verifier-state
+mapping for rejection by such a layer.
 
 Algorithm parameters are caller-supplied verifier inputs. Missing, malformed,
 out-of-bounds, or surplus parameters return `InvalidAlgorithmParameters`.

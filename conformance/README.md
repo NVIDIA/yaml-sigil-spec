@@ -99,6 +99,14 @@ See [schema-alignment/README.md](./schema-alignment/README.md).
 
 See [transcoding/README.md](./transcoding/README.md).
 
+### Verification runtime (`verification-runtime/`)
+
+- **Verification runtime** — paired YAML and protobuf artifacts for the
+  supported-and-verified control, unsupported-algorithm classification,
+  and cryptographic mismatch.
+
+See [verification-runtime/README.md](./verification-runtime/README.md).
+
 ### `keyid` Conformance (`key-id/`)
 
 - **`keyid`** — absent, present-empty, exactly 1024 UTF-8 octets,
