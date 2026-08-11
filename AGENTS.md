@@ -15,6 +15,13 @@ non-normative companion material after specification changes, including
 diagrams, schema-adjacent documentation, conformance indexes, examples, and
 cross-references.
 
+## Commit messages
+
+Use Conventional Commits for every commit. Format the subject as
+`<type>(<optional scope>): <description>`, keep it under 72 characters, and
+choose the smallest accurate type. Follow the sign-off requirements in
+`CONTRIBUTING.md`.
+
 ## Repository scope
 
 This repository is a **specification**: the normative deliverables are
