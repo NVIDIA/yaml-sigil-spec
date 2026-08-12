@@ -20,8 +20,8 @@ signature: <base64url signature>
 A spec matching this didn't exist in any other form to the best of my
 knowledge. This began as an exploratory effort, found its footing, and
 even has a Rust implementation:
-[yaml-sigil-traits](https://github.com/NVIDIA-dev/yaml-sigil-traits) +
-[yaml-sigil-rs](https://github.com/NVIDIA-dev/yaml-sigil-rs).
+[yaml-sigil-traits](https://github.com/NVIDIA/yaml-sigil-traits) +
+[yaml-sigil-rs](https://github.com/NVIDIA/yaml-sigil-rs).
 
 There are [known deficiencies](#known-deficiencies) here, but they aren't
 too rough around the edges in practice.
