@@ -120,17 +120,12 @@ For any spec change that touches conformance behavior:
    `rebuild-rs/src/`, register it in `main.rs`'s `SUBDIRS` const,
    create the new subdirectory with its `README.md`, and add a
    top-level entry in [`conformance/README.md`](./README.md).
-6. Run the mechanical-sanity checks named in the top-level
-   [`AGENTS.md`](../AGENTS.md) (`buf lint`, `buf format`,
-   `jq empty`, `rumdl check`, link sweep). Conformance fixtures are downstream of
-   the IDL and schema; a fixture cannot be valid if the upstream
-   artifacts don't parse.
-7. Run the Rust-toolchain checks from inside `rebuild-rs/`:
-   `cargo fmt --all --check`,
-   `cargo clippy --workspace --all-targets`, and
-   `cargo test --workspace`. All three MUST be clean before landing the
-   change.
-8. If `Cargo.toml`, `Cargo.lock`, a container base image, or an installed
+6. Run `cargo xtask ci` from the repository root. It performs the Markdown,
+   Buf, JSON Schema, formatting, linting, test, and dependency-audit checks
+   required by the top-level [`AGENTS.md`](../AGENTS.md). Conformance fixtures
+   are downstream of the IDL and schema; a fixture cannot be valid if the
+   upstream artifacts do not parse.
+7. If `Cargo.toml`, `Cargo.lock`, a container base image, or an installed
    container package changes, audit the resulting build and runtime
    dependency graph. The Docker build automatically collects registry-crate
    license files and preserves Debian package notices. Verify that collection,
@@ -202,10 +197,9 @@ Every Rust source file under `rebuild-rs/src/` MUST:
    (encoder / decoder pairs, arithmetic identities, known-answer
    vectors). Test data SHOULD come from the same upstream citation
    used in the rustdoc.
-3. **Pass `cargo fmt`, `cargo clippy`, and `cargo test`.** All three
-   MUST be clean (no `-D warnings` override needed; clippy at its
-   default-warn level MUST emit no findings) before the change can
-   land.
+3. **Pass `cargo xtask ci` from the repository root.** The complete
+   formatting, clippy-with-denied-warnings, test, and dependency-audit gate
+   MUST be clean before the change can land.
 
 ## Why generators, not check-in-only?
 

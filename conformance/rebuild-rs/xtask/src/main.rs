@@ -4,9 +4,10 @@
 //! Developer-only tasks for the `rebuild-rs` workspace.
 //!
 //! Invoked via the `cargo xtask ...` alias defined in
-//! `.cargo/config.toml`. Currently provides:
+//! `.cargo/config.toml`. Provides:
 //!
 //! ```text
+//! cargo xtask ci
 //! cargo xtask update-acvp [--commit <hash>]
 //! ```
 //!
@@ -14,6 +15,8 @@
 //! vectors. The xtask is intentionally dependency-free (`std` only);
 //! HTTP fetching is delegated to `curl`, which is universally
 //! available on the dev environments this targets.
+
+mod ci;
 
 use std::env;
 use std::io;
@@ -35,20 +38,46 @@ fn main() -> ExitCode {
     let mut args = env::args().skip(1);
     let cmd = args.next().unwrap_or_default();
     match cmd.as_str() {
-        "update-acvp" => match parse_update_args(args) {
-            Ok(commit) => match update_acvp(&commit) {
-                Ok(()) => ExitCode::SUCCESS,
-                Err(e) => {
-                    eprintln!("update-acvp failed: {e}");
-                    ExitCode::FAILURE
-                }
-            },
-            Err(e) => {
-                eprintln!("{e}");
+        "ci" => {
+            let remaining: Vec<_> = args.collect();
+            if is_help_request(&remaining) {
+                print_usage();
+                ExitCode::SUCCESS
+            } else if !remaining.is_empty() {
+                eprintln!("ci does not accept arguments");
                 print_usage();
                 ExitCode::FAILURE
+            } else {
+                match ci::run(&workspace_root()) {
+                    Ok(()) => ExitCode::SUCCESS,
+                    Err(e) => {
+                        eprintln!("ci failed: {e}");
+                        ExitCode::FAILURE
+                    }
+                }
             }
-        },
+        }
+        "update-acvp" => {
+            let remaining: Vec<_> = args.collect();
+            if is_help_request(&remaining) {
+                print_usage();
+                return ExitCode::SUCCESS;
+            }
+            match parse_update_args(remaining.into_iter()) {
+                Ok(commit) => match update_acvp(&commit) {
+                    Ok(()) => ExitCode::SUCCESS,
+                    Err(e) => {
+                        eprintln!("update-acvp failed: {e}");
+                        ExitCode::FAILURE
+                    }
+                },
+                Err(e) => {
+                    eprintln!("{e}");
+                    print_usage();
+                    ExitCode::FAILURE
+                }
+            }
+        }
         "" | "help" | "--help" | "-h" => {
             print_usage();
             ExitCode::SUCCESS
@@ -64,11 +93,17 @@ fn main() -> ExitCode {
 fn print_usage() {
     eprintln!(
         "usage:\n  \
+         cargo xtask ci\n  \
          cargo xtask update-acvp [--commit <hash>]\n\n\
+         Runs the repository's complete non-release validation sequence.\n\n\
          Refreshes vendor/acvp/{VENDORED_FILE_NAME} and the matching\n\
          vendor/acvp/README.md to track the requested commit of\n\
          https://github.com/{UPSTREAM_REPO}."
     );
+}
+
+fn is_help_request(args: &[String]) -> bool {
+    matches!(args, [arg] if matches!(arg.as_str(), "help" | "--help" | "-h"))
 }
 
 fn parse_update_args<I: Iterator<Item = String>>(mut args: I) -> Result<String, String> {

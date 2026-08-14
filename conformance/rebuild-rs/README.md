@@ -99,12 +99,14 @@ CONFORMANCE_ROOT="$(realpath ..)" cargo run --release --locked
 `CONFORMANCE_ROOT` defaults to `/work` (the Docker mount point); set
 it explicitly when running outside the container.
 
-## Local toolchain checks
+## Local validation
 
-```sh
-cargo fmt --all --check
-cargo clippy --workspace --all-targets
-cargo test --workspace
+Run the complete validation sequence from the repository root:
+
+```shell
+cargo xtask ci
 ```
 
-All three MUST be clean before a change can land.
+This includes repository Markdown, Protobuf, and JSON Schema checks, followed
+by formatting, linting, tests, and a dependency audit for this locked Rust
+workspace.

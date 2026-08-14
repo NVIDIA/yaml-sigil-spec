@@ -119,23 +119,15 @@ Do not hide a normative contract change inside a non-normative cleanup.
      documented or available, record the missing PNG regeneration in the change
      summary.
 
-6. Run validation appropriate to the files touched:
+6. Run the complete local validation sequence from the repository root:
 
    ```shell
-   buf lint proto
-   buf format proto -d
-   jq empty schema/YamlSigilSignature.v1alpha1.schema.json
+   cargo xtask ci
    ```
 
-   Run `rumdl check` on touched in-scope Markdown files and run the repository's
-   link sweep when one is configured. If conformance generator source changes,
-   run the Rust checks from `conformance/rebuild-rs/`:
-
-   ```shell
-   cargo fmt --check
-   cargo clippy
-   cargo test
-   ```
+   This covers Markdown, Protobuf, JSON Schema, and the complete locked Rust
+   rebuilder workspace. Run the repository's link sweep separately when one is
+   configured.
 
 7. Summarize the sync before review:
 

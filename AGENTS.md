@@ -146,8 +146,8 @@ Treat them differently.
 
   The `proto/` tree is governed by `proto/buf.yaml` (buf v2 format)
   using the full `STANDARD` lint rule set with no exceptions.
-  `buf lint proto` and `buf format proto -d` MUST pass on every
-  change.
+  `buf build proto`, `buf lint proto`, and
+  `buf format proto --diff --exit-code` MUST pass on every change.
 
 - **`schema/YamlSigilSignature.v1alpha1.schema.json`** — the working
   enumeration of the YAML-form strict signature-document shape for
@@ -376,6 +376,105 @@ corresponding conformance update, treat it as a defect.
   documents a narrower renderer requirement.
   Run `rumdl check` on touched files before landing.
 
+### CI validation
+
+Run the complete repository-owned, non-release validation sequence from the
+repository root:
+
+```shell
+cargo xtask ci
+```
+
+The command runs these checks in order:
+
+```shell
+rumdl check .
+buf build proto
+buf lint proto
+buf format proto --diff --exit-code
+jq empty schema/YamlSigilSignature.v1alpha1.schema.json
+(
+  cd conformance/rebuild-rs
+  cargo fmt --all --check
+  cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+  cargo test --locked --workspace --all-features
+)
+cargo-machete --with-metadata
+(
+  cd conformance/rebuild-rs
+  cargo audit
+)
+```
+
+Install `rumdl`, `cargo-audit`, and `cargo-machete` with Cargo, and install
+`jq`, before running the wrapper:
+
+```shell
+cargo install rumdl
+cargo install cargo-audit
+cargo install --locked cargo-machete --version 0.9.2
+```
+
+Keep the cargo-machete version aligned with hosted CI. The
+`--with-metadata` check resolves normal, development, and build dependency
+names across all features, but remains an unused-dependency heuristic; retain
+the all-target, all-feature Clippy and test checks as the compilation proof.
+
+For Buf, the xtask uses the executable named by `BUF` when set, then searches
+`PATH`, and confirms that the selected executable can run. The repository
+follows Buf's rolling latest release instead of pinning a numeric CLI version.
+Hosted CI expresses that policy by omitting the `version` input when it uses
+`bufbuild/buf-action`. Install or update the latest `buf-toolchain` release and
+ensure `$CARGO_HOME/bin` is on `PATH`:
+
+```shell
+cargo install --force buf-toolchain
+```
+
+See the [official Buf installation instructions](https://buf.build/docs/cli/installation/)
+for other installation methods. Keep the rolling Buf version policy and exact
+local validation sequence aligned between
+`conformance/rebuild-rs/xtask/src/ci.rs` and this file.
+
+Keep `cargo xtask ci` provider-neutral. It must not read, parse, or test a
+hosted CI provider's configuration. Its tests should validate the
+repository-owned command plan and actionable prerequisite guidance. Hosted CI
+may declare the same checks as independent steps, but behavioral alignment is
+a review responsibility rather than a source-level dependency between the
+xtask and a provider configuration file.
+
+Validate shell scripts under `.github/scripts` with Shuck before landing
+changes. Install it from the `shuck-cli` crate and run it from the repository
+root:
+
+```shell
+cargo install shuck-cli
+shuck check .github/scripts
+```
+
+ShellCheck is an acceptable fallback:
+
+```shell
+shellcheck .github/scripts/check-pull-request-commits.sh
+```
+
+Hosted CI runs its pinned ShellCheck Action for these provider-specific scripts.
+Keep this validation outside `cargo xtask ci`.
+
+Treat every GitHub Action `uses:` pin update as a potential validation-behavior
+change, even when the workflow inputs remain unchanged. While evaluating a
+candidate update, compare the Action at the current and candidate immutable
+SHAs, including its commands, inputs and defaults, runtime, and transitive
+`uses:` dependencies. Determine whether those changes affect the local
+`cargo xtask ci` equivalent or this exact-command documentation. When an Action
+update changes relevant behavior, reify it in hosted CI and, when applicable,
+the xtask command plan and this file in the same change. Document any
+intentional hosted-versus-local difference without making the xtask depend on
+the hosted provider's configuration.
+
+Keep maintenance commands such as `cargo xtask update-acvp` separate from CI
+unless hosted validation explicitly needs them.
+
 ## Style guide
 
 Applies to normative and maintenance Markdown: repository-root spec
@@ -438,7 +537,9 @@ technical readers. Remove them during review.
   shell commands with `$`:
 
   ```shell
-  buf lint proto && buf format proto -d
+  buf build proto
+  buf lint proto
+  buf format proto --diff --exit-code
   ```
 
 - Use tables for structured comparisons (enum mappings, stage
