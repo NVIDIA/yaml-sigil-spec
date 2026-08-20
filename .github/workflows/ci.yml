@@ -2,12 +2,10 @@ name: CI
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches:
-      - main
   push:
     branches:
       - main
+      - "pull-request/[0-9]+"
 
 permissions:
   contents: read
@@ -19,34 +17,77 @@ concurrency:
 jobs:
   commit_policy:
     name: Commit policy
-    runs-on: ubuntu-latest
+    runs-on: linux-amd64-cpu4
     timeout-minutes: 10
     permissions:
       contents: read
+      pull-requests: read
     steps:
       - name: Accept trusted invocation
-        if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
-        run: echo "Commit policy is evaluated only on pull requests."
+        if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
+        run: echo "Commit policy is evaluated on copied pull-request heads, not trusted direct invocations."
+
+      # Recover the immutable PR SHAs that a copied-head push event omits. The
+      # step fails closed unless this branch is the exact current head of an
+      # open pull request targeting this repository's main branch.
+      - name: Resolve copied pull request
+        id: pull_request
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/heads/pull-request/') }}
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          retries: 3
+          script: |
+            const branch = context.ref.replace(/^refs\/heads\//, "");
+            const match = /^pull-request\/([0-9]+)$/.exec(branch);
+            if (!match) {
+              core.setFailed(`${branch} is not a copied pull-request branch.`);
+              return;
+            }
+
+            const pullNumber = Number.parseInt(match[1], 10);
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pullNumber,
+            });
+            const baseRepository = `${context.repo.owner}/${context.repo.repo}`;
+            if (
+              pullRequest.state !== "open" ||
+              pullRequest.base.repo?.full_name !== baseRepository ||
+              pullRequest.base.ref !== "main"
+            ) {
+              core.setFailed(`Pull request ${pullNumber} is not an open change targeting main.`);
+              return;
+            }
+            if (pullRequest.head.sha !== context.sha) {
+              core.setFailed(
+                `Copied head ${context.sha} does not match pull request head ${pullRequest.head.sha}.`,
+              );
+              return;
+            }
+
+            core.setOutput("base_sha", pullRequest.base.sha);
+            core.setOutput("head_sha", pullRequest.head.sha);
 
       - name: Check out pull request history
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/heads/pull-request/') }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ steps.pull_request.outputs.head_sha }}
 
       - name: Check pull request commits
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/heads/pull-request/') }}
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ steps.pull_request.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.pull_request.outputs.head_sha }}
         shell: bash
         run: .github/scripts/check-pull-request-commits.sh
 
   workflow_lint:
     name: GitHub Actions
-    runs-on: ubuntu-latest
+    runs-on: linux-amd64-cpu4
     timeout-minutes: 10
     permissions:
       contents: read
@@ -69,7 +110,7 @@ jobs:
 
   markdown:
     name: Markdown
-    runs-on: ubuntu-latest
+    runs-on: linux-amd64-cpu4
     timeout-minutes: 10
     steps:
       - name: Check out repository
@@ -85,7 +126,7 @@ jobs:
 
   contracts:
     name: Schema and Protobuf
-    runs-on: ubuntu-latest
+    runs-on: linux-amd64-cpu4
     timeout-minutes: 10
     steps:
       - name: Check out repository
@@ -109,10 +150,9 @@ jobs:
 
   rebuild_rs:
     name: Rust conformance generator
-    runs-on: ubuntu-latest
+    runs-on: linux-amd64-cpu8
     timeout-minutes: 30
     permissions:
-      checks: write
       contents: read
     steps:
       - name: Check out repository
@@ -128,18 +168,18 @@ jobs:
           toolchain: stable
 
       # This section would benefit by a change to the action allowlist
-      - name: Install cargo-machete
+      - name: Install Rust validation tools
         uses: taiki-e/install-action@43aecc8d72668fbcfe75c31400bc4f890f1c5853 # v2.83.2
         with:
           checksum: true
           fallback: none
-          tool: cargo-machete@0.9.2
+          tool: cargo-audit,cargo-machete@0.9.2
 
       - name: Cache Rust build inputs
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-bin: false
-          save-if: ${{ github.event_name == 'push' }}
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           workspaces: conformance/rebuild-rs -> target
 
       - name: Check Rust formatting
@@ -158,10 +198,8 @@ jobs:
         run: cargo-machete --with-metadata
 
       - name: Audit Rust dependencies
-        uses: rustsec/audit-check@858dc40f52ca2b8570b7a997c1c4e35c6fc9a432 # main (unreleased Node 24 revision)
-        with:
-          token: ${{ github.token }}
-          working-directory: conformance/rebuild-rs
+        run: cargo audit
+        working-directory: conformance/rebuild-rs
 
   required_ci:
     name: Required CI
@@ -172,7 +210,7 @@ jobs:
       - markdown
       - contracts
       - rebuild_rs
-    runs-on: ubuntu-latest
+    runs-on: linux-amd64-cpu4
     timeout-minutes: 5
     permissions: {}
     steps:
