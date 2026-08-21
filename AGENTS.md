@@ -385,6 +385,16 @@ repository root:
 cargo xtask ci
 ```
 
+To apply the validator from the current checkout to another repository
+checkout, pass its root explicitly:
+
+```shell
+cargo xtask ci --candidate-root PATH
+```
+
+The command still builds and runs the xtask from the current checkout; only
+the repository content being validated comes from `PATH`.
+
 The command runs these checks in order:
 
 ```shell
