@@ -43,12 +43,10 @@ fn main() -> ExitCode {
             if is_help_request(&remaining) {
                 print_usage();
                 ExitCode::SUCCESS
-            } else if !remaining.is_empty() {
-                eprintln!("ci does not accept arguments");
-                print_usage();
-                ExitCode::FAILURE
             } else {
-                match ci::run(&workspace_root()) {
+                match parse_ci_root(&remaining)
+                    .and_then(|root| ci::run(&root).map_err(|error| error.to_string()))
+                {
                     Ok(()) => ExitCode::SUCCESS,
                     Err(e) => {
                         eprintln!("ci failed: {e}");
@@ -93,9 +91,11 @@ fn main() -> ExitCode {
 fn print_usage() {
     eprintln!(
         "usage:\n  \
-         cargo xtask ci\n  \
+         cargo xtask ci [--candidate-root PATH]\n  \
          cargo xtask update-acvp [--commit <hash>]\n\n\
-         Runs the repository's complete non-release validation sequence.\n\n\
+         Runs the repository's complete non-release validation sequence.\n\
+         --candidate-root validates another repository checkout with this\n\
+         protected xtask implementation.\n\n\
          Refreshes vendor/acvp/{VENDORED_FILE_NAME} and the matching\n\
          vendor/acvp/README.md to track the requested commit of\n\
          https://github.com/{UPSTREAM_REPO}."
@@ -176,6 +176,39 @@ fn workspace_root() -> PathBuf {
         }
     }
     env::current_dir().expect("cwd available")
+}
+
+fn repository_root() -> PathBuf {
+    workspace_root()
+        .parent()
+        .and_then(std::path::Path::parent)
+        .expect("rebuild-rs is nested under conformance/")
+        .to_path_buf()
+}
+
+fn parse_ci_root(args: &[String]) -> Result<PathBuf, String> {
+    let candidate = match args {
+        [] => repository_root(),
+        [flag, value] if flag == "--candidate-root" && !value.is_empty() => PathBuf::from(value),
+        [flag, _] if flag == "--candidate-root" => {
+            return Err("--candidate-root needs a nonempty path".to_string());
+        }
+        _ => return Err("ci accepts only --candidate-root PATH".to_string()),
+    };
+    let candidate = candidate.canonicalize().map_err(|error| {
+        format!(
+            "cannot resolve candidate root {}: {error}",
+            candidate.display()
+        )
+    })?;
+    let rebuild_root = candidate.join("conformance/rebuild-rs");
+    if !rebuild_root.join("Cargo.toml").is_file() {
+        return Err(format!(
+            "candidate root {} lacks conformance/rebuild-rs/Cargo.toml",
+            candidate.display()
+        ));
+    }
+    Ok(rebuild_root)
 }
 
 fn render_readme(commit: &str, size: u64) -> String {
@@ -260,6 +293,20 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
 
     static NEXT_TEST_DIR: AtomicU64 = AtomicU64::new(0);
+
+    #[test]
+    fn ci_candidate_root_is_repository_scoped() {
+        let root = repository_root();
+        let parsed = parse_ci_root(&["--candidate-root".to_string(), root.display().to_string()])
+            .expect("repository root is a valid candidate");
+        assert_eq!(
+            parsed,
+            root.canonicalize().unwrap().join("conformance/rebuild-rs")
+        );
+
+        assert!(parse_ci_root(&["--candidate-root".to_string()]).is_err());
+        assert!(parse_ci_root(&["--unknown".to_string(), "value".to_string()]).is_err());
+    }
 
     fn test_dir(label: &str) -> PathBuf {
         let sequence = NEXT_TEST_DIR.fetch_add(1, Ordering::Relaxed);
