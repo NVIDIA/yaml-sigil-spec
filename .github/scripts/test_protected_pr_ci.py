@@ -320,7 +320,7 @@ class AuthorizationTests(unittest.TestCase):
         with self.assertRaisesRegex(controller.PolicyError, "requested SHA"):
             controller.authorize(event(), policy(), api, environment())
 
-    def test_exact_release_app_exception_is_accepted(self) -> None:
+    def test_exact_release_app_author_and_committer_are_accepted(self) -> None:
         api = FakeAuthorizationApi()
         api.files = [{"filename": "Cargo.toml", "status": "modified"}]
         api.pull["user"]["login"] = BOT
@@ -328,11 +328,11 @@ class AuthorizationTests(unittest.TestCase):
         api.pull["head"]["ref"] = "release-plz-next"
         api.details[HEAD_SHA] = git_commit(
             author_login=BOT,
-            committer_login="web-flow",
+            committer_login=BOT,
             author_name=BOT,
             author_email="318780254+nvidia-yamlsigil-release-pr[bot]@users.noreply.github.com",
-            committer_name="GitHub",
-            committer_email="noreply@github.com",
+            committer_name=BOT,
+            committer_email="318780254+nvidia-yamlsigil-release-pr[bot]@users.noreply.github.com",
             message=(
                 "chore(release): prepare candidate\n\n"
                 "Signed-off-by: nvidia-yamlsigil-release-pr[bot] "
@@ -346,6 +346,23 @@ class AuthorizationTests(unittest.TestCase):
         with self.assertRaisesRegex(controller.PolicyError, "only modify existing"):
             controller.authorize(event(), policy(), api, environment())
 
+    def test_release_app_commit_rejects_non_app_committer(self) -> None:
+        for committer_login in ("web-flow", MAINTAINER):
+            with self.subTest(committer_login=committer_login):
+                api = FakeAuthorizationApi()
+                api.files = [{"filename": "Cargo.toml", "status": "modified"}]
+                api.pull["user"]["login"] = BOT
+                api.pull["head"]["repo"]["full_name"] = REPOSITORY
+                api.pull["head"]["ref"] = "release-plz-next"
+                api.details[HEAD_SHA] = git_commit(
+                    author_login=BOT,
+                    committer_login=committer_login,
+                    author_name=BOT,
+                    author_email="318780254+nvidia-yamlsigil-release-pr[bot]@users.noreply.github.com",
+                )
+                with self.assertRaisesRegex(controller.PolicyError, "committer is unexpected"):
+                    controller.authorize(event(), policy(), api, environment())
+
     def test_release_app_identity_parent_and_allowlist_are_exact(self) -> None:
         base_api = FakeAuthorizationApi()
         base_api.files = [{"filename": "Cargo.toml", "status": "modified"}]
@@ -355,9 +372,11 @@ class AuthorizationTests(unittest.TestCase):
         base_api.details[HEAD_SHA] = git_commit(
             parent=OLD_SHA,
             author_login=BOT,
-            committer_login="web-flow",
+            committer_login=BOT,
             author_name=BOT,
             author_email="318780254+nvidia-yamlsigil-release-pr[bot]@users.noreply.github.com",
+            committer_name=BOT,
+            committer_email="318780254+nvidia-yamlsigil-release-pr[bot]@users.noreply.github.com",
             message=(
                 "chore(release): prepare candidate\n\n"
                 "Signed-off-by: nvidia-yamlsigil-release-pr[bot] "
