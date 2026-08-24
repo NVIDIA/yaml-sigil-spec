@@ -201,6 +201,9 @@ jobs:
       # Stage candidate YAML as inert input beside protected-main configuration.
       - name: Stage workflows for linting
         run: |
+          # The staged root is deliberately checkout-free. Initialize only Git
+          # metadata so actionlint recognizes it as a project workspace.
+          git init --quiet --initial-branch=main .
           install -d .github/workflows
           install -m 0644 policy/.github/actionlint.yaml .github/actionlint.yaml
           find candidate/.github/workflows -maxdepth 1 -type f \
