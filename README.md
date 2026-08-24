@@ -57,7 +57,7 @@ document carries verification inputs: `schema`, `alg`, `keyid`, and
 ## Artifact Forms
 
 `v1alpha1` defines no magic bytes, registered media type, or required file
-extension. Callers identify the form out of band.
+extension. Callers identify and bind the form out of band.
 
 Form selection is deployment policy, not content sniffing. A deployment that
 supports both forms MUST bind each artifact source, route, or storage class to
