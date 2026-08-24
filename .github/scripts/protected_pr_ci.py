@@ -443,6 +443,11 @@ def require_release_app_change(
     require(parent.get("sha") == main_sha, "release App commit parent is not current main")
     author = require_mapping(commit.get("author"), "release App commit author")
     require(author.get("login") == release_app.get("login"), "release App commit author is unexpected")
+    committer = require_mapping(commit.get("committer"), "release App commit committer")
+    require(
+        committer.get("login") == release_app.get("login"),
+        "release App commit committer is unexpected",
+    )
     require_verified(commit, "release App commit")
     require_dco(commit, require_committer=False, label="release App commit")
 
