@@ -6,6 +6,8 @@ name = "yamlsigil-conformance-rebuild"
 version = "0.0.0"
 edition = "2021"
 publish = false
+# This conformance rebuilder has no build script.
+build = false
 license = "Apache-2.0"
 description = "Generators for conformance/ fixtures."
 
