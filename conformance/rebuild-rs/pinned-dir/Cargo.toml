@@ -6,6 +6,8 @@ name = "yamlsigil-pinned-dir"
 version = "0.0.0"
 edition = "2021"
 publish = false
+# This repository-local library has no build script.
+build = false
 license = "Apache-2.0"
 description = "Repository-local pinned-directory writes for conformance tooling."
 

@@ -49,6 +49,8 @@
     "Cargo.lock",
     "**/Cargo.toml",
     "**/Cargo.lock",
+    "build.rs",
+    "**/build.rs",
     "AGENTS.md",
     "**/AGENTS.md",
     ".agents/**",
