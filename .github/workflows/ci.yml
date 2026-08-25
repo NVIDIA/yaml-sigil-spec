@@ -110,7 +110,7 @@ jobs:
         with:
           checksum: true
           fallback: none
-          tool: cargo-audit,cargo-machete@0.9.2
+          tool: cargo-audit,cargo-deny@0.20.2,cargo-machete@0.9.2
 
       - name: Cache Rust build inputs
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
@@ -133,6 +133,10 @@ jobs:
 
       - name: Check unused Rust dependencies
         run: cargo-machete --with-metadata
+
+      - name: Check Rust dependency policy
+        run: cargo deny --locked --workspace check bans licenses sources -D warnings
+        working-directory: conformance/rebuild-rs
 
       - name: Audit Rust dependencies
         run: cargo audit

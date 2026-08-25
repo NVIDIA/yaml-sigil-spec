@@ -412,18 +412,25 @@ jq empty schema/YamlSigilSignature.v1alpha1.schema.json
 cargo-machete --with-metadata
 (
   cd conformance/rebuild-rs
+  cargo deny --locked --workspace check bans licenses sources -D warnings
   cargo audit
 )
 ```
 
-Install `rumdl`, `cargo-audit`, and `cargo-machete` with Cargo, and install
-`jq`, before running the wrapper:
+Install `rumdl`, `cargo-audit`, `cargo-deny`, and `cargo-machete` with
+Cargo, and install `jq`, before running the wrapper:
 
 ```shell
 cargo install rumdl
 cargo install cargo-audit
+cargo install --locked cargo-deny --version 0.20.2
 cargo install --locked cargo-machete --version 0.9.2
 ```
+
+Cargo Deny reads the repository-wide policy from `deny.toml` and the
+workspace-specific license exceptions from
+`conformance/rebuild-rs/deny.exceptions.toml`. The locked workspace check
+covers the rebuilder, its local helper crate, and the developer xtask.
 
 Keep the cargo-machete version aligned with hosted CI. The
 `--with-metadata` check resolves normal, development, and build dependency
