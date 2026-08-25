@@ -8,8 +8,8 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-const BUF_INSTALL_GUIDANCE: &str = "Install or update the latest buf-toolchain release with:\n    \
-     cargo install --force buf-toolchain\n\n\
+const BUF_INSTALL_GUIDANCE: &str = "Install or update the pinned buf-toolchain release with:\n    \
+     cargo install --locked --force buf-toolchain --version 1.72.0-hotfix.2\n\n\
      Then ensure $CARGO_HOME/bin is on PATH.\n\
      See https://buf.build/docs/cli/installation/ for official alternatives.";
 const CARGO_MACHETE_INSTALL_COMMAND: &str = "cargo install --locked cargo-machete --version 0.9.2";
@@ -252,6 +252,8 @@ mod tests {
     use super::*;
 
     const AGENT_GUIDANCE: &str = include_str!("../../../../AGENTS.md");
+    const BUF_TOOLCHAIN_INSTALL_COMMAND: &str =
+        "cargo install --locked --force buf-toolchain --version 1.72.0-hotfix.2";
 
     #[test]
     fn agent_guidance_documents_every_local_ci_step() {
@@ -277,12 +279,13 @@ mod tests {
 
     #[test]
     fn buf_version_policy_is_aligned_and_actionable() {
-        assert!(BUF_INSTALL_GUIDANCE.contains("cargo install --force buf-toolchain"));
-        assert!(!BUF_INSTALL_GUIDANCE.contains("buf-toolchain@"));
+        assert!(BUF_INSTALL_GUIDANCE.contains(BUF_TOOLCHAIN_INSTALL_COMMAND));
         assert!(BUF_INSTALL_GUIDANCE.contains("$CARGO_HOME/bin"));
         assert!(BUF_INSTALL_GUIDANCE.contains("https://buf.build/docs/cli/installation/"));
-        assert!(AGENT_GUIDANCE.contains("cargo install --force buf-toolchain"));
-        assert!(AGENT_GUIDANCE.contains("rolling latest release"));
+        assert!(AGENT_GUIDANCE.contains(BUF_TOOLCHAIN_INSTALL_COMMAND));
+        assert!(AGENT_GUIDANCE.contains("Buf CLI `1.72.0`"));
+        assert!(AGENT_GUIDANCE.contains("`bufbuild/buf-action` `version` input"));
+        assert!(!AGENT_GUIDANCE.contains("rolling latest release"));
         assert!(AGENT_GUIDANCE.contains("Keep `cargo xtask ci` provider-neutral"));
     }
 

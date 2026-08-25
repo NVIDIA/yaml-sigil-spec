@@ -81,6 +81,7 @@ jobs:
           lint: true
           pr_comment: false
           push: false
+          version: "1.72.0"
 
       - name: Validate JSON Schema
         run: jq empty schema/YamlSigilSignature.v1alpha1.schema.json
