@@ -6,6 +6,12 @@ name = "xtask"
 version = "0.0.0"
 edition = "2021"
 publish = false
+# Keep the executable target inventory explicit. Conventional target
+# directories do not add code to validation without a manifest change.
+autobenches = false
+autobins = false
+autoexamples = false
+autotests = false
 # This developer tool has no build script.
 build = false
 license = "Apache-2.0"
