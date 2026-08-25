@@ -33,6 +33,11 @@ HEAD_TREE_SHA = "e" * 40
 BASE_BLOB_SHA = "1" * 40
 HEAD_BLOB_SHA = "2" * 40
 DIRECTORY_TREE_SHA = "f" * 40
+RUN_ID = 101
+RUN_ATTEMPT = 1
+WORKFLOW_ID = 701
+PULL_NUMBER = 7
+COMMENT_ID = 19
 BOT = "nvidia-yamlsigil-release-pr[bot]"
 BOT_ID = 318780254
 BOT_EMAIL = "318780254+nvidia-yamlsigil-release-pr[bot]@users.noreply.github.com"
@@ -48,7 +53,7 @@ def policy() -> dict:
     return {
         "version": 1,
         "default_branch": "main",
-        "workflow_file": ".github/workflows/pr-ci.yml",
+        "workflow_file": ".github/workflows/pr-ci-command.yml",
         "required_check": "Required CI",
         "release_app": {
             "enabled": True,
@@ -102,6 +107,7 @@ def environment() -> dict[str, str]:
     return {
         "GITHUB_REPOSITORY": REPOSITORY,
         "GITHUB_ACTOR": MAINTAINER,
+        "GITHUB_EVENT_NAME": "issue_comment",
         "GITHUB_REF": "refs/heads/main",
         "GITHUB_TRIGGERING_ACTOR": MAINTAINER,
         "GITHUB_RUN_ATTEMPT": "1",
@@ -109,16 +115,72 @@ def environment() -> dict[str, str]:
     }
 
 
-def workflow_dispatch_event() -> dict:
+def call_binding(
+    *,
+    head_sha: str = HEAD_SHA,
+    pull_number: int = PULL_NUMBER,
+    comment_id: int = COMMENT_ID,
+) -> object:
+    return controller.CallBinding(
+        pull_number=pull_number,
+        head_sha=head_sha,
+        comment_id=comment_id,
+    )
+
+
+def workflow_job(
+    *,
+    binding=None,
+    run_id: int = RUN_ID,
+    attempt: int = RUN_ATTEMPT,
+    policy_sha: str = MAIN_SHA,
+    name: str | None = None,
+) -> dict:
+    selected = binding or call_binding()
     return {
+        "id": 901,
+        "run_id": run_id,
+        "run_attempt": attempt,
+        "head_sha": policy_sha,
+        "name": name or selected.encode_job_name(),
+        "status": "in_progress",
+        "conclusion": None,
+    }
+
+
+def workflow_run(
+    *,
+    run_id: int = RUN_ID,
+    attempt: int = RUN_ATTEMPT,
+    policy_sha: str = MAIN_SHA,
+    status: str = "in_progress",
+    conclusion: str | None = None,
+) -> dict:
+    return {
+        "id": run_id,
+        "run_attempt": attempt,
+        "workflow_id": WORKFLOW_ID,
+        "name": f"PR #{PULL_NUMBER} comment {COMMENT_ID}",
+        "path": ".github/workflows/pr-ci-command.yml",
+        "event": "issue_comment",
+        "head_branch": "main",
+        "head_sha": policy_sha,
+        "status": status,
+        "conclusion": conclusion,
+        "actor": {"login": MAINTAINER},
+        "triggering_actor": {"login": MAINTAINER},
+    }
+
+
+def workflow_run_event(*, attempt: int = RUN_ATTEMPT, conclusion: str = "failure") -> dict:
+    return {
+        "action": "completed",
         "repository": {"full_name": REPOSITORY},
-        "inputs": {
-            "pull_number": "7",
-            "head_sha": HEAD_SHA,
-            "base_sha": MAIN_SHA,
-            "policy_sha": MAIN_SHA,
-            "comment_id": "19",
-        },
+        "workflow_run": workflow_run(
+            attempt=attempt,
+            status="completed",
+            conclusion=conclusion,
+        ),
     }
 
 
@@ -213,6 +275,9 @@ class FakeAuthorizationApi:
         self.comment_issue_number = 7
         self.posts = []
         self.get_paths = []
+        self.run = workflow_run()
+        self.jobs = [workflow_job()]
+        self.runs = [self.run]
         self.main_reads = 0
         self.pull_reads = 0
         self.final_pull = None
@@ -297,6 +362,15 @@ class FakeAuthorizationApi:
                 f"{self.comment_issue_number}"
             )
             return value
+        if path.endswith(f"/actions/runs/{RUN_ID}"):
+            return copy.deepcopy(self.run)
+        if "/actions/workflows/" in path:
+            return {
+                "id": WORKFLOW_ID,
+                "name": controller.CALLER_WORKFLOW_NAME,
+                "path": ".github/workflows/pr-ci-command.yml",
+                "state": "active",
+            }
         if "/git/commits/" in path:
             sha = path.split("/git/commits/", 1)[1].split("?", 1)[0]
             return copy.deepcopy(self.git_commits[sha])
@@ -313,6 +387,14 @@ class FakeAuthorizationApi:
         if label == "pull request commits":
             return copy.deepcopy(self.commits)
         raise AssertionError(f"unexpected pagination label {label}")
+
+    def paginate_key(self, path, key, *, max_items, label):
+        del path, key, max_items
+        if label == "workflow run jobs":
+            return copy.deepcopy(self.jobs)
+        if label == "protected workflow runs":
+            return copy.deepcopy(self.runs)
+        raise AssertionError(f"unexpected keyed pagination label {label}")
 
     def post(self, path: str, payload: dict):
         self.posts.append((path, payload))
@@ -760,70 +842,220 @@ class AuthorizationTests(unittest.TestCase):
         with self.assertRaisesRegex(controller.PolicyError, "allowlist"):
             controller.authorize(event(), policy(), api, environment())
 
-    def test_comment_dispatch_ignores_near_misses_and_sanitizes_inputs(self) -> None:
+    def test_comment_receiver_ignores_near_misses_and_returns_sanitized_values(self) -> None:
         api = FakeAuthorizationApi()
-        self.assertFalse(controller.dispatch_comment(event("looks useful"), policy(), api, environment()))
+        self.assertIsNone(
+            controller.authorize_comment(
+                event("looks useful"), policy(), api, environment()
+            )
+        )
         self.assertEqual(api.posts, [])
 
-        self.assertTrue(controller.dispatch_comment(event(), policy(), api, environment()))
-        self.assertEqual(len(api.posts), 1)
-        path, payload = api.posts[0]
-        self.assertTrue(path.endswith("/actions/workflows/.github%2Fworkflows%2Fpr-ci.yml/dispatches"))
-        self.assertEqual(payload["ref"], "main")
-        self.assertEqual(payload["inputs"], workflow_dispatch_event()["inputs"])
+        authorization = controller.authorize_comment(
+            event(), policy(), api, environment()
+        )
+        self.assertIsNotNone(authorization)
+        assert authorization is not None
+        self.assertEqual(
+            authorization.github_outputs(),
+            {
+                "repository": REPOSITORY,
+                "pull_number": str(PULL_NUMBER),
+                "head_sha": HEAD_SHA,
+                "base_sha": MAIN_SHA,
+                "head_repository": "contributor/yaml-sigil-example",
+                "policy_sha": MAIN_SHA,
+                "comment_id": str(COMMENT_ID),
+            },
+        )
+        self.assertEqual(api.posts, [])
 
-    def test_dispatched_request_reloads_the_exact_comment(self) -> None:
+    def test_reusable_call_reloads_the_exact_comment_and_job_binding(self) -> None:
         api = FakeAuthorizationApi()
-        result = controller.authorize_dispatch(
-            workflow_dispatch_event(), policy(), api, environment()
+        api.jobs[0]["name"] = (
+            f"{controller.CALLER_JOB_NAME} / {call_binding().encode_job_name()}"
+        )
+        result = controller.authorize_call(
+            event(),
+            policy(),
+            api,
+            environment(),
+            repository=REPOSITORY,
+            pull_number=PULL_NUMBER,
+            head_sha=HEAD_SHA,
+            base_sha=MAIN_SHA,
+            policy_sha=MAIN_SHA,
+            comment_id=COMMENT_ID,
+            run_id=RUN_ID,
+            run_attempt=RUN_ATTEMPT,
         )
         self.assertEqual(result.head_sha, HEAD_SHA)
 
-        changed = workflow_dispatch_event()
-        changed["inputs"]["head_sha"] = OLD_SHA
-        with self.assertRaisesRegex(controller.PolicyError, "dispatch head SHA"):
-            controller.authorize_dispatch(changed, policy(), api, environment())
+        with self.assertRaisesRegex(controller.PolicyError, "authorized head SHA"):
+            controller.authorize_call(
+                event(),
+                policy(),
+                api,
+                environment(),
+                repository=REPOSITORY,
+                pull_number=PULL_NUMBER,
+                head_sha=OLD_SHA,
+                base_sha=MAIN_SHA,
+                policy_sha=MAIN_SHA,
+                comment_id=COMMENT_ID,
+                run_id=RUN_ID,
+                run_attempt=RUN_ATTEMPT,
+            )
 
-    def test_dispatched_request_rejects_changed_comment_issue_or_ref(self) -> None:
+    def test_reusable_call_rejects_changed_comment_issue_or_ref(self) -> None:
         api = FakeAuthorizationApi()
         api.comment["body"] = f"/ok to test {OLD_SHA}"
         with self.assertRaisesRegex(controller.PolicyError, "exact current pull request head"):
-            controller.authorize_dispatch(
-                workflow_dispatch_event(), policy(), api, environment()
+            controller.authorize_call(
+                event(),
+                policy(),
+                api,
+                environment(),
+                repository=REPOSITORY,
+                pull_number=PULL_NUMBER,
+                head_sha=HEAD_SHA,
+                base_sha=MAIN_SHA,
+                policy_sha=MAIN_SHA,
+                comment_id=COMMENT_ID,
+                run_id=RUN_ID,
+                run_attempt=RUN_ATTEMPT,
             )
 
         api = FakeAuthorizationApi()
         api.comment_issue_number = 8
         with self.assertRaisesRegex(controller.PolicyError, "another issue"):
-            controller.authorize_dispatch(
-                workflow_dispatch_event(), policy(), api, environment()
+            controller.authorize_call(
+                event(),
+                policy(),
+                api,
+                environment(),
+                repository=REPOSITORY,
+                pull_number=PULL_NUMBER,
+                head_sha=HEAD_SHA,
+                base_sha=MAIN_SHA,
+                policy_sha=MAIN_SHA,
+                comment_id=COMMENT_ID,
+                run_id=RUN_ID,
+                run_attempt=RUN_ATTEMPT,
             )
 
         api = FakeAuthorizationApi()
         env = environment()
         env["GITHUB_REF"] = "refs/heads/release-plz-next"
         with self.assertRaisesRegex(controller.PolicyError, "exact main"):
-            controller.authorize_dispatch(workflow_dispatch_event(), policy(), api, env)
+            controller.authorize_call(
+                event(),
+                policy(),
+                api,
+                env,
+                repository=REPOSITORY,
+                pull_number=PULL_NUMBER,
+                head_sha=HEAD_SHA,
+                base_sha=MAIN_SHA,
+                policy_sha=MAIN_SHA,
+                comment_id=COMMENT_ID,
+                run_id=RUN_ID,
+                run_attempt=RUN_ATTEMPT,
+            )
 
-    def test_direct_dispatch_requires_a_current_writer(self) -> None:
+    def test_reusable_call_requires_a_current_rerun_writer(self) -> None:
         api = FakeAuthorizationApi()
         api.permissions["outsider"] = "read"
         env = environment()
-        env["GITHUB_ACTOR"] = "outsider"
         env["GITHUB_TRIGGERING_ACTOR"] = "outsider"
-        with self.assertRaisesRegex(controller.PolicyError, "workflow dispatch actor"):
-            controller.authorize_dispatch(workflow_dispatch_event(), policy(), api, env)
+        with self.assertRaisesRegex(controller.PolicyError, "triggering actor"):
+            controller.authorize_call(
+                event(),
+                policy(),
+                api,
+                env,
+                repository=REPOSITORY,
+                pull_number=PULL_NUMBER,
+                head_sha=HEAD_SHA,
+                base_sha=MAIN_SHA,
+                policy_sha=MAIN_SHA,
+                comment_id=COMMENT_ID,
+                run_id=RUN_ID,
+                run_attempt=RUN_ATTEMPT,
+            )
 
-    def test_dispatched_rerun_requires_a_current_writer(self) -> None:
+    def test_reusable_call_binding_is_unique_complete_and_attempt_aware(self) -> None:
         api = FakeAuthorizationApi()
-        env = environment()
-        env["GITHUB_ACTOR"] = controller.GITHUB_ACTIONS_LOGIN
-        env["GITHUB_TRIGGERING_ACTOR"] = controller.GITHUB_ACTIONS_LOGIN
-        controller.authorize_dispatch(workflow_dispatch_event(), policy(), api, env)
+        api.jobs = []
+        with self.assertRaisesRegex(controller.PolicyError, "binding job is missing"):
+            controller.authorize_call(
+                event(),
+                policy(),
+                api,
+                environment(),
+                repository=REPOSITORY,
+                pull_number=PULL_NUMBER,
+                head_sha=HEAD_SHA,
+                base_sha=MAIN_SHA,
+                policy_sha=MAIN_SHA,
+                comment_id=COMMENT_ID,
+                run_id=RUN_ID,
+                run_attempt=RUN_ATTEMPT,
+            )
 
-        env["GITHUB_RUN_ATTEMPT"] = "2"
-        with self.assertRaisesRegex(controller.PolicyError, "may not rerun"):
-            controller.authorize_dispatch(workflow_dispatch_event(), policy(), api, env)
+        api = FakeAuthorizationApi()
+        api.jobs.append(workflow_job())
+        with self.assertRaisesRegex(controller.PolicyError, "multiple reusable-call"):
+            controller.authorize_call(
+                event(),
+                policy(),
+                api,
+                environment(),
+                repository=REPOSITORY,
+                pull_number=PULL_NUMBER,
+                head_sha=HEAD_SHA,
+                base_sha=MAIN_SHA,
+                policy_sha=MAIN_SHA,
+                comment_id=COMMENT_ID,
+                run_id=RUN_ID,
+                run_attempt=RUN_ATTEMPT,
+            )
+
+        api = FakeAuthorizationApi()
+        api.jobs[0]["name"] = f"{controller.JOB_BINDING_MARKER}truncated"
+        with self.assertRaisesRegex(controller.PolicyError, "malformed or truncated"):
+            controller.authorize_call(
+                event(),
+                policy(),
+                api,
+                environment(),
+                repository=REPOSITORY,
+                pull_number=PULL_NUMBER,
+                head_sha=HEAD_SHA,
+                base_sha=MAIN_SHA,
+                policy_sha=MAIN_SHA,
+                comment_id=COMMENT_ID,
+                run_id=RUN_ID,
+                run_attempt=RUN_ATTEMPT,
+            )
+
+        api = FakeAuthorizationApi()
+        api.jobs[0]["run_attempt"] = 2
+        with self.assertRaisesRegex(controller.PolicyError, "binding job is missing"):
+            controller.authorize_call(
+                event(),
+                policy(),
+                api,
+                environment(),
+                repository=REPOSITORY,
+                pull_number=PULL_NUMBER,
+                head_sha=HEAD_SHA,
+                base_sha=MAIN_SHA,
+                policy_sha=MAIN_SHA,
+                comment_id=COMMENT_ID,
+                run_id=RUN_ID,
+                run_attempt=RUN_ATTEMPT,
+            )
 
 
 class ImmutableTreeTests(unittest.TestCase):
@@ -1021,6 +1253,34 @@ class PaginationApi(controller.GitHubApi):
 
 
 class PaginationTests(unittest.TestCase):
+    def test_api_response_size_is_bounded(self) -> None:
+        class Response:
+            status = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def read(self, limit):
+                self.assert_limit = limit
+                return b"12345"
+
+        response = Response()
+        api = controller.GitHubApi("token", "https://example.invalid")
+        with (
+            mock.patch.object(controller, "MAX_API_RESPONSE_BYTES", 4),
+            mock.patch.object(
+                controller.urllib.request,
+                "urlopen",
+                return_value=response,
+            ),
+            self.assertRaisesRegex(controller.PolicyError, "size limit"),
+        ):
+            api.get("/example")
+        self.assertEqual(response.assert_limit, 5)
+
     def test_list_pagination_fails_on_intermediate_error(self) -> None:
         api = PaginationApi([[{} for _ in range(100)], controller.PolicyError("page failed")])
         with self.assertRaisesRegex(controller.PolicyError, "page failed"):
@@ -1089,15 +1349,6 @@ class FakeCheckApi:
         }
         self.checks.append(check)
         return check
-
-
-class FakeActionsApi:
-    def __init__(self, runs) -> None:
-        self.runs = runs
-
-    def paginate_key(self, path, key, *, max_items, label):
-        del path, key, max_items, label
-        return self.runs
 
 
 def external(run_id: int = 101, attempt: int = 1) -> object:
@@ -1179,9 +1430,10 @@ class CheckRunTests(unittest.TestCase):
             app_api,
             FakeAuthorizationApi(),
             policy(),
-            workflow_dispatch_event(),
+            event(),
             environment(),
             binding,
+            COMMENT_ID,
             1,
             ["commit_policy=success", "workflow_lint=success"],
             APP_SLUG,
@@ -1194,9 +1446,10 @@ class CheckRunTests(unittest.TestCase):
                 app_api,
                 FakeAuthorizationApi(),
                 policy(),
-                workflow_dispatch_event(),
+                event(),
                 environment(),
                 binding,
+                COMMENT_ID,
                 1,
                 ["commit_policy=success", "workflow_lint=skipped"],
                 APP_SLUG,
@@ -1207,7 +1460,15 @@ class CheckRunTests(unittest.TestCase):
         binding = external()
         app_api = FakeCheckApi([pending_check(1, binding)])
         auth_api = FakeAuthorizationApi()
-        auth_api.main_sha_sequence = [MAIN_SHA, MAIN_SHA, MAIN_SHA, OLD_SHA]
+        auth_api.main_sha_sequence = [
+            MAIN_SHA,
+            MAIN_SHA,
+            MAIN_SHA,
+            MAIN_SHA,
+            MAIN_SHA,
+            MAIN_SHA,
+            OLD_SHA,
+        ]
 
         with self.assertRaisesRegex(
             controller.PolicyError, "main changed during final check reconciliation"
@@ -1216,9 +1477,10 @@ class CheckRunTests(unittest.TestCase):
                 app_api,
                 auth_api,
                 policy(),
-                workflow_dispatch_event(),
+                event(),
                 environment(),
                 binding,
+                COMMENT_ID,
                 1,
                 ["commit_policy=success", "workflow_lint=success"],
                 APP_SLUG,
@@ -1235,16 +1497,17 @@ class CheckRunTests(unittest.TestCase):
         binding = external()
         app_api = FakeCheckApi([pending_check(1, binding)])
         auth_api = FakeAuthorizationApi()
-        auth_api.main_error_on_read = 4
+        auth_api.main_error_on_read = 7
 
         with self.assertRaisesRegex(controller.PolicyError, "main ref reread failed"):
             controller.finish_check(
                 app_api,
                 auth_api,
                 policy(),
-                workflow_dispatch_event(),
+                event(),
                 environment(),
                 binding,
+                COMMENT_ID,
                 1,
                 ["commit_policy=success", "workflow_lint=success"],
                 APP_SLUG,
@@ -1264,16 +1527,17 @@ class CheckRunTests(unittest.TestCase):
             "external_id": external(run_id=999).encode()
         }
         auth_api = FakeAuthorizationApi()
-        auth_api.main_error_on_read = 4
+        auth_api.main_error_on_read = 7
 
         with self.assertRaisesRegex(controller.PolicyError, "binding is unexpected"):
             controller.finish_check(
                 app_api,
                 auth_api,
                 policy(),
-                workflow_dispatch_event(),
+                event(),
                 environment(),
                 binding,
+                COMMENT_ID,
                 1,
                 ["commit_policy=success", "workflow_lint=success"],
                 APP_SLUG,
@@ -1290,22 +1554,16 @@ class CheckRunTests(unittest.TestCase):
                 pending_check(2, binding, slug="github-actions"),
             ]
         )
-        run_event = {
-            "action": "completed",
-            "repository": {"full_name": REPOSITORY},
-            "workflow_run": {
-                "id": binding.run_id,
-                "run_attempt": binding.run_attempt,
-                "name": "Protected pull request CI",
-                "path": ".github/workflows/pr-ci.yml",
-                "event": "workflow_dispatch",
-                "head_branch": "main",
-                "head_sha": binding.policy_sha,
-                "display_title": f"PR #7 /ok to test {HEAD_SHA}",
-                "conclusion": "cancelled",
-            },
-        }
-        count = controller.reconcile_run(api, policy(), run_event, REPOSITORY, APP_SLUG)
+        auth_api = FakeAuthorizationApi()
+        auth_api.run = workflow_run(status="completed", conclusion="cancelled")
+        count = controller.reconcile_run(
+            api,
+            auth_api,
+            policy(),
+            workflow_run_event(conclusion="cancelled"),
+            REPOSITORY,
+            APP_SLUG,
+        )
         self.assertEqual(count, 1)
         self.assertEqual(len(api.patches), 1)
         self.assertEqual(api.patches[0][1]["conclusion"], "cancelled")
@@ -1313,23 +1571,15 @@ class CheckRunTests(unittest.TestCase):
     def test_late_retry_event_cannot_close_a_newer_attempt(self) -> None:
         binding = external(attempt=2)
         api = FakeCheckApi([pending_check(1, binding)])
-        run_event = {
-            "action": "completed",
-            "repository": {"full_name": REPOSITORY},
-            "workflow_run": {
-                "id": binding.run_id,
-                "run_attempt": 1,
-                "name": "Protected pull request CI",
-                "path": ".github/workflows/pr-ci.yml",
-                "event": "workflow_dispatch",
-                "head_branch": "main",
-                "head_sha": binding.policy_sha,
-                "display_title": f"PR #7 /ok to test {HEAD_SHA}",
-                "conclusion": "cancelled",
-            },
-        }
+        auth_api = FakeAuthorizationApi()
+        auth_api.run = workflow_run(status="completed", conclusion="cancelled")
         count = controller.reconcile_run(
-            api, policy(), run_event, REPOSITORY, APP_SLUG
+            api,
+            auth_api,
+            policy(),
+            workflow_run_event(conclusion="cancelled"),
+            REPOSITORY,
+            APP_SLUG,
         )
         self.assertEqual(count, 0)
         self.assertEqual(api.patches, [])
@@ -1337,27 +1587,63 @@ class CheckRunTests(unittest.TestCase):
     def test_sweep_closes_only_a_completed_bound_run(self) -> None:
         binding = external()
         app_api = FakeCheckApi([pending_check(1, binding)])
-        run = {
-            "id": binding.run_id,
-            "run_attempt": binding.run_attempt,
-            "name": "Protected pull request CI",
-            "path": ".github/workflows/pr-ci.yml",
-            "event": "workflow_dispatch",
-            "head_branch": "main",
-            "head_sha": binding.policy_sha,
-            "display_title": f"PR #7 /ok to test {HEAD_SHA}",
-            "status": "completed",
-            "conclusion": "failure",
-        }
+        actions_api = FakeAuthorizationApi()
+        actions_api.run = workflow_run(status="completed", conclusion="failure")
+        actions_api.runs = [actions_api.run]
         count = controller.sweep_runs(
             app_api,
-            FakeActionsApi([run]),
+            actions_api,
             policy(),
             REPOSITORY,
             APP_SLUG,
         )
         self.assertEqual(count, 1)
         self.assertEqual(app_api.patches[-1][1]["conclusion"], "failure")
+
+    def test_ordinary_comment_run_has_no_protected_binding(self) -> None:
+        auth_api = FakeAuthorizationApi()
+        auth_api.run = workflow_run(status="completed", conclusion="success")
+        auth_api.jobs = [
+            {
+                "id": 902,
+                "run_id": RUN_ID,
+                "run_attempt": RUN_ATTEMPT,
+                "head_sha": MAIN_SHA,
+                "name": "Inspect test command",
+                "status": "completed",
+                "conclusion": "success",
+            }
+        ]
+        protected = controller.completed_run_from_event(
+            auth_api,
+            policy(),
+            workflow_run_event(conclusion="success"),
+            REPOSITORY,
+        )
+        self.assertIsNone(protected)
+
+    def test_reconciliation_revalidates_comment_permission_before_closing(self) -> None:
+        binding = external()
+        app_api = FakeCheckApi([pending_check(1, binding)])
+        auth_api = FakeAuthorizationApi()
+        auth_api.run = workflow_run(status="completed", conclusion="failure")
+        auth_api.permissions[MAINTAINER] = "read"
+
+        count = controller.reconcile_run(
+            app_api,
+            auth_api,
+            policy(),
+            workflow_run_event(conclusion="failure"),
+            REPOSITORY,
+            APP_SLUG,
+        )
+
+        self.assertEqual(count, 1)
+        self.assertEqual(app_api.patches[-1][1]["conclusion"], "failure")
+        self.assertIn(
+            "Final state validation failed",
+            app_api.patches[-1][1]["output"]["summary"],
+        )
 
 
 if __name__ == "__main__":

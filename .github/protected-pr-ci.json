@@ -1,7 +1,7 @@
 {
   "version": 1,
   "default_branch": "main",
-  "workflow_file": ".github/workflows/pr-ci.yml",
+  "workflow_file": ".github/workflows/pr-ci-command.yml",
   "required_check": "Required CI",
   "release_app": {
     "enabled": false,
@@ -20,6 +20,7 @@
   "expected_jobs": [
     "commit_policy",
     "workflow_lint",
+    "tool_isolation",
     "markdown",
     "contracts",
     "rebuild_rs"
