@@ -50,6 +50,7 @@ WRITER_PERMISSIONS = frozenset({"write", "push", "maintain", "admin"})
 TERMINAL_CHECK_STATUSES = frozenset({"completed"})
 CHECK_NAME = "Required CI"
 MAX_API_RESPONSE_BYTES = 32 * 1024 * 1024
+MAX_API_ERROR_DETAIL_BYTES = 500
 MAX_CHANGED_PATHS = 3_000
 MAX_PULL_COMMITS = 250
 MAX_TREE_ENTRIES = 100_000
@@ -251,8 +252,16 @@ class GitHubApi:
                 )
                 require(200 <= response.status < 300, f"GitHub API returned HTTP {response.status}")
         except urllib.error.HTTPError as error:
-            detail = error.read().decode("utf-8", "replace")[:500]
-            raise PolicyError(f"GitHub API {method} {path} failed with HTTP {error.code}: {detail}") from error
+            raw_detail = error.read(MAX_API_ERROR_DETAIL_BYTES + 1)
+            truncated = len(raw_detail) > MAX_API_ERROR_DETAIL_BYTES
+            detail = raw_detail[:MAX_API_ERROR_DETAIL_BYTES].decode(
+                "utf-8", "replace"
+            )
+            if truncated:
+                detail = f"{detail}..."
+            raise PolicyError(
+                f"GitHub API {method} {path} failed with HTTP {error.code}: {detail}"
+            ) from error
         except (urllib.error.URLError, TimeoutError, OSError) as error:
             raise PolicyError(f"GitHub API {method} {path} failed: {error}") from error
         if not raw:

@@ -1281,6 +1281,39 @@ class PaginationTests(unittest.TestCase):
             api.get("/example")
         self.assertEqual(response.assert_limit, 5)
 
+    def test_api_error_response_size_is_bounded(self) -> None:
+        class ErrorBody:
+            def read(self, limit):
+                self.assert_limit = limit
+                return b"12345"
+
+            def close(self):
+                pass
+
+        body = ErrorBody()
+        error = controller.urllib.error.HTTPError(
+            "https://example.invalid/example",
+            500,
+            "server error",
+            {},
+            body,
+        )
+        api = controller.GitHubApi("token", "https://example.invalid")
+        with (
+            mock.patch.object(controller, "MAX_API_ERROR_DETAIL_BYTES", 4),
+            mock.patch.object(
+                controller.urllib.request,
+                "urlopen",
+                side_effect=error,
+            ),
+            self.assertRaisesRegex(
+                controller.PolicyError,
+                r"HTTP 500: 1234\.\.\.$",
+            ),
+        ):
+            api.get("/example")
+        self.assertEqual(body.assert_limit, 5)
+
     def test_list_pagination_fails_on_intermediate_error(self) -> None:
         api = PaginationApi([[{} for _ in range(100)], controller.PolicyError("page failed")])
         with self.assertRaisesRegex(controller.PolicyError, "page failed"):
