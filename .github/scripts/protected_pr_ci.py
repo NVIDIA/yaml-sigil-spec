@@ -8,7 +8,7 @@
 The workflow that invokes this module is loaded from the protected default
 branch.  Candidate commits are treated only as data until ``authorize`` has
 checked the exact command, current repository state, live permissions, and
-sensitive-path policy.  Check runs are created and updated only with the
+contributor-commit policy.  Check runs are created and updated only with the
 repository's narrowly scoped GitHub App token.
 
 This module intentionally uses only the Python standard library so privileged
@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import fnmatch
 import json
 import os
 import re
@@ -142,10 +141,9 @@ def load_config(path: str) -> Mapping[str, Any]:
         "required_check",
         "release_app",
         "expected_jobs",
-        "sensitive_paths",
     }
     require(set(config) == required, "policy configuration keys are incomplete or ambiguous")
-    require(config["version"] == 1, "unsupported policy configuration version")
+    require(config["version"] == 2, "unsupported policy configuration version")
     require(config["default_branch"] == "main", "the protected branch must be exact main")
     validate_path(config["workflow_file"], "workflow_file")
     require(config["required_check"] == CHECK_NAME, f"required_check must be {CHECK_NAME!r}")
@@ -212,11 +210,6 @@ def load_config(path: str) -> Mapping[str, Any]:
             f"expected_jobs[{index}] is not a job identifier",
         )
 
-    patterns = require_sequence(config["sensitive_paths"], "sensitive_paths")
-    require(patterns and len(set(patterns)) == len(patterns), "sensitive_paths must be nonempty and unique")
-    for index, pattern in enumerate(patterns):
-        require_string(pattern, f"sensitive_paths[{index}]")
-        require("\\" not in pattern and not pattern.startswith("/"), f"sensitive_paths[{index}] is invalid")
     return config
 
 
@@ -363,27 +356,10 @@ def normalized_casefold(value: str) -> str:
     return unicodedata.normalize("NFKC", normalized.casefold())
 
 
-def is_sensitive(path: str, patterns: Sequence[str]) -> bool:
-    """Match declarations, treating a trailing ``/**`` as including its root."""
-    identity = normalized_casefold(path)
-    for pattern in patterns:
-        declaration = normalized_casefold(pattern)
-        if fnmatch.fnmatchcase(identity, declaration):
-            return True
-        if declaration.endswith("/**") and fnmatch.fnmatchcase(
-            identity, declaration[:-3]
-        ):
-            return True
-    return False
-
-
-def commit_identities(commit: Mapping[str, Any]) -> tuple[str, str]:
+def commit_author_identity(commit: Mapping[str, Any]) -> str:
     details = require_mapping(commit.get("commit"), "commit details")
     author = require_mapping(details.get("author"), "commit author")
-    committer = require_mapping(details.get("committer"), "commit committer")
-    author_identity = f"{require_string(author.get('name'), 'commit author name')} <{require_string(author.get('email'), 'commit author email')}>"
-    committer_identity = f"{require_string(committer.get('name'), 'commit committer name')} <{require_string(committer.get('email'), 'commit committer email')}>"
-    return author_identity, committer_identity
+    return f"{require_string(author.get('name'), 'commit author name')} <{require_string(author.get('email'), 'commit author email')}>"
 
 
 def signoffs(message: Any) -> set[str]:
@@ -403,13 +379,11 @@ def require_verified(commit: Mapping[str, Any], label: str) -> None:
     require(verification.get("reason") == "valid", f"{label} verification is not valid")
 
 
-def require_dco(commit: Mapping[str, Any], *, require_committer: bool, label: str) -> None:
+def require_author_dco(commit: Mapping[str, Any], *, label: str) -> None:
     details = require_mapping(commit.get("commit"), f"{label} details")
     found = signoffs(details.get("message"))
-    author, committer = commit_identities(commit)
+    author = commit_author_identity(commit)
     require(author in found, f"{label} lacks the author's DCO sign-off")
-    if require_committer:
-        require(committer in found, f"{label} lacks the adopting committer's DCO sign-off")
 
 
 def current_main(api: GitHubApi, repository: str, branch: str) -> str:
@@ -702,29 +676,23 @@ def require_release_app_change(
         "release App raw commit committer email is unexpected",
     )
     require_verified(commit, "release App commit")
-    require_dco(commit, require_committer=False, label="release App commit")
+    require_author_dco(commit, label="release App commit")
 
 
-def require_adopted_change(
+def require_contributor_change(
     api: GitHubApi,
     repository: str,
-    pull: Mapping[str, Any],
     commits: Sequence[Mapping[str, Any]],
 ) -> None:
-    head = require_mapping(pull.get("head"), "pull request head")
-    head_repo = require_mapping(head.get("repo"), "pull request head repository")
-    require(head_repo.get("full_name") == repository, "sensitive changes require a same-repository branch")
-
     for index, summary in enumerate(commits):
-        sha = validate_sha(summary.get("sha"), f"adopted commit {index} SHA")
+        sha = validate_sha(summary.get("sha"), f"contributor commit {index} SHA")
         commit = full_commit(api, repository, sha)
-        parents = require_sequence(commit.get("parents"), f"adopted commit {index} parents")
-        require(len(parents) == 1, f"adopted commit {index} must be linear")
-        require_verified(commit, f"adopted commit {index}")
-        committer = require_mapping(commit.get("committer"), f"adopted commit {index} GitHub committer")
-        login = validate_login(committer.get("login"), f"adopted commit {index} GitHub committer login")
-        require_writer(api, repository, login, f"adopted commit {index} committer")
-        require_dco(commit, require_committer=True, label=f"adopted commit {index}")
+        parents = require_sequence(
+            commit.get("parents"), f"contributor commit {index} parents"
+        )
+        require(len(parents) == 1, f"contributor commit {index} must be linear")
+        require_verified(commit, f"contributor commit {index}")
+        require_author_dco(commit, label=f"contributor commit {index}")
 
 
 @dataclass(frozen=True)
@@ -843,17 +811,18 @@ def authorize(
     require(validate_sha(commits[-1].get("sha"), "last pull request commit SHA") == head_sha, "commit list does not end at pull request head")
     require_commit_chain(commits, base_sha, head_sha)
 
-    patterns = [require_string(value, "sensitive path pattern") for value in require_sequence(config.get("sensitive_paths"), "sensitive_paths")]
-    sensitive = [path for path in paths if is_sensitive(path, patterns)]
-    if sensitive:
-        release_app = require_mapping(config.get("release_app"), "release_app")
-        user = require_mapping(pull.get("user"), "pull request author")
-        if user.get("login") == release_app.get("login"):
-            require_release_app_change(
-                api, repository, pull, commits, paths, statuses, main_sha, release_app
-            )
-        else:
-            require_adopted_change(api, repository, pull, commits)
+    release_app = require_mapping(config.get("release_app"), "release_app")
+    user = require_mapping(pull.get("user"), "pull request author")
+    is_release_app = (
+        user.get("login") == release_app.get("login")
+        or user.get("id") == release_app.get("bot_user_id")
+    )
+    if is_release_app:
+        require_release_app_change(
+            api, repository, pull, commits, paths, statuses, main_sha, release_app
+        )
+    else:
+        require_contributor_change(api, repository, commits)
 
     require_live_authorization_state(
         api,
