@@ -36,10 +36,12 @@ a new review and command.
 
 Candidate jobs check out the exact authorized head on GitHub-hosted workers
 without repository credentials, secrets, OIDC, write permissions, cache saves,
-or retained artifacts. Externally authored changes to workflow and policy
-files, Cargo execution surfaces, or repository agent guidance additionally
-require adoption on a same-repository branch by a verified, DCO-compliant
-repository writer.
+or retained artifacts. Every human-authored pull-request commit must form a
+linear history from current `main`, be GitHub Verified, and contain a
+`Signed-off-by` trailer that exactly matches its Git author. The contributor's
+fork branch remains the pull-request head; a writer's command authorizes testing
+only and does not authorize integration. A maintainer reviews the completed
+results and separately decides whether to integrate the pull request.
 
 #### Signing Off Your Work
 

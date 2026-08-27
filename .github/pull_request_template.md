@@ -43,8 +43,9 @@ compatibility effects. Write `None` when there are none.
 - [ ] I confirmed this concerns the language-neutral specification or its
   conformance contract, rather than implementation-specific API semantics or
   behavior better handled in the implementation.
-- [ ] I have the right to submit this contribution and every commit includes a
-  `Signed-off-by` trailer.
+- [ ] I have the right to submit this contribution, every commit is GitHub
+  Verified, and every commit includes a `Signed-off-by` trailer that exactly
+  matches its Git author.
 - [ ] I understand and can explain this change.
 - [ ] I updated documentation or tests where needed.
 - [ ] I reviewed `CONTRIBUTING.md` and `SECURITY.md`.
