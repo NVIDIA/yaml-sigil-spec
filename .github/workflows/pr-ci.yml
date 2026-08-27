@@ -361,6 +361,7 @@ jobs:
           lint: true
           pr_comment: false
           push: false
+          version: "1.72.0"
 
       - name: Validate JSON Schema
         run: jq empty candidate/schema/YamlSigilSignature.v1alpha1.schema.json
@@ -412,6 +413,7 @@ jobs:
         uses: bufbuild/buf-action@8c6a16e16f12ba20b6470afa9c2ba9b5ba8c97c3 # v1.5.0
         with:
           setup_only: true
+          version: "1.72.0"
 
       # This section would benefit by a change to the action allowlist
       - name: Install Rust validation tools
@@ -419,7 +421,7 @@ jobs:
         with:
           checksum: true
           fallback: none
-          tool: cargo-audit,cargo-machete@0.9.2
+          tool: cargo-audit,cargo-deny@0.20.2,cargo-machete@0.9.2
 
       # The executable validator is built from protected main. Its candidate
       # root causes candidate Rust and xtask code to compile and test only in

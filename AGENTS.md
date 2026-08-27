@@ -412,18 +412,25 @@ jq empty schema/YamlSigilSignature.v1alpha1.schema.json
 cargo-machete --with-metadata
 (
   cd conformance/rebuild-rs
+  cargo deny --locked --workspace check bans licenses sources -D warnings
   cargo audit
 )
 ```
 
-Install `rumdl`, `cargo-audit`, and `cargo-machete` with Cargo, and install
-`jq`, before running the wrapper:
+Install `rumdl`, `cargo-audit`, `cargo-deny`, and `cargo-machete` with
+Cargo, and install `jq`, before running the wrapper:
 
 ```shell
 cargo install rumdl
 cargo install cargo-audit
+cargo install --locked cargo-deny --version 0.20.2
 cargo install --locked cargo-machete --version 0.9.2
 ```
+
+Cargo Deny reads the repository-wide policy from `deny.toml` and the
+workspace-specific license exceptions from
+`conformance/rebuild-rs/deny.exceptions.toml`. The locked workspace check
+covers the rebuilder, its local helper crate, and the developer xtask.
 
 Keep the cargo-machete version aligned with hosted CI. The
 `--with-metadata` check resolves normal, development, and build dependency
@@ -431,19 +438,18 @@ names across all features, but remains an unused-dependency heuristic; retain
 the all-target, all-feature Clippy and test checks as the compilation proof.
 
 For Buf, the xtask uses the executable named by `BUF` when set, then searches
-`PATH`, and confirms that the selected executable can run. The repository
-follows Buf's rolling latest release instead of pinning a numeric CLI version.
-Hosted CI expresses that policy by omitting the `version` input when it uses
-`bufbuild/buf-action`. Install or update the latest `buf-toolchain` release and
-ensure `$CARGO_HOME/bin` is on `PATH`:
+`PATH`, and confirms that the selected executable can run. The repository pins
+Buf CLI `1.72.0`. Hosted CI expresses that policy through the
+`bufbuild/buf-action` `version` input. Install or update the matching
+`buf-toolchain` release and ensure `$CARGO_HOME/bin` is on `PATH`:
 
 ```shell
-cargo install --force buf-toolchain
+cargo install --locked --force buf-toolchain --version 1.72.0-hotfix.2
 ```
 
 See the [official Buf installation instructions](https://buf.build/docs/cli/installation/)
-for other installation methods. Keep the rolling Buf version policy and exact
-local validation sequence aligned between
+for other installation methods. Keep the pinned Buf CLI and `buf-toolchain`
+versions and the exact local validation sequence aligned between
 `conformance/rebuild-rs/xtask/src/ci.rs` and this file.
 
 Keep `cargo xtask ci` provider-neutral. It must not read, parse, or test a
