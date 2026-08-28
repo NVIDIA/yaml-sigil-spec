@@ -377,7 +377,7 @@ class GitHubApi:
                 "$first:Int!,$after:String){repository(owner:$owner,name:$name){"
                 "pullRequest(number:$number){commits(first:$first,after:$after){"
                 "totalCount nodes{commit{oid signature{__typename email isValid "
-                "state wasSignedByGitHub signer{databaseId login __typename}}}}}"
+                "state wasSignedByGitHub signer{databaseId login __typename}}}}"
                 "pageInfo{hasNextPage endCursor}}}}}"
             )
             payload = json.dumps(

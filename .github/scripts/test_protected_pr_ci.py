@@ -2081,6 +2081,45 @@ def graphql_signature_pages(oids: list[str]):
 
 
 class GraphQlSignatureTests(unittest.TestCase):
+    def test_signature_query_text_matches_the_intended_selection_tree(self) -> None:
+        api = controller.GitHubApi("token", "https://example.invalid")
+        with mock.patch.object(
+            controller.urllib.request,
+            "urlopen",
+            return_value=graphql_signature_response([HEAD_SHA]),
+        ) as urlopen:
+            api.commit_signatures(REPOSITORY, PULL_NUMBER, [HEAD_SHA])
+
+        _, _, _, query = requested_graphql_page(urlopen.call_args.args[0])
+        expected = "".join(
+            """
+            query($owner:String!,$name:String!,$number:Int!,$first:Int!,$after:String){
+              repository(owner:$owner,name:$name){
+                pullRequest(number:$number){
+                  commits(first:$first,after:$after){
+                    totalCount
+                    nodes{
+                      commit{
+                        oid
+                        signature{
+                          __typename
+                          email
+                          isValid
+                          state
+                          wasSignedByGitHub
+                          signer{databaseId login __typename}
+                        }
+                      }
+                    }
+                    pageInfo{hasNextPage endCursor}
+                  }
+                }
+              }
+            }
+            """.split()
+        )
+        self.assertEqual("".join(query.split()), expected)
+
     def test_signature_inventory_is_batched_five_by_fifty(self) -> None:
         oids = [f"{index:040x}" for index in range(1, 251)]
         api = controller.GitHubApi("token", "https://example.invalid")
