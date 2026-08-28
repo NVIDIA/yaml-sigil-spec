@@ -35,9 +35,9 @@ repository's commit history. Concretely:
    - Vendored ACVP test-vector ingestion (JSON parsing of the
      pinned NIST ACVP-Server snapshot under `rebuild-rs/vendor/`):
      `serde`, `serde_json`.
-   - Output isolation uses the repository-local
-     `yamlsigil-pinned-dir` crate. It pins each output directory before
-     replacing a fixture or vendor file.
+   - Input and output isolation use the repository-local
+     `yamlsigil-pinned-dir` crate. It anchors bounded no-follow ACVP reads and
+     pins each output directory before replacing a fixture or vendor file.
 
    No wholesale crypto library is trusted for fixture content;
    ECDSA point arithmetic and Ed25519 vector handling are

@@ -24,6 +24,20 @@ byte-equality against the published `(r, s)`. The file
 covers multiple curve / hash combinations; the rebuilder
 filters for `curve = P-256` and `hashAlg = SHA2-256`.
 
+## Resource limits
+
+Protected CI and the native rebuilder accept at most 3 MiB of
+encoded JSON, 512 test groups, 64 cases per group, and 4,096
+cases in total. The selected P-256 / SHA2-256 replay is further
+limited to eight groups and 256 cases. Scalar-like hex fields are
+capped at 160 characters, messages at 4,096 characters, and
+randomized-hashing values at 256 characters. The rebuilder reads
+one anchored no-follow byte snapshot, validates these limits before
+retaining collections, and deserializes that same snapshot before
+replay. A refresh outside these limits requires an explicit review
+and coordinated limit change. `cargo xtask ci` exercises every
+exact-boundary and limit-plus-one regression.
+
 The National Institute of Standards and Technology is explicitly
 acknowledged as the source of this test data. The local file name
 was changed; its contents were not modified. The NIST notice that

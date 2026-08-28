@@ -34,14 +34,59 @@ head and comment `/ok to test <head-sha>`. Only that exact lowercase,
 40-character SHA command starts candidate validation; every new head requires
 a new review and command.
 
+Changes to workflow policy, protected validation tools, manifests, lockfiles,
+toolchain or dependency policy, the conformance rebuilder, or its vendored ACVP
+corpus are security-sensitive. Each commit must preserve the original human
+author while a current repository writer becomes the verified committer, and
+its message must contain exact DCO trailers for both identities. For a fork,
+maintainer edits must remain enabled on the original pull request. After
+reviewing that adopted history, a writer comments
+`/ok to test-and-adopt <head-sha>`. Ordinary changes must not use the adoption
+command, and sensitive changes must not use the ordinary command.
+
+Record the authorization comment ID and time. GitHub event delivery may take
+up to 20 minutes, so the absence of a run or acknowledgement during that
+window is not a reason to repeat the command. After 25 minutes, inspect the
+Actions run list and the original comment, and distinguish a queued run from a
+missing event before posting at most one replacement command for the still
+current head.
+
+An authorization is invalid after any head, base, protected-policy, comment
+body or timestamp, repository identity, or writer-permission change. Never
+accept a late acknowledgement or job result for an invalidated binding.
+
 Candidate jobs check out the exact authorized head on GitHub-hosted workers
 without repository credentials, secrets, OIDC, write permissions, cache saves,
 or retained artifacts. Every human-authored pull-request commit must form a
-linear history from current `main`, be GitHub Verified, and contain a
-`Signed-off-by` trailer that exactly matches its Git author. The contributor's
-fork branch remains the pull-request head; a writer's command authorizes testing
-only and does not authorize integration. A maintainer reviews the completed
-results and separately decides whether to integrate the pull request.
+linear history from current `main`, be GitHub Verified, and contain the exact
+DCO identity required for direct or adopted history. The contributor's fork
+branch remains the pull-request head; a writer's command authorizes testing
+only and does not authorize integration.
+
+Protected checkout verifier regressions also run on GitHub-hosted Linux,
+macOS, and Windows workers. The Windows leg uses a real directory junction and
+a short-name-shaped path to prove fail-closed handling without retaining
+artifacts.
+
+Before final authorization, fetch current upstream `main`, rebase the original
+contributor branch with `git rebase --gpg-sign <upstream>/main`, and push the
+rewritten branch back to the same fork with `--force-with-lease`. Confirm every
+rewritten commit is GitHub Verified and DCO-compliant, then request testing for
+the new exact SHA. Do not copy the contribution onto a repository-owned branch
+merely to run CI.
+
+The protected conformance job bounds the vendored ACVP snapshot before Cargo
+compiles candidate Rust. The rebuilder then uses one anchored no-follow read,
+preflights byte, group, case, decoded-field, and replay-work limits without
+retaining corpus collections, and deserializes the same byte snapshot.
+Oversized or noncanonical input fails before cryptographic replay.
+
+Repository Actions execution protection is an additional platform control,
+not the source of `/ok to test` authority. When that policy is in **Evaluate**
+mode, its warnings are telemetry only: they neither allow nor block a workflow.
+The protected `issue_comment` controller and its exact-SHA reauthorization
+remain the operational boundary. A maintainer reviews the completed results
+and separately decides whether to integrate the pull request.
 
 #### Signing Off Your Work
 

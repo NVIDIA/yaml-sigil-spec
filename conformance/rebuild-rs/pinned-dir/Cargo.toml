@@ -3,7 +3,7 @@
 
 [package]
 name = "yamlsigil-pinned-dir"
-version = "0.0.0"
+version = "0.0.1"
 edition = "2021"
 publish = false
 # Keep the executable target inventory explicit. Conventional target

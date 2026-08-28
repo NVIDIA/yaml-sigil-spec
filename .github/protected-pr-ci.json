@@ -1,5 +1,7 @@
 {
-  "version": 2,
+  "version": 3,
+  "repository": "NVIDIA/yaml-sigil-spec",
+  "repository_kind": "spec",
   "default_branch": "main",
   "workflow_file": ".github/workflows/pr-ci-command.yml",
   "required_check": "Required CI",
@@ -20,9 +22,11 @@
   "expected_jobs": [
     "commit_policy",
     "workflow_lint",
+    "platform_verifier",
     "tool_isolation",
     "markdown",
     "contracts",
     "rebuild_rs"
-  ]
+  ],
+  "supplemental_candidate_ci": false
 }
