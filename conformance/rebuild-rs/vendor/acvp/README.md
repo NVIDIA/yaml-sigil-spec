@@ -71,11 +71,19 @@ To bump the pin to a newer commit, edit `DEFAULT_COMMIT` in
 cargo xtask update-acvp
 ```
 
-Or pass an explicit commit hash (without bumping the default):
+Or pass an explicit full 40-character lowercase hexadecimal commit
+hash (without bumping the default):
 
 ```sh
-cargo xtask update-acvp --commit <hash>
+cargo xtask update-acvp --commit <40-character-lowercase-commit>
 ```
+
+The updater accepts only an HTTP 200 response over HTTPS, follows at
+most five HTTPS redirects, and uses the platform certificate verifier.
+It honors supported HTTP and HTTPS proxy and `NO_PROXY` environment
+settings, does not retry, requests identity encoding, and bounds
+response headers, timeouts, and the 3 MiB response body before
+replacing either pinned file.
 
 The xtask rewrites both the JSON file and this README. This
 file is regenerated on every run; do not edit it by hand.
