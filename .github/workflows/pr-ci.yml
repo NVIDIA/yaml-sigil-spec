@@ -288,6 +288,14 @@ jobs:
       GH_TOKEN: ""
       GITHUB_TOKEN: ""
     steps:
+      - name: Check out protected policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          path: policy
+          persist-credentials: false
+          ref: ${{ needs.authorize.outputs.policy_sha }}
+
       # Resolve the supported runner's trusted executables before candidate
       # files exist, then prove a checkout-root decoy cannot replace them.
       - name: Resolve trusted executable paths
@@ -394,6 +402,14 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Check out protected policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          path: policy
+          persist-credentials: false
+          ref: ${{ needs.authorize.outputs.policy_sha }}
+
       - name: Check out and verify exact candidate
         uses: ./policy/.github/actions/protected-candidate-checkout
         with:
