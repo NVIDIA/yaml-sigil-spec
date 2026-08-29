@@ -11,6 +11,8 @@ minimal and exact-pinned in `Cargo.toml`, grouped by role:
 - Input and output isolation: the repository-local `yamlsigil-pinned-dir`
   crate anchors no-follow ACVP reads and pins output directories before
   replacing fixture or vendor files.
+- Developer-only ACVP refresh transport: `ureq` uses Rustls with the platform
+  certificate verifier.
 
 The full transitive graph is locked in `Cargo.lock`. The Docker image
 defined here packages everything needed to rebuild every fixture in
@@ -81,14 +83,22 @@ commands. Currently:
 To refresh a vendored file, use the corresponding xtask subcommand:
 
 ```sh
-cargo xtask update-acvp [--commit <hash>]
+cargo xtask update-acvp [--commit <40-character-lowercase-commit>]
 ```
 
-The xtask rewrites both the data file and the vendor `README.md` so
-the pin is always self-describing. Downloads and replay are limited to a
-3 MiB encoded snapshot. Group, case, selected-replay, and decoded-field limits
-are documented in that generated vendor README and exercised by
-exact-boundary and limit-plus-one tests.
+The optional commit must be a full 40-character lowercase hexadecimal Git
+commit ID. The updater accepts only an HTTP 200 response over HTTPS, follows at
+most five HTTPS redirects, uses the platform certificate verifier, and honors
+supported `ALL_PROXY`, `HTTPS_PROXY`, `HTTP_PROXY`, and `NO_PROXY` environment
+settings. It does not retry, requests identity encoding, and bounds response
+headers, each network phase, the complete request, and the response body before
+replacing either pinned file.
+
+The xtask rewrites both the data file and the vendor `README.md` so the pin is
+always self-describing. Downloads and replay are limited to a 3 MiB encoded
+snapshot. Group, case, selected-replay, and decoded-field limits are documented
+in that generated vendor README and exercised by exact-boundary and
+limit-plus-one tests.
 
 ## Running locally without Docker
 
