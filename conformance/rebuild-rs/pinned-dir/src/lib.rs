@@ -3,32 +3,24 @@
 
 //! Pinned-directory file operations for the conformance developer tools.
 //!
-//! Linux exposes an open directory through `/proc/self/fd/<fd>`. Resolving a
-//! single child name through that handle keeps the operation attached to the
-//! opened directory even if another process renames or replaces its original
-//! pathname.
+//! Every child operation is resolved relative to an already-open directory
+//! handle. This keeps the operation attached to that directory even if
+//! another process renames or replaces its original pathname.
 
-#[cfg(not(target_os = "linux"))]
-compile_error!(
-    "native conformance rebuilding requires Linux; use the repository's container workflow"
-);
-
-use std::ffi::OsStr;
-use std::fs::{self, File, OpenOptions};
+use cap_fs_ext::{DirExt, FollowSymlinks, OpenOptionsFollowExt};
+use cap_std::ambient_authority;
+use cap_std::fs::{Dir, OpenOptions};
+use std::ffi::OsString;
 use std::io::{self, Read, Write};
-use std::os::fd::AsRawFd;
-use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Component, Path, PathBuf};
 
-// Linux open(2) flags. The standard library supplies the access, creation,
-// exclusive, and close-on-exec flags used by each OpenOptions call.
-const O_DIRECTORY: i32 = 0o200000;
-const O_NOFOLLOW: i32 = 0o400000;
+#[cfg(test)]
+use std::fs;
 
 /// An open directory used as the authority for child operations.
 #[derive(Debug)]
 pub struct PinnedDir {
-    handle: File,
+    handle: Dir,
 }
 
 impl PinnedDir {
@@ -42,27 +34,14 @@ impl PinnedDir {
             ));
         }
 
+        let (root, components) = absolute_path_components(path)?;
         let mut current = Self {
-            handle: open_directory(Path::new("/"))?,
+            handle: Dir::open_ambient_dir(root, ambient_authority())?,
         };
-        for component in path.components() {
-            match component {
-                Component::RootDir => {}
-                Component::Normal(name) => {
-                    current = Self {
-                        handle: open_directory(&current.entry_path(name))?,
-                    };
-                }
-                _ => {
-                    return Err(io::Error::new(
-                        io::ErrorKind::InvalidInput,
-                        format!(
-                            "directory path is not a normalized absolute path: {}",
-                            path.display()
-                        ),
-                    ));
-                }
-            }
+        for component in components {
+            current = Self {
+                handle: current.handle.open_dir_nofollow(component)?,
+            };
         }
         Ok(current)
     }
@@ -72,7 +51,7 @@ impl PinnedDir {
     pub fn open_child(&self, name: &str) -> io::Result<Self> {
         validate_name(name)?;
         Ok(Self {
-            handle: open_directory(&self.entry_path(name))?,
+            handle: self.handle.open_dir_nofollow(name)?,
         })
     }
 
@@ -86,7 +65,7 @@ impl PinnedDir {
                 format!("refusing non-directory or symlink path: {name}"),
             )),
             Err(error) if error.kind() == io::ErrorKind::NotFound => {
-                fs::create_dir(self.entry_path(name))?;
+                self.handle.create_dir(name)?;
                 self.open_child(name)
             }
             Err(error) => Err(error),
@@ -94,9 +73,9 @@ impl PinnedDir {
     }
 
     /// Query a child entry without following a final symlink.
-    pub fn symlink_metadata(&self, name: &str) -> io::Result<fs::Metadata> {
+    pub fn symlink_metadata(&self, name: &str) -> io::Result<cap_std::fs::Metadata> {
         validate_name(name)?;
-        fs::symlink_metadata(self.entry_path(name))
+        self.handle.symlink_metadata(name)
     }
 
     /// Read one regular child file through the pinned directory handle.
@@ -109,10 +88,9 @@ impl PinnedDir {
         let sentinel = max_bytes.checked_add(1).ok_or_else(|| {
             io::Error::new(io::ErrorKind::InvalidInput, "file bound has no sentinel")
         })?;
-        let mut file = OpenOptions::new()
-            .read(true)
-            .custom_flags(O_NOFOLLOW)
-            .open(self.entry_path(name))?;
+        let mut options = OpenOptions::new();
+        options.read(true).follow(FollowSymlinks::No);
+        let mut file = self.handle.open_with(name, &options)?;
         let metadata = file.metadata()?;
         if !metadata.file_type().is_file() {
             return Err(io::Error::new(
@@ -146,7 +124,7 @@ impl PinnedDir {
         validate_name(name)?;
         match self.symlink_metadata(name) {
             Ok(metadata) if metadata.file_type().is_file() => {
-                fs::remove_file(self.entry_path(name))?;
+                self.handle.remove_file(name)?;
             }
             Ok(_) => {
                 return Err(io::Error::new(
@@ -158,26 +136,46 @@ impl PinnedDir {
             Err(error) => return Err(error),
         }
 
-        let mut file = OpenOptions::new()
+        let mut options = OpenOptions::new();
+        options
             .write(true)
             .create_new(true)
-            .custom_flags(O_NOFOLLOW)
-            .open(self.entry_path(name))?;
+            .follow(FollowSymlinks::No);
+        let mut file = self.handle.open_with(name, &options)?;
         file.write_all(content)
-    }
-
-    fn entry_path(&self, name: impl AsRef<OsStr>) -> PathBuf {
-        PathBuf::from("/proc/self/fd")
-            .join(self.handle.as_raw_fd().to_string())
-            .join(name.as_ref())
     }
 }
 
-fn open_directory(path: &Path) -> io::Result<File> {
-    OpenOptions::new()
-        .read(true)
-        .custom_flags(O_DIRECTORY | O_NOFOLLOW)
-        .open(path)
+fn absolute_path_components(path: &Path) -> io::Result<(PathBuf, Vec<OsString>)> {
+    let invalid = || {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!(
+                "directory path is not a normalized absolute path: {}",
+                path.display()
+            ),
+        )
+    };
+    let mut root = PathBuf::new();
+    let mut names = Vec::new();
+    let mut saw_root = false;
+    for component in path.components() {
+        match component {
+            Component::Prefix(prefix) if root.as_os_str().is_empty() && !saw_root => {
+                root.push(prefix.as_os_str());
+            }
+            Component::RootDir if !saw_root => {
+                root.push(std::path::MAIN_SEPARATOR_STR);
+                saw_root = true;
+            }
+            Component::Normal(name) if saw_root => names.push(name.to_os_string()),
+            _ => return Err(invalid()),
+        }
+    }
+    if !saw_root {
+        return Err(invalid());
+    }
+    Ok((root, names))
 }
 
 fn validate_name(name: &str) -> io::Result<()> {
@@ -319,6 +317,37 @@ mod tests {
         fs::remove_dir(moved_path).expect("remove moved parent");
         fs::remove_dir(outside_path.join("output")).expect("remove outside output");
         fs::remove_dir(outside_path).expect("remove outside");
+        fs::remove_dir(root).expect("remove test root");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn initial_open_rejects_intermediate_junction() {
+        use std::process::Command;
+
+        let root = test_dir("initial-parent-junction");
+        let target = root.join("target");
+        let junction = root.join("junction");
+        fs::create_dir(&target).expect("create junction target");
+        fs::create_dir(target.join("child")).expect("create target child");
+        let output = Command::new("cmd.exe")
+            .args(["/D", "/C", "mklink", "/J"])
+            .arg(&junction)
+            .arg(&target)
+            .output()
+            .expect("run mklink");
+        assert!(
+            output.status.success(),
+            "mklink failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+
+        PinnedDir::open(&junction.join("child"))
+            .expect_err("intermediate junction must fail closed");
+
+        fs::remove_dir(&junction).expect("remove junction");
+        fs::remove_dir(target.join("child")).expect("remove target child");
+        fs::remove_dir(target).expect("remove target");
         fs::remove_dir(root).expect("remove test root");
     }
 

@@ -19,3 +19,7 @@ description = "Repository-local pinned-directory writes for conformance tooling.
 
 [lib]
 path = "src/lib.rs"
+
+[dependencies]
+cap-fs-ext = "=4.0.3"
+cap-std = "=4.0.3"
