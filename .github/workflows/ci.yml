@@ -122,7 +122,7 @@ jobs:
   rebuild_rs:
     name: Rust conformance generator
     runs-on: linux-amd64-cpu8
-    timeout-minutes: 30
+    timeout-minutes: 120
     permissions:
       contents: read
     steps:
@@ -172,6 +172,47 @@ jobs:
         run: cargo audit
         working-directory: conformance/rebuild-rs
 
+  terminal_probe:
+    name: Protected terminal probe (${{ matrix.name }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux
+            runner: ubuntu-latest
+          - name: macOS
+            runner: macos-latest
+          - name: Windows
+            runner: windows-latest
+    steps:
+      # The repaired script is protected policy and terminal candidate input.
+      # No repository-backed Action or post-hook follows candidate execution.
+      - name: Run protected validation with isolated stable tools
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          policy_root="$(mktemp -d)"
+          chmod 0755 "${policy_root}"
+          git -c core.autocrlf=false -c credential.helper= \
+            init --quiet --initial-branch=main "${policy_root}"
+          git -C "${policy_root}" remote add origin \
+            "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
+          GIT_TERMINAL_PROMPT=0 git -c core.autocrlf=false \
+            -c credential.helper= -C "${policy_root}" fetch --no-tags \
+            --no-recurse-submodules --depth=1 origin "${GITHUB_SHA}"
+          git -C "${policy_root}" checkout --quiet --detach FETCH_HEAD
+          exec bash --noprofile --norc \
+            "${policy_root}/.github/scripts/run-terminal-candidate.sh" \
+            protected-ci "${RUNNER_OS}" "${policy_root}" "${GITHUB_SHA}" \
+            "${GITHUB_REPOSITORY}" "${GITHUB_REPOSITORY}" \
+            "${GITHUB_SHA}" "${GITHUB_SHA}" "${GITHUB_ENV}"
+
   required_ci:
     name: Required CI
     if: ${{ always() }}
@@ -181,6 +222,7 @@ jobs:
       - markdown
       - contracts
       - rebuild_rs
+      - terminal_probe
     runs-on: linux-amd64-cpu4
     timeout-minutes: 5
     permissions: {}
@@ -192,6 +234,7 @@ jobs:
           MARKDOWN_RESULT: ${{ needs.markdown.result }}
           PLATFORM_VERIFIER_RESULT: ${{ needs.platform_verifier.result }}
           REBUILD_RS_RESULT: ${{ needs.rebuild_rs.result }}
+          TERMINAL_PROBE_RESULT: ${{ needs.terminal_probe.result }}
         run: |
           require_success() {
             local job="$1"
@@ -208,3 +251,4 @@ jobs:
           require_success "Markdown" "${MARKDOWN_RESULT}"
           require_success "Schema and Protobuf" "${CONTRACTS_RESULT}"
           require_success "Rust conformance generator" "${REBUILD_RS_RESULT}"
+          require_success "Protected terminal probe" "${TERMINAL_PROBE_RESULT}"
