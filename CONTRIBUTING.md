@@ -55,13 +55,20 @@ An authorization is invalid after any head, base, protected-policy, comment
 body or timestamp, repository identity, or writer-permission change. Never
 accept a late acknowledgement or job result for an invalidated binding.
 
-Candidate jobs check out the exact authorized head on GitHub-hosted workers
-without repository credentials, secrets, OIDC, write permissions, cache saves,
-or retained artifacts. Every human-authored pull-request commit must form a
-linear history from current `main`, be GitHub Verified, and contain the exact
-DCO identity required for direct or adopted history. The contributor's fork
-branch remains the pull-request head; a writer's command authorizes testing
-only and does not authorize integration.
+The protected parent uses a contents-read token only to fetch and verify the
+exact authorized head. Candidate-controlled processes then run as a
+purpose-created disposable operating-system identity with read-only source and
+tool inputs, a minimal environment, and no repository credential, secret,
+OIDC, write permission, cache save, or retained artifact. The runner-command
+directory is inaccessible to that identity, no trusted Action or post-step
+follows candidate execution, and the job fails unless every candidate process
+is quiescent and the identity is removed.
+
+Every human-authored pull-request commit must form a linear history from
+current `main`, be GitHub Verified, and contain the exact DCO identity required
+for direct or adopted history. The contributor's fork branch remains the
+pull-request head; a writer's command authorizes testing only and does not
+authorize integration.
 
 Protected checkout verifier regressions also run on GitHub-hosted Linux,
 macOS, and Windows workers. The Windows leg uses a real directory junction and
