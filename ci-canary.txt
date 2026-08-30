@@ -1,0 +1,1 @@
+This unmerged change exercises the protected contributor CI path.
