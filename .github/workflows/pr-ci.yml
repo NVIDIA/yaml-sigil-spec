@@ -214,34 +214,25 @@ jobs:
           - name: Windows
             runner: windows-latest
     steps:
-      # This job has no repository-backed Action and therefore no registered
-      # post-hook. Protected policy prepares a distinct OS identity, then the
-      # final exec runs candidate tests as the terminal disposable workload.
-      - name: Run terminal candidate controller tests
-        env:
-          BASE_SHA: ${{ needs.authorize.outputs.base_sha }}
-          GITHUB_TOKEN: ${{ github.token }}
-          HEAD_REPOSITORY: ${{ needs.authorize.outputs.head_repository }}
-          HEAD_SHA: ${{ needs.authorize.outputs.head_sha }}
-          POLICY_SHA: ${{ needs.authorize.outputs.policy_sha }}
+      # These regressions execute only protected policy. Candidate conformance
+      # remains in the separate Linux terminal job below.
+      - name: Check out protected policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          path: policy
+          persist-credentials: false
+          ref: ${{ needs.authorize.outputs.policy_sha }}
+
+      - name: Compile and test protected checkout verifier
         shell: bash
         run: |
-          set -euo pipefail
-          policy_root="$(mktemp -d)"
-          chmod 0755 "${policy_root}"
-          git -c core.autocrlf=false -c credential.helper= \
-            init --quiet --initial-branch=main "${policy_root}"
-          git -C "${policy_root}" remote add origin \
-            "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
-          GIT_TERMINAL_PROMPT=0 git -c core.autocrlf=false \
-            -c credential.helper= -C "${policy_root}" fetch --no-tags \
-            --no-recurse-submodules --depth=1 origin "${POLICY_SHA}"
-          git -C "${policy_root}" checkout --quiet --detach FETCH_HEAD
-          exec bash --noprofile --norc \
-            "${policy_root}/.github/scripts/run-terminal-candidate.sh" \
-            controller "${RUNNER_OS}" "${policy_root}" "${POLICY_SHA}" \
-            "${GITHUB_REPOSITORY}" "${HEAD_REPOSITORY}" \
-            "${BASE_SHA}" "${HEAD_SHA}" "${GITHUB_ENV}"
+          python3 -m py_compile \
+            policy/.github/scripts/protected_checkout.py \
+            policy/.github/scripts/protected_pr_ci.py \
+            policy/.github/scripts/test_protected_pr_ci.py
+          python3 -m unittest discover \
+            -s policy/.github/scripts -p 'test_protected_pr_ci.py'
 
   tool_isolation:
     name: Trusted tool isolation
