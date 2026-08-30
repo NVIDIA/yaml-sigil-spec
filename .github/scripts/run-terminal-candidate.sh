@@ -146,8 +146,13 @@ while IFS='=' read -r name _; do
 done < <(env)
 
 # macOS gives its per-user temporary ancestors private traversal permissions.
+# Git for Windows likewise must not resolve a candidate path through the
+# runner account's private profile. Only the new sandbox below the drive root
+# is hardened; no ancestor ACL is changed.
 if [[ "${runner_os}" == 'macOS' ]]; then
   sandbox="$(mktemp -d /tmp/yaml-sigil-terminal.XXXXXX)"
+elif [[ "${runner_os}" == 'Windows' ]]; then
+  sandbox="$(mktemp -d /c/yaml-sigil-terminal.XXXXXX)"
 else
   sandbox="$(mktemp -d)"
 fi

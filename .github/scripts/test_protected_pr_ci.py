@@ -1981,6 +1981,7 @@ class WorkflowStructureTests(unittest.TestCase):
         self.assertIn('sudo -n chown -R "${candidate_uid}"', shell)
         self.assertNotIn('\nchown -R "${candidate_uid}"', shell)
         self.assertIn("mktemp -d /tmp/yaml-sigil-terminal.XXXXXX", shell)
+        self.assertIn("mktemp -d /c/yaml-sigil-terminal.XXXXXX", shell)
         self.assertIn('policy_root="${sandbox}/protected-policy"', shell)
         self.assertIn('install -m 0555 "${trusted_cargo}"', shell)
         self.assertIn('protected_validator="${trusted_cargo}"', shell)
