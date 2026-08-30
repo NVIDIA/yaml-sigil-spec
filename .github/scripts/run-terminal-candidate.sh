@@ -105,12 +105,13 @@ if [[ ! -f "${command_file}" ]]; then
 fi
 
 trusted_git="$(command -v git)"
-trusted_python="$(command -v python3)"
+trusted_python_command="$(command -v python3)"
+trusted_python_name="$(basename "${trusted_python_command}")"
 trusted_cargo="$(command -v cargo)"
 trusted_rustup="$(command -v rustup)"
 trusted_env="$(command -v env)"
 trusted_git="$(realpath "${trusted_git}")"
-trusted_python="$(realpath "${trusted_python}")"
+trusted_python="$(realpath "${trusted_python_command}")"
 trusted_cargo="$(realpath "${trusted_cargo}")"
 trusted_rustup="$(realpath "${trusted_rustup}")"
 trusted_env="$(realpath "${trusted_env}")"
@@ -144,7 +145,12 @@ while IFS='=' read -r name _; do
   esac
 done < <(env)
 
-sandbox="$(mktemp -d)"
+# macOS gives its per-user temporary ancestors private traversal permissions.
+if [[ "${runner_os}" == 'macOS' ]]; then
+  sandbox="$(mktemp -d /tmp/yaml-sigil-terminal.XXXXXX)"
+else
+  sandbox="$(mktemp -d)"
+fi
 chmod 0755 "${sandbox}"
 candidate_root="${sandbox}/candidate"
 candidate_home="${sandbox}/candidate-home"
@@ -164,6 +170,19 @@ mkdir -p \
   "${candidate_temp}" "${candidate_buf_cache}" "${candidate_pycache}" \
   "${trusted_tools}/bin" "${trusted_rustup_home}" "${setup_cargo_home}" \
   "${setup_target}"
+
+# A Windows Python installation loads DLLs and the standard library beside
+# its executable. Stage the complete runtime before creating the candidate
+# identity so that the interpreter and everything it loads share one
+# read-only ACL boundary.
+if [[ "${runner_os}" == 'Windows' ]]; then
+  trusted_python_source="$(dirname "${trusted_python}")"
+  trusted_python_root="${trusted_tools}/python"
+  mkdir -p "${trusted_python_root}"
+  cp -R "${trusted_python_source}/." "${trusted_python_root}/"
+  trusted_python="${trusted_python_root}/${trusted_python_name}"
+  "${trusted_python}" -c 'import hashlib, json, pathlib, sys'
+fi
 
 safe_path=''
 while IFS= read -r entry; do
@@ -207,6 +226,12 @@ if [[ "${profile}" != 'controller' ]]; then
   fi
 fi
 
+cargo_name='cargo'
+[[ "${runner_os}" == 'Windows' ]] && cargo_name='cargo.exe'
+install -m 0555 "${trusted_cargo}" "${trusted_tools}/bin/${cargo_name}"
+trusted_cargo="${trusted_tools}/bin/${cargo_name}"
+protected_validator="${trusted_cargo}"
+
 git_command=(
   "${trusted_git}"
   -c advice.detachedHead=false
@@ -215,6 +240,26 @@ git_command=(
   -c core.hooksPath=/dev/null
   -c credential.helper=
 )
+
+# Restage macOS policy below a globally traversable temporary ancestor.
+if [[ "${runner_os}" == 'macOS' ]]; then
+  policy_root="${sandbox}/protected-policy"
+  "${git_command[@]}" init --quiet --initial-branch=main "${policy_root}"
+  "${git_command[@]}" -C "${policy_root}" remote add origin \
+    "https://github.com/${canonical_repository}.git"
+  "${git_command[@]}" -C "${policy_root}" fetch --no-tags \
+    --no-recurse-submodules --depth=1 origin "${policy_sha}"
+  "${git_command[@]}" -C "${policy_root}" checkout --quiet --detach FETCH_HEAD
+  restaged_policy_sha="$(
+    "${git_command[@]}" -C "${policy_root}" \
+      rev-parse --verify 'HEAD^{commit}'
+  )"
+  if [[ "${restaged_policy_sha}" != "${policy_sha}" ]]; then
+    echo 'restaged terminal policy is not the authorized commit' >&2
+    exit 1
+  fi
+fi
+
 export GIT_TERMINAL_PROMPT=0
 "${git_command[@]}" init --quiet --initial-branch=main "${candidate_root}"
 "${git_command[@]}" -C "${candidate_root}" remote add origin \
@@ -233,10 +278,16 @@ digest() {
     "$1"
 }
 
+verifier_git="${trusted_git}"
+if [[ "${runner_os}" == 'Windows' ]]; then
+  # Native Python requires the trusted executable's Windows-absolute path.
+  verifier_git="$(cygpath -w "${trusted_git}")"
+fi
+
 GITHUB_TOKEN="${github_token}" "${trusted_python}" \
   "${policy_root}/.github/scripts/protected_checkout.py" verify \
   --candidate-root "${candidate_root}" \
-  --git "${trusted_git}" \
+  --git "${verifier_git}" \
   --repository "${canonical_repository}" \
   --base-sha "${base_sha}" \
   --head-sha "${head_sha}" \
@@ -374,7 +425,8 @@ if pgrep -u "${candidate_uid}" >/dev/null 2>&1; then
 fi
 
 chmod 0700 "${command_directory}"
-chown -R "${candidate_uid}" \
+# Only elevated setup may transfer writable roots to the disposable identity.
+sudo -n chown -R "${candidate_uid}" \
   "${candidate_home}" "${candidate_cargo_home}" "${candidate_target}" \
   "${candidate_temp}" "${candidate_buf_cache}" "${candidate_pycache}"
 
