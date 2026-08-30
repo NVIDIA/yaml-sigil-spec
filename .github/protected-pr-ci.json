@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "repository": "NVIDIA/yaml-sigil-spec",
   "repository_kind": "spec",
   "default_branch": "main",
@@ -28,5 +28,6 @@
     "contracts",
     "rebuild_rs"
   ],
-  "supplemental_candidate_ci": false
+  "supplemental_candidate_ci": false,
+  "trusted_gitlinks": []
 }
