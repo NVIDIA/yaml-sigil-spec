@@ -8,11 +8,23 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use crate::isolated_process;
+
 const BUF_INSTALL_GUIDANCE: &str = "Install or update the latest buf-toolchain release with:\n    \
      cargo install --force buf-toolchain\n\n\
      Then ensure $CARGO_HOME/bin is on PATH.\n\
      See https://buf.build/docs/cli/installation/ for official alternatives.";
 const CARGO_MACHETE_INSTALL_COMMAND: &str = "cargo install --locked cargo-machete --version 0.9.2";
+const PROTECTED_MARKER_ENV: &str = "YAML_SIGIL_TERMINAL_CANDIDATE";
+const PROTECTED_AUDIT_ENV: &str = "YAML_SIGIL_CARGO_AUDIT";
+const PROTECTED_SEED_ENV: &str = "YAML_SIGIL_CARGO_SEED";
+const PROTECTED_STATE_ENV: &str = "YAML_SIGIL_CARGO_STATE_ROOT";
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum ExecutionBoundary {
+    Ordinary,
+    Protected { cargo_audit: PathBuf },
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum WorkingDirectory {
@@ -34,6 +46,23 @@ impl Step {
             .chain(self.args.iter().copied())
             .collect::<Vec<_>>()
             .join(" ")
+    }
+
+    fn command(self, boundary: &ExecutionBoundary) -> Command {
+        if self.is_dependency_audit() {
+            if let ExecutionBoundary::Protected { cargo_audit } = boundary {
+                let mut command = Command::new(cargo_audit);
+                command.args(["audit", "--no-fetch"]);
+                return command;
+            }
+        }
+        let mut command = Command::new(self.program);
+        command.args(self.args);
+        command
+    }
+
+    fn is_dependency_audit(self) -> bool {
+        self.program == "cargo" && self.args == ["audit"]
     }
 }
 
@@ -115,6 +144,7 @@ const CI_STEPS: &[Step] = &[
 pub(crate) fn run(rebuild_root: &Path) -> io::Result<()> {
     require_cargo_machete()?;
     let buf = resolve_buf()?;
+    let boundary = execution_boundary()?;
     let repository_root = rebuild_root
         .parent()
         .and_then(Path::parent)
@@ -129,12 +159,12 @@ pub(crate) fn run(rebuild_root: &Path) -> io::Result<()> {
         let mut command = if step.program == "buf" {
             Command::new(&buf)
         } else {
-            Command::new(step.program)
+            step.command(&boundary)
         };
-        let status = command
-            .args(step.args)
-            .current_dir(current_dir)
-            .status()
+        if step.program == "buf" {
+            command.args(step.args);
+        }
+        let status = isolated_process::status(command.current_dir(current_dir))
             .map_err(|error| io::Error::new(error.kind(), format!("{}: {error}", step.label)))?;
         if !status.success() {
             return Err(io::Error::other(format!(
@@ -144,6 +174,40 @@ pub(crate) fn run(rebuild_root: &Path) -> io::Result<()> {
         }
     }
     Ok(())
+}
+
+fn execution_boundary() -> io::Result<ExecutionBoundary> {
+    let marker = env::var_os(PROTECTED_MARKER_ENV);
+    let audit = env::var_os(PROTECTED_AUDIT_ENV);
+    let seed = env::var_os(PROTECTED_SEED_ENV);
+    let state = env::var_os(PROTECTED_STATE_ENV);
+    if marker.is_none() && audit.is_none() && seed.is_none() && state.is_none() {
+        return Ok(ExecutionBoundary::Ordinary);
+    }
+    let Some(audit) = audit.filter(|value| !value.is_empty()) else {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "protected dependency-audit boundary is incomplete",
+        ));
+    };
+    if marker.as_deref() != Some(std::ffi::OsStr::new("1"))
+        || seed.as_ref().is_none_or(|value| value.is_empty())
+        || state.as_ref().is_none_or(|value| value.is_empty())
+        || env::var_os("CARGO_NET_OFFLINE").as_deref() != Some(std::ffi::OsStr::new("true"))
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "protected dependency-audit boundary is incomplete",
+        ));
+    }
+    let cargo_audit = PathBuf::from(audit);
+    if !cargo_audit.is_absolute() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "protected cargo-audit path is not absolute",
+        ));
+    }
+    Ok(ExecutionBoundary::Protected { cargo_audit })
 }
 
 fn require_cargo_machete() -> io::Result<()> {
@@ -271,5 +335,36 @@ mod tests {
         );
         assert!(AGENT_GUIDANCE.contains(CARGO_MACHETE_INSTALL_COMMAND));
         assert!(AGENT_GUIDANCE.contains("cargo-machete --with-metadata"));
+    }
+
+    #[test]
+    fn ordinary_audit_can_seed_a_clean_cargo_home() {
+        let audit = CI_STEPS
+            .iter()
+            .find(|step| step.label == "Rust dependency audit")
+            .expect("dependency audit step is present");
+        let clean = tempfile::tempdir().unwrap();
+        let mut command = audit.command(&ExecutionBoundary::Ordinary);
+        command.env("CARGO_HOME", clean.path());
+        assert_eq!(command.get_program(), "cargo");
+        assert_eq!(command.get_args().collect::<Vec<_>>(), ["audit"]);
+        assert!(!command.get_args().any(|argument| argument == "--no-fetch"));
+    }
+
+    #[test]
+    fn protected_audit_uses_the_authenticated_binary_without_network() {
+        let audit = CI_STEPS
+            .iter()
+            .copied()
+            .find(|step| step.is_dependency_audit())
+            .unwrap();
+        let command = audit.command(&ExecutionBoundary::Protected {
+            cargo_audit: PathBuf::from("/trusted-tools/bin/cargo-audit"),
+        });
+        assert_eq!(command.get_program(), "/trusted-tools/bin/cargo-audit");
+        assert_eq!(
+            command.get_args().collect::<Vec<_>>(),
+            ["audit", "--no-fetch"]
+        );
     }
 }
