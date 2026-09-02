@@ -24,3 +24,9 @@ path = "src/main.rs"
 [dependencies]
 ureq = { version = "=3.4.0", default-features = false, features = ["platform-verifier", "rustls"] }
 yamlsigil-pinned-dir = { path = "../pinned-dir" }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+rustix = { version = "=1.1.4", features = ["process"] }
+
+[dev-dependencies]
+tempfile = "3.23"

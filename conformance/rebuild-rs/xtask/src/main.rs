@@ -16,6 +16,7 @@
 //! vectors through a size- and time-bounded HTTPS client.
 
 mod ci;
+mod isolated_process;
 
 use std::env;
 use std::io::{self, Read};

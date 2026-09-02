@@ -453,10 +453,11 @@ may declare the same checks as independent steps, but behavioral alignment is
 a review responsibility rather than a source-level dependency between the
 xtask and a provider configuration file.
 
-A separate GitHub-hosted Linux, macOS, and Windows matrix runs the protected
-checkout verifier regressions. Its Windows leg creates an actual directory
-junction and a short-name-shaped path; this provider-specific validation stays
-outside `cargo xtask ci`.
+A separate GitHub-hosted Linux job runs the protected checkout verifier
+regressions. This repository is Linux-only and must not schedule or require
+macOS or Windows jobs. Shared verifier code may remain portable, while hosted
+cross-platform regressions belong in the traits and Rust implementation
+repositories. This provider-specific validation stays outside `cargo xtask ci`.
 
 Validate shell scripts under `.github/scripts` with Shuck before landing
 changes. Install it from the `shuck-cli` crate and run it from the repository
