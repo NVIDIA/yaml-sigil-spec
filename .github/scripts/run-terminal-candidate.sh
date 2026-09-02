@@ -532,7 +532,10 @@ if [[ "${profile}" != 'controller' ]]; then
     --depth=1 --no-tags https://github.com/RustSec/advisory-db.git \
     /cargo-seed/advisory-db
 fi
-chmod -R a+rX,go-w "${candidate_cargo_seed}"
+# Prefetch runs as the disposable candidate identity. Transfer the complete
+# seed to trusted ownership before the read-only validation mount.
+sudo -n chown -R --no-dereference 0:0 -- "${candidate_cargo_seed}"
+sudo -n chmod -R a+rX,go-w -- "${candidate_cargo_seed}"
 
 # The terminal validation container has no runner home, host PID namespace,
 # Docker socket, credentials, or outbound network. Authenticated source and
