@@ -211,10 +211,18 @@ def cargo_config_inventory(
     root: pathlib.Path, kind: str
 ) -> dict[pathlib.PurePosixPath, bytes]:
     inventory: dict[pathlib.PurePosixPath, bytes] = {}
-    cargo_roots = [pathlib.PurePosixPath(".")]
+    cargo_working_directories = [pathlib.PurePosixPath(".")]
     if kind == "spec":
-        cargo_roots.append(pathlib.PurePosixPath("conformance/rebuild-rs"))
-    for cargo_root in cargo_roots:
+        cargo_working_directories.append(
+            pathlib.PurePosixPath("conformance/rebuild-rs")
+        )
+    cargo_roots: set[pathlib.PurePosixPath] = {pathlib.PurePosixPath(".")}
+    for working_directory in cargo_working_directories:
+        current = working_directory
+        while current != pathlib.PurePosixPath("."):
+            cargo_roots.add(current)
+            current = current.parent
+    for cargo_root in sorted(cargo_roots, key=lambda path: (len(path.parts), path.parts)):
         for name in ("config", "config.toml"):
             relative = cargo_root / ".cargo" / name
             path = root / relative
