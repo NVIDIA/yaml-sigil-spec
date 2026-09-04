@@ -459,6 +459,10 @@ regressions. This repository is Linux-only and must not schedule or require
 macOS or Windows jobs. Shared verifier code may remain portable, while hosted
 cross-platform regressions belong in the traits and Rust implementation
 repositories. This provider-specific validation stays outside `cargo xtask ci`.
+The Linux job also runs `.github/scripts/test-cargo-egress-topology.sh` as a
+test-only Docker check of the parentless internal IPvlan, unexposed proxy,
+blocked direct egress, TLS-authenticated crates.io path, and exact cleanup. It
+must not execute candidate or release code.
 
 Validate shell scripts under `.github/scripts` with Shuck before landing
 changes. Install it from the `shuck-cli` crate and run it from the repository

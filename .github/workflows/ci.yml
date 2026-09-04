@@ -69,6 +69,10 @@ jobs:
           python3 -m unittest discover \
             -s .github/scripts -p 'test_protected_pr_ci.py'
 
+      # Exercise only the test topology; candidate and release code are absent.
+      - name: Test protected Cargo egress topology
+        run: .github/scripts/test-cargo-egress-topology.sh
+
   markdown:
     name: Markdown
     runs-on: linux-amd64-cpu4
