@@ -16,7 +16,6 @@
 //! vectors through a size- and time-bounded HTTPS client.
 
 mod ci;
-mod isolated_process;
 
 use std::env;
 use std::io::{self, Read};
@@ -138,8 +137,8 @@ fn print_usage() {
          cargo xtask update-acvp [--commit <40-character-lowercase-commit>]\n\n\
          Runs the repository's complete non-release validation sequence.\n\
          --candidate-root validates another repository checkout with this\n\
-         protected xtask implementation.\n\n\
-         Candidate preflight performs the protected, no-follow, bounded ACVP\n\
+         repository-owned xtask implementation.\n\n\
+         Candidate preflight performs a no-follow, bounded ACVP\n\
          corpus read before any candidate-controlled process executes.\n\n\
          Refreshes vendor/acvp/{VENDORED_FILE_NAME} and the matching\n\
          vendor/acvp/README.md to track the requested commit of\n\
@@ -536,7 +535,7 @@ fn render_readme(commit: &str, size: u64) -> String {
          \n\
          ## Resource limits\n\
          \n\
-         Protected CI and the native rebuilder accept at most 3 MiB of\n\
+         Candidate preflight and the native rebuilder accept at most 3 MiB of\n\
          encoded JSON, 512 test groups, 64 cases per group, and 4,096\n\
          cases in total. The selected P-256 / SHA2-256 replay is further\n\
          limited to eight groups and 256 cases. Scalar-like hex fields are\n\

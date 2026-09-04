@@ -1,23 +1,24 @@
 name: CI
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
+      - "ci-testing/*"
+      - "pull-request/[0-9]+"
 
-permissions:
-  contents: read
+permissions: {}
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.repository }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  workflow_lint:
-    name: GitHub Actions
-    runs-on: linux-amd64-cpu4
-    timeout-minutes: 10
+  trusted_ci:
+    name: Trusted CI (Linux)
+    if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/ci-testing/') }}
+    runs-on: linux-amd64-cpu8
+    timeout-minutes: 120
     permissions:
       contents: read
     steps:
@@ -37,67 +38,20 @@ jobs:
           scandir: .github/scripts
           version: v0.11.0
 
-      - name: Compile and test protected controller
+      - name: Test CI helpers
         run: |
           python3 -m py_compile \
-            .github/scripts/protected_pr_ci.py \
-            .github/scripts/test_protected_pr_ci.py
+            .github/scripts/report_required_ci.py \
+            .github/scripts/test_report_required_ci.py
           python3 -m unittest discover \
-            -s .github/scripts -p 'test_protected_pr_ci.py'
-
-  platform_verifier:
-    name: Protected policy verifier tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      # Exercise the complete protected policy verifier on the repository's
-      # supported Linux platform without weakening protected-checkout coverage.
-      - name: Compile and run protected policy verifier tests
-        shell: bash
-        run: |
-          python3 -m py_compile \
-            .github/scripts/protected_checkout.py \
-            .github/scripts/protected_pr_ci.py \
-            .github/scripts/test_protected_pr_ci.py
-          python3 -m unittest discover \
-            -s .github/scripts -p 'test_protected_pr_ci.py'
-
-      # Exercise only the test topology; candidate and release code are absent.
-      - name: Test protected Cargo egress topology
-        run: .github/scripts/test-cargo-egress-topology.sh
-
-  markdown:
-    name: Markdown
-    runs-on: linux-amd64-cpu4
-    timeout-minutes: 10
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
+            -s .github/scripts -p 'test_report_required_ci.py'
+          .github/scripts/test-materialize-candidate.sh
 
       - name: Lint Markdown
         # Refresh this immutable pin frequently to keep pace with rumdl releases.
         uses: rvben/rumdl@95a982d941d00cf41a0dcef4d0788bd15a29be1b # v0.2.54
         with:
           version: "0.2.54"
-
-  contracts:
-    name: Schema and Protobuf
-    runs-on: linux-amd64-cpu4
-    timeout-minutes: 10
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
 
       - name: Check Protobuf
         uses: bufbuild/buf-action@8c6a16e16f12ba20b6470afa9c2ba9b5ba8c97c3 # v1.5.0
@@ -109,21 +63,10 @@ jobs:
           lint: true
           pr_comment: false
           push: false
+          version: "1.72.0"
 
       - name: Validate JSON Schema
         run: jq empty schema/YamlSigilSignature.v1alpha1.schema.json
-
-  rebuild_rs:
-    name: Rust conformance generator
-    runs-on: linux-amd64-cpu8
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
 
       - name: Set up Rust
         uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
@@ -140,12 +83,13 @@ jobs:
           fallback: none
           tool: cargo-audit,cargo-machete@0.9.2
 
-      - name: Cache Rust build inputs
+      - name: Cache trusted Rust build inputs
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-bin: false
-          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-          workspaces: conformance/rebuild-rs -> target
+          # Retain source registry data only; target/ may contain executables.
+          cache-targets: false
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Check Rust formatting
         run: cargo fmt --all --check
@@ -166,39 +110,168 @@ jobs:
         run: cargo audit
         working-directory: conformance/rebuild-rs
 
-  required_ci:
-    name: Required CI
-    if: ${{ always() }}
-    needs:
-      - workflow_lint
-      - platform_verifier
-      - markdown
-      - contracts
-      - rebuild_rs
-    runs-on: linux-amd64-cpu4
-    timeout-minutes: 5
+  candidate_ci:
+    name: Candidate CI (Linux)
+    if: ${{ startsWith(github.ref, 'refs/heads/pull-request/') }}
+    runs-on: linux-amd64-cpu8
+    timeout-minutes: 120
     permissions: {}
+    env:
+      ACTIONS_CACHE_URL: ""
+      ACTIONS_ID_TOKEN_REQUEST_TOKEN: ""
+      ACTIONS_ID_TOKEN_REQUEST_URL: ""
+      ACTIONS_RESULTS_URL: ""
+      ACTIONS_RUNTIME_TOKEN: ""
+      CARGO_REGISTRIES_CRATES_IO_TOKEN: ""
+      GH_TOKEN: ""
+      GIT_ASKPASS: /bin/false
+      GIT_CONFIG_GLOBAL: /dev/null
+      GIT_CONFIG_NOSYSTEM: "1"
+      GIT_CONFIG_SYSTEM: /dev/null
+      GIT_LFS_SKIP_SMUDGE: "1"
+      GIT_TERMINAL_PROMPT: "0"
+      GITHUB_TOKEN: ""
     steps:
-      - name: Require successful CI jobs
-        env:
-          CONTRACTS_RESULT: ${{ needs.contracts.result }}
-          GITHUB_ACTIONS_RESULT: ${{ needs.workflow_lint.result }}
-          MARKDOWN_RESULT: ${{ needs.markdown.result }}
-          PLATFORM_VERIFIER_RESULT: ${{ needs.platform_verifier.result }}
-          REBUILD_RS_RESULT: ${{ needs.rebuild_rs.result }}
+      # Allocate Cargo state beneath this runner job's fresh temporary root.
+      - name: Initialize ephemeral Cargo state
+        shell: bash
         run: |
-          require_success() {
-            local job="$1"
-            local result="$2"
-            if [[ "${result}" != "success" ]]; then
-              printf '%s finished with result %s; success is required.\n' \
-                "${job}" "${result}"
-              exit 1
-            fi
-          }
+          set -euo pipefail
+          printf '%s\n' "CARGO_HOME=${RUNNER_TEMP}/cargo-home" >> "${GITHUB_ENV}"
 
-          require_success "GitHub Actions" "${GITHUB_ACTIONS_RESULT}"
-          require_success "Protected policy verifier" "${PLATFORM_VERIFIER_RESULT}"
-          require_success "Markdown" "${MARKDOWN_RESULT}"
-          require_success "Schema and Protobuf" "${CONTRACTS_RESULT}"
-          require_success "Rust conformance generator" "${REBUILD_RS_RESULT}"
+      # Install fixed tools before any contributor-controlled path exists.
+      - name: Set up Rust
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+        with:
+          cache: false
+          components: clippy, rustfmt
+          toolchain: stable
+
+      # This section would benefit by a change to the action allowlist
+      - name: Install Rust validation tools
+        uses: taiki-e/install-action@43aecc8d72668fbcfe75c31400bc4f890f1c5853 # v2.83.2
+        with:
+          checksum: true
+          fallback: none
+          tool: cargo-audit,cargo-machete@0.9.2,shellcheck@0.11.0
+
+      - name: Install Markdown linter
+        # Refresh this immutable pin frequently to keep pace with rumdl releases.
+        uses: rvben/rumdl@95a982d941d00cf41a0dcef4d0788bd15a29be1b # v0.2.54
+        with:
+          install-only: true
+          version: "0.2.54"
+
+      # Install Buf without a token while no contributor path exists. Candidate
+      # Protobuf checks invoke this fixed executable directly after checkout.
+      - name: Install Buf
+        uses: bufbuild/buf-action@8c6a16e16f12ba20b6470afa9c2ba9b5ba8c97c3 # v1.5.0
+        with:
+          github_token: ""
+          setup_only: true
+          token: ""
+          version: "1.72.0"
+
+      # Load checkout-boundary scripts from current protected main
+      # while the workspace still contains no contributor-controlled path.
+      - name: Load protected candidate policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e "${GITHUB_WORKSPACE}/.git"
+          git -c credential.helper= init --quiet --initial-branch=main \
+            "${GITHUB_WORKSPACE}"
+          git -C "${GITHUB_WORKSPACE}" remote add origin \
+            "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
+          git -c credential.helper= -c http.extraHeader= \
+            -C "${GITHUB_WORKSPACE}" fetch --no-tags \
+            --no-recurse-submodules --depth=1 origin \
+            refs/heads/main:refs/remotes/origin/main
+          git -C "${GITHUB_WORKSPACE}" show \
+            refs/remotes/origin/main:.github/scripts/materialize-candidate.sh \
+            > "${RUNNER_TEMP}/materialize-candidate.sh"
+          git -C "${GITHUB_WORKSPACE}" show \
+            refs/remotes/origin/main:.github/scripts/check-pull-request-commits.sh \
+            > "${RUNNER_TEMP}/check-pull-request-commits.sh"
+          git -C "${GITHUB_WORKSPACE}" show \
+            refs/remotes/origin/main:.github/scripts/install-actionlint.sh \
+            > "${RUNNER_TEMP}/install-actionlint.sh"
+          test -s "${RUNNER_TEMP}/materialize-candidate.sh"
+          test -s "${RUNNER_TEMP}/check-pull-request-commits.sh"
+          test -s "${RUNNER_TEMP}/install-actionlint.sh"
+          /bin/bash -n "${RUNNER_TEMP}/materialize-candidate.sh"
+          /bin/bash -n "${RUNNER_TEMP}/check-pull-request-commits.sh"
+          /bin/bash -n "${RUNNER_TEMP}/install-actionlint.sh"
+          /bin/bash --noprofile --norc \
+            "${RUNNER_TEMP}/install-actionlint.sh" \
+            "${RUNNER_TEMP}/actionlint-bin"
+
+      # The protected helper performs the only candidate checkout, disables
+      # filters and LFS, and never reads candidate submodule configuration.
+      - name: Materialize the exact copied candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${GITHUB_WORKSPACE}"
+          /bin/bash --noprofile --norc \
+            "${RUNNER_TEMP}/materialize-candidate.sh" \
+            "${GITHUB_REPOSITORY}" "${GITHUB_SHA}" "${GITHUB_REF_NAME}"
+          export BASE_SHA
+          export HEAD_SHA="${GITHUB_SHA}"
+          BASE_SHA="$(git -C "${GITHUB_WORKSPACE}" \
+            rev-parse refs/remotes/origin/main)"
+          /bin/bash --noprofile --norc \
+            "${RUNNER_TEMP}/check-pull-request-commits.sh"
+
+      # Policy-oriented checks run before any candidate script, build script,
+      # or test can modify Cargo state or GitHub command files. Candidate code
+      # runs only in the terminal step below; no privileged step consumes its
+      # state afterward.
+      - name: Lint GitHub Actions workflows
+        run: |
+          "${RUNNER_TEMP}/actionlint-bin/actionlint"
+
+      - name: Lint shell scripts
+        run: shellcheck .github/scripts/*.sh
+
+      - name: Lint Markdown
+        run: rumdl check .
+
+      - name: Build Protobuf
+        run: buf build proto
+
+      - name: Lint Protobuf
+        run: buf lint proto
+
+      - name: Check Protobuf formatting
+        run: buf format proto --diff --exit-code
+
+      - name: Validate JSON Schema
+        run: jq empty schema/YamlSigilSignature.v1alpha1.schema.json
+
+      - name: Check Rust formatting
+        run: cargo-fmt --all --check
+        working-directory: conformance/rebuild-rs
+
+      - name: Check unused Rust dependencies
+        run: cargo-machete --with-metadata
+
+      - name: Audit Rust dependencies
+        run: cargo-audit audit
+        working-directory: conformance/rebuild-rs
+
+      # Rust builds and project-owned test scripts execute candidate code. Keep
+      # them together at the end so GITHUB_ENV, GITHUB_PATH, Cargo aliases,
+      # wrappers, and replaced tools cannot influence a later policy step.
+      - name: Run terminal candidate validation
+        run: |
+          cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+          cargo test --locked --workspace --all-features
+          cd "${GITHUB_WORKSPACE}"
+          python3 -m py_compile \
+            .github/scripts/report_required_ci.py \
+            .github/scripts/test_report_required_ci.py
+          python3 -m unittest discover \
+            -s .github/scripts -p 'test_report_required_ci.py'
+          .github/scripts/test-materialize-candidate.sh
+        working-directory: conformance/rebuild-rs
