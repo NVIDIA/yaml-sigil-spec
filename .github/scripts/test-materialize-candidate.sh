@@ -76,7 +76,8 @@ run_materializer() {
   mkdir "${destination}"
   (
     cd "${destination}"
-    RUNNER_TEMP="${fixture_root}" \
+    env -u GITHUB_ACTIONS \
+      RUNNER_TEMP="${fixture_root}" \
       YAML_SIGIL_MATERIALIZE_TEST_ORIGIN="${bare}" \
       "${materializer}" NVIDIA/yaml-sigil-test "${head}" pull-request/7 \
       source-spec "${spec_repo}"
@@ -85,6 +86,24 @@ run_materializer() {
 
 spec_repo="$(make_spec)"
 plain_repo="$(make_candidate plain '# no content filters' "${spec_repo}")"
+
+# The local-origin override is a test seam only. Prove the production Actions
+# environment rejects it before unsetting that marker for the fixture cases.
+actions_destination="${fixture_root}/actions-checkout"
+mkdir "${actions_destination}"
+if (
+  cd "${actions_destination}"
+  GITHUB_ACTIONS=true \
+    RUNNER_TEMP="${fixture_root}" \
+    YAML_SIGIL_MATERIALIZE_TEST_ORIGIN="${plain_repo}" \
+    "${materializer}" NVIDIA/yaml-sigil-test \
+    "$(git --git-dir="${plain_repo}" rev-parse refs/heads/pull-request/7)" \
+    pull-request/7 source-spec "${spec_repo}"
+); then
+  echo "test origin unexpectedly accepted in GitHub Actions" >&2
+  exit 1
+fi
+
 run_materializer "${plain_repo}" "${spec_repo}" "${fixture_root}/plain-checkout"
 test "$(git -C "${fixture_root}/plain-checkout/source-spec" remote get-url origin)" \
   = "${spec_repo}"
@@ -124,7 +143,8 @@ stale_destination="${fixture_root}/stale-checkout"
 mkdir "${stale_destination}"
 if (
   cd "${stale_destination}"
-  RUNNER_TEMP="${fixture_root}" \
+  env -u GITHUB_ACTIONS \
+    RUNNER_TEMP="${fixture_root}" \
     YAML_SIGIL_MATERIALIZE_TEST_ORIGIN="${plain_repo}" \
     "${materializer}" NVIDIA/yaml-sigil-test "$(printf 'f%.0s' {1..40})" \
     pull-request/7 source-spec "${spec_repo}"
