@@ -20,6 +20,32 @@ API_ROOT = "https://api.github.com"
 API_VERSION = "2026-03-10"
 MAX_EVENT_BYTES = 256 * 1024
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
+MAX_PULL_COMMITS = 100
+SIGNATURE_QUERY = """
+query($owner:String!,$name:String!,$number:Int!,$first:Int!){
+  repository(owner:$owner,name:$name){
+    pullRequest(number:$number){
+      commits(first:$first){
+        totalCount
+        nodes{
+          commit{
+            oid
+            signature{
+              __typename
+              email
+              isValid
+              state
+              wasSignedByGitHub
+              signer{databaseId login __typename}
+            }
+          }
+        }
+        pageInfo{hasNextPage}
+      }
+    }
+  }
+}
+"""
 TERMINAL_JOB_CONCLUSIONS = {
     "action_required",
     "cancelled",
@@ -45,6 +71,10 @@ class Api(Protocol):
     def post(self, path: str, payload: dict[str, Any]) -> Any:
         """Create one GitHub object and decode its JSON response."""
 
+    def graphql(self, query: str, variables: dict[str, Any]) -> Any:
+        """Run one bounded read-only GraphQL query."""
+
+
 class GitHubApi:
     """Bounded JSON client for api.github.com."""
 
@@ -58,6 +88,11 @@ class GitHubApi:
 
     def post(self, path: str, payload: dict[str, Any]) -> Any:
         return self._request("POST", path, payload)
+
+    def graphql(self, query: str, variables: dict[str, Any]) -> Any:
+        return self._request(
+            "POST", "graphql", {"query": query, "variables": variables}
+        )
 
     def _request(
         self, method: str, path: str, payload: dict[str, Any] | None
@@ -144,6 +179,17 @@ class Binding:
         return f"yaml-sigil-required-ci:{self.run_id}:{self.run_attempt}"
 
 
+@dataclass(frozen=True)
+class SignatureIdentity:
+    """GitHub's verified signer identity for one exact commit OID."""
+
+    oid: str
+    kind: str
+    email: str
+    signer_id: int
+    signer_login: str
+
+
 def _mapping(value: Any, label: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ReporterError(f"{label} is not an object")
@@ -177,6 +223,144 @@ def _sha(value: Any, label: str) -> str:
 
 def _repository_name(value: Any, label: str) -> str:
     return _text(_mapping(value, label).get("full_name"), f"{label} full name")
+
+
+def _account(value: Any, label: str) -> tuple[int, str, str]:
+    account = _mapping(value, label)
+    account_id = _integer(account.get("id"), f"{label} ID")
+    login = _text(account.get("login"), f"{label} login")
+    if re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})", login) is None:
+        raise ReporterError(f"{label} login is malformed")
+    kind = _text(account.get("type"), f"{label} type")
+    if kind != "User":
+        raise ReporterError(f"{label} is not a GitHub User")
+    return account_id, login, kind
+
+
+def _raw_identity(
+    commit: dict[str, Any], role: str, label: str
+) -> tuple[str, str, str]:
+    body = _mapping(commit.get("commit"), f"{label} body")
+    actor = _mapping(body.get(role), f"{label} raw {role}")
+    name = _text(actor.get("name"), f"{label} raw {role} name")
+    email = _text(actor.get("email"), f"{label} raw {role} email")
+    return name, email, f"{name} <{email}>"
+
+
+def _signoffs(value: Any, label: str) -> set[str]:
+    if not isinstance(value, str):
+        raise ReporterError(f"{label} is not text")
+    found = set()
+    for line in value.splitlines():
+        match = re.fullmatch(r"Signed-off-by:\s*(.+)", line, flags=re.IGNORECASE)
+        if match:
+            found.add(match.group(1))
+    return found
+
+
+def _signature_identity(value: Any, expected_oid: str, label: str) -> SignatureIdentity:
+    node = _mapping(value, f"{label} node")
+    if set(node) != {"commit"}:
+        raise ReporterError(f"{label} node fields are incomplete or ambiguous")
+    commit = _mapping(node.get("commit"), f"{label} result")
+    if set(commit) != {"oid", "signature"}:
+        raise ReporterError(f"{label} result fields are incomplete or ambiguous")
+    oid = _sha(commit.get("oid"), f"{label} OID")
+    if oid != expected_oid:
+        raise ReporterError(f"{label} OID is out of order")
+    signature = _mapping(commit.get("signature"), f"{label} signature")
+    if set(signature) != {
+        "__typename",
+        "email",
+        "isValid",
+        "state",
+        "wasSignedByGitHub",
+        "signer",
+    }:
+        raise ReporterError(f"{label} signature fields are incomplete or ambiguous")
+    kind = _text(signature.get("__typename"), f"{label} signature type")
+    if kind not in {"GpgSignature", "SshSignature", "SmimeSignature"}:
+        raise ReporterError(f"{label} signature type is unsupported")
+    if signature.get("isValid") is not True or signature.get("state") != "VALID":
+        raise ReporterError(f"{label} is not GitHub Verified")
+    if signature.get("wasSignedByGitHub") is not False:
+        raise ReporterError(f"{label} uses an unsupported GitHub-generated signature")
+    signer = _mapping(signature.get("signer"), f"{label} signer")
+    if set(signer) != {"databaseId", "login", "__typename"}:
+        raise ReporterError(f"{label} signer fields are incomplete or ambiguous")
+    signer_id = _integer(signer.get("databaseId"), f"{label} signer ID")
+    signer_login = _text(signer.get("login"), f"{label} signer login")
+    if signer.get("__typename") != "User":
+        raise ReporterError(f"{label} signer is not a GitHub User")
+    return SignatureIdentity(
+        oid=oid,
+        kind=kind,
+        email=_text(signature.get("email"), f"{label} signature email"),
+        signer_id=signer_id,
+        signer_login=signer_login,
+    )
+
+
+def _signature_inventory(
+    api: Api,
+    repository: str,
+    pull_number: int,
+    commit_shas: list[str],
+) -> list[SignatureIdentity]:
+    if not 1 <= len(commit_shas) <= MAX_PULL_COMMITS:
+        raise ReporterError("pull request signature inventory exceeds its bound")
+    if len(set(commit_shas)) != len(commit_shas):
+        raise ReporterError("pull request commit inventory contains duplicate OIDs")
+    owner, name = repository.split("/", 1)
+    envelope = _mapping(
+        api.graphql(
+            SIGNATURE_QUERY,
+            {
+                "owner": owner,
+                "name": name,
+                "number": pull_number,
+                "first": len(commit_shas),
+            },
+        ),
+        "GraphQL response",
+    )
+    if envelope.get("errors") not in (None, []):
+        raise ReporterError("GraphQL signature response contains errors")
+    data = _mapping(envelope.get("data"), "GraphQL data")
+    graph_repository = _mapping(data.get("repository"), "GraphQL repository")
+    pull = _mapping(graph_repository.get("pullRequest"), "GraphQL pull request")
+    commits = _mapping(pull.get("commits"), "GraphQL pull request commits")
+    if set(commits) != {"totalCount", "nodes", "pageInfo"}:
+        raise ReporterError("GraphQL signature inventory fields are incomplete or ambiguous")
+    if commits.get("totalCount") != len(commit_shas):
+        raise ReporterError("GraphQL signature inventory count changed")
+    nodes = _sequence(commits.get("nodes"), "GraphQL signature nodes")
+    page_info = _mapping(commits.get("pageInfo"), "GraphQL signature page info")
+    if set(page_info) != {"hasNextPage"} or page_info.get("hasNextPage") is not False:
+        raise ReporterError("GraphQL signature inventory is incomplete")
+    if len(nodes) != len(commit_shas):
+        raise ReporterError("GraphQL signature inventory is incomplete")
+    return [
+        _signature_identity(node, sha, f"pull request commit {index}")
+        for index, (node, sha) in enumerate(zip(nodes, commit_shas, strict=True), 1)
+    ]
+
+
+def _require_direct_identity(
+    commit: dict[str, Any], signature: SignatureIdentity, label: str
+) -> None:
+    signer = (signature.signer_id, signature.signer_login, "User")
+    if _account(commit.get("author"), f"{label} author") != signer:
+        raise ReporterError(f"{label} author does not match the verified signer")
+    if _account(commit.get("committer"), f"{label} committer") != signer:
+        raise ReporterError(f"{label} committer does not match the verified signer")
+    _, author_email, author_dco = _raw_identity(commit, "author", label)
+    _, committer_email, _ = _raw_identity(commit, "committer", label)
+    if author_email != signature.email or committer_email != signature.email:
+        raise ReporterError(f"{label} signature email does not match raw identity")
+    body = _mapping(commit.get("commit"), f"{label} body")
+    if author_dco not in _signoffs(body.get("message"), f"{label} message"):
+        raise ReporterError(f"{label} lacks the exact raw-author DCO sign-off")
 
 
 def read_event(path: Path) -> dict[str, Any]:
@@ -260,6 +444,44 @@ def bind_candidate(api: Api, event: dict[str, Any], policy: Policy) -> Binding:
     pull_head = _mapping(pull.get("head"), "pull request head")
     if _sha(pull_head.get("sha"), "current pull request head SHA") != head_sha:
         raise ReporterError("pull request head moved after candidate execution")
+
+    expected_commits = _integer(pull.get("commits"), "pull request commit count")
+    if expected_commits > MAX_PULL_COMMITS:
+        raise ReporterError("pull request commit inventory exceeds its bound")
+    commits = _sequence(
+        api.get(f"{repository_path}/pulls/{pull_number}/commits?per_page=100&page=1"),
+        "pull request commits",
+    )
+    if len(commits) != expected_commits:
+        raise ReporterError("pull request commit inventory is incomplete")
+    commit_shas: list[str] = []
+    for index, value in enumerate(commits, 1):
+        commit = _mapping(value, f"pull request commit {index}")
+        commit_shas.append(_sha(commit.get("sha"), f"pull request commit {index} SHA"))
+        verification = _mapping(
+            _mapping(commit.get("commit"), f"pull request commit {index} body").get(
+                "verification"
+            ),
+            f"pull request commit {index} verification",
+        )
+        if (
+            verification.get("verified") is not True
+            or verification.get("reason") != "valid"
+        ):
+            raise ReporterError(f"pull request commit {index} is not GitHub Verified")
+    if commit_shas[-1] != head_sha:
+        raise ReporterError("pull request commit inventory does not end at the head")
+    signatures = _signature_inventory(
+        api, policy.repository, pull_number, commit_shas
+    )
+    for index, (commit, signature) in enumerate(
+        zip(commits, signatures, strict=True), 1
+    ):
+        _require_direct_identity(
+            _mapping(commit, f"pull request commit {index}"),
+            signature,
+            f"pull request commit {index}",
+        )
 
     encoded_ref = urllib.parse.quote(f"heads/{head_branch}", safe="/")
     copied_ref = _mapping(

@@ -40,11 +40,15 @@ jobs:
 
       - name: Test CI helpers
         run: |
+          .github/scripts/check-trusted-tool-pins.sh
+          .github/scripts/test-trusted-tool-pins.sh
           python3 -m py_compile \
+            .github/scripts/bind-candidate-pr.py \
             .github/scripts/report_required_ci.py \
+            .github/scripts/test_bind_candidate_pr.py \
             .github/scripts/test_report_required_ci.py
           python3 -m unittest discover \
-            -s .github/scripts -p 'test_report_required_ci.py'
+            -s .github/scripts -p 'test_*.py'
           .github/scripts/test-materialize-candidate.sh
 
       - name: Lint Markdown
@@ -73,7 +77,7 @@ jobs:
         with:
           cache: false
           components: clippy, rustfmt
-          toolchain: stable
+          toolchain: 1.98.0
 
       # This section would benefit by a change to the action allowlist
       - name: Install Rust validation tools
@@ -81,7 +85,12 @@ jobs:
         with:
           checksum: true
           fallback: none
-          tool: cargo-audit,cargo-machete@0.9.2
+          tool: cargo-audit@0.22.2,cargo-machete@0.9.2
+
+      - name: Verify exact trusted validation tools
+        run: |
+          rustc --version --verbose | grep -Fx 'release: 1.98.0'
+          test "$(cargo-audit --version)" = 'cargo-audit 0.22.2'
 
       - name: Cache trusted Rust build inputs
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
@@ -145,7 +154,7 @@ jobs:
         with:
           cache: false
           components: clippy, rustfmt
-          toolchain: stable
+          toolchain: 1.98.0
 
       # This section would benefit by a change to the action allowlist
       - name: Install Rust validation tools
@@ -153,7 +162,12 @@ jobs:
         with:
           checksum: true
           fallback: none
-          tool: cargo-audit,cargo-machete@0.9.2,shellcheck@0.11.0
+          tool: cargo-audit@0.22.2,cargo-machete@0.9.2,shellcheck@0.11.0
+
+      - name: Verify exact protected validation tools
+        run: |
+          rustc --version --verbose | grep -Fx 'release: 1.98.0'
+          test "$(cargo-audit --version)" = 'cargo-audit 0.22.2'
 
       - name: Install Markdown linter
         # Refresh this immutable pin frequently to keep pace with rumdl releases.
@@ -191,20 +205,41 @@ jobs:
             refs/remotes/origin/main:.github/scripts/materialize-candidate.sh \
             > "${RUNNER_TEMP}/materialize-candidate.sh"
           git -C "${GITHUB_WORKSPACE}" show \
+            refs/remotes/origin/main:.github/scripts/bind-candidate-pr.py \
+            > "${RUNNER_TEMP}/bind-candidate-pr.py"
+          git -C "${GITHUB_WORKSPACE}" show \
             refs/remotes/origin/main:.github/scripts/check-pull-request-commits.sh \
             > "${RUNNER_TEMP}/check-pull-request-commits.sh"
           git -C "${GITHUB_WORKSPACE}" show \
             refs/remotes/origin/main:.github/scripts/install-actionlint.sh \
             > "${RUNNER_TEMP}/install-actionlint.sh"
           test -s "${RUNNER_TEMP}/materialize-candidate.sh"
+          test -s "${RUNNER_TEMP}/bind-candidate-pr.py"
           test -s "${RUNNER_TEMP}/check-pull-request-commits.sh"
           test -s "${RUNNER_TEMP}/install-actionlint.sh"
           /bin/bash -n "${RUNNER_TEMP}/materialize-candidate.sh"
           /bin/bash -n "${RUNNER_TEMP}/check-pull-request-commits.sh"
           /bin/bash -n "${RUNNER_TEMP}/install-actionlint.sh"
+          python3 -m py_compile "${RUNNER_TEMP}/bind-candidate-pr.py"
           /bin/bash --noprofile --norc \
             "${RUNNER_TEMP}/install-actionlint.sh" \
             "${RUNNER_TEMP}/actionlint-bin"
+
+      # Anonymous protected policy rejects a closed or moved pull request
+      # before any contributor-controlled path is materialized.
+      - name: Bind current open pull request
+        env:
+          CANDIDATE_REF: ${{ github.ref_name }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          base_sha="$(git -C "${GITHUB_WORKSPACE}" \
+            rev-parse refs/remotes/origin/main)"
+          python3 "${RUNNER_TEMP}/bind-candidate-pr.py" \
+            --repository "${GITHUB_REPOSITORY}" \
+            --copied-ref "${CANDIDATE_REF}" \
+            --head-sha "${CANDIDATE_SHA}" \
+            --base-sha "${base_sha}"
 
       # The protected helper performs the only candidate checkout, disables
       # filters and LFS, and never reads candidate submodule configuration.
@@ -269,9 +304,12 @@ jobs:
           cargo test --locked --workspace --all-features
           cd "${GITHUB_WORKSPACE}"
           python3 -m py_compile \
+            .github/scripts/bind-candidate-pr.py \
             .github/scripts/report_required_ci.py \
+            .github/scripts/test_bind_candidate_pr.py \
             .github/scripts/test_report_required_ci.py
           python3 -m unittest discover \
-            -s .github/scripts -p 'test_report_required_ci.py'
+            -s .github/scripts -p 'test_*.py'
           .github/scripts/test-materialize-candidate.sh
+          .github/scripts/test-trusted-tool-pins.sh
         working-directory: conformance/rebuild-rs

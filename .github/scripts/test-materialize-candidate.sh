@@ -62,8 +62,11 @@ make_candidate() {
   git -C "${work}" update-index --add --cacheinfo \
     "160000,${spec_sha},source-spec"
   git -C "${work}" commit --quiet -m "candidate fixture"
+  local head
+  head="$(git -C "${work}" rev-parse HEAD)"
   git clone --quiet --bare "${work}" "${bare}"
   git --git-dir="${bare}" update-ref refs/heads/main "${base}"
+  git --git-dir="${bare}" update-ref refs/pull/7/head "${head}"
   printf '%s\n' "${bare}"
 }
 
@@ -150,6 +153,17 @@ if (
     pull-request/7 source-spec "${spec_repo}"
 ); then
   echo "stale candidate head unexpectedly materialized" >&2
+  exit 1
+fi
+
+# The copied ref is insufficient when the live pull-request head has moved.
+# Require GitHub's canonical pull-head ref to remain at the authorized SHA.
+moved_pull_repo="$(make_candidate moved-pull '# no content filters' "${spec_repo}")"
+git --git-dir="${moved_pull_repo}" update-ref refs/pull/7/head \
+  "$(git --git-dir="${moved_pull_repo}" rev-parse refs/heads/main)"
+if run_materializer "${moved_pull_repo}" "${spec_repo}" \
+  "${fixture_root}/moved-pull-checkout"; then
+  echo "moved pull-request head unexpectedly materialized" >&2
   exit 1
 fi
 

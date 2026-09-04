@@ -25,6 +25,10 @@ ATTEMPT = 2
 WORKFLOW_ID = 123456
 PULL = 65
 HEAD = "a" * 40
+SIGNER_ID = 42
+SIGNER_LOGIN = "example-contributor"
+SIGNER_NAME = "Example Contributor"
+SIGNER_EMAIL = "contributor@example.invalid"
 
 
 class FakeApi:
@@ -40,16 +44,15 @@ class FakeApi:
     def post(self, path: str, payload: dict[str, Any]) -> Any:
         return self._take("POST", path, payload)
 
+    def graphql(self, query: str, variables: dict[str, Any]) -> Any:
+        return self._take("GRAPHQL", query, variables)
+
     def _take(self, method: str, path: str, payload: Any) -> Any:
         self.calls.append((method, path, copy.deepcopy(payload)))
         key = (method, path)
         if key not in self.responses:
             raise AssertionError(f"unexpected API call: {method} {path}")
         value = self.responses[key]
-        if isinstance(value, list):
-            if not value:
-                raise AssertionError(f"exhausted API response: {method} {path}")
-            return copy.deepcopy(value.pop(0))
         return copy.deepcopy(value)
 
 
@@ -93,8 +96,67 @@ def fixture() -> tuple[dict[str, Any], dict[tuple[str, str], Any]]:
         ): {
             "number": PULL,
             "state": "open",
+            "commits": 1,
             "base": {"ref": "main", "repo": {"full_name": REPOSITORY}},
             "head": {"sha": HEAD, "ref": "feature", "repo": {"full_name": "fork/repo"}},
+        },
+        (
+            "GET",
+            f"repos/{REPOSITORY}/pulls/{PULL}/commits?per_page=100&page=1",
+        ): [
+            {
+                "sha": HEAD,
+                "author": {
+                    "id": SIGNER_ID,
+                    "login": SIGNER_LOGIN,
+                    "type": "User",
+                },
+                "committer": {
+                    "id": SIGNER_ID,
+                    "login": SIGNER_LOGIN,
+                    "type": "User",
+                },
+                "commit": {
+                    "author": {"name": SIGNER_NAME, "email": SIGNER_EMAIL},
+                    "committer": {"name": SIGNER_NAME, "email": SIGNER_EMAIL},
+                    "message": (
+                        "fix: bind one identity\n\n"
+                        f"Signed-off-by: {SIGNER_NAME} <{SIGNER_EMAIL}>"
+                    ),
+                    "verification": {"verified": True, "reason": "valid"},
+                },
+            }
+        ],
+        ("GRAPHQL", reporter.SIGNATURE_QUERY): {
+            "data": {
+                "repository": {
+                    "pullRequest": {
+                        "commits": {
+                            "totalCount": 1,
+                            "nodes": [
+                                {
+                                    "commit": {
+                                        "oid": HEAD,
+                                        "signature": {
+                                            "__typename": "SshSignature",
+                                            "email": SIGNER_EMAIL,
+                                            "isValid": True,
+                                            "state": "VALID",
+                                            "wasSignedByGitHub": False,
+                                            "signer": {
+                                                "databaseId": SIGNER_ID,
+                                                "login": SIGNER_LOGIN,
+                                                "__typename": "User",
+                                            },
+                                        },
+                                    }
+                                }
+                            ],
+                            "pageInfo": {"hasNextPage": False},
+                        }
+                    }
+                }
+            }
         },
         (
             "GET",
@@ -168,6 +230,8 @@ class BindingTests(unittest.TestCase):
             "closed pull": lambda _, responses: responses[("GET", f"repos/{REPOSITORY}/pulls/{PULL}")].__setitem__("state", "closed"),
             "wrong base branch": lambda _, responses: responses[("GET", f"repos/{REPOSITORY}/pulls/{PULL}")]["base"].__setitem__("ref", "develop"),
             "moved pull head": lambda _, responses: responses[("GET", f"repos/{REPOSITORY}/pulls/{PULL}")]["head"].__setitem__("sha", "b" * 40),
+            "incomplete commits": lambda _, responses: responses[("GET", f"repos/{REPOSITORY}/pulls/{PULL}")].__setitem__("commits", 2),
+            "unverified commit": lambda _, responses: responses[("GET", f"repos/{REPOSITORY}/pulls/{PULL}/commits?per_page=100&page=1")][0]["commit"]["verification"].__setitem__("verified", False),
             "moved copied ref": lambda _, responses: responses[("GET", f"repos/{REPOSITORY}/git/ref/heads/pull-request/{PULL}")]["object"].__setitem__("sha", "b" * 40),
             "wrong job run": lambda _, responses: responses[("GET", f"repos/{REPOSITORY}/actions/runs/{RUN_ID}/attempts/{ATTEMPT}/jobs?per_page=100")]["jobs"][0].__setitem__("run_id", RUN_ID + 1),
             "wrong job attempt": lambda _, responses: responses[("GET", f"repos/{REPOSITORY}/actions/runs/{RUN_ID}/attempts/{ATTEMPT}/jobs?per_page=100")]["jobs"][0].__setitem__("run_attempt", ATTEMPT + 1),
@@ -189,6 +253,96 @@ class BindingTests(unittest.TestCase):
         jobs["total_count"] += 1
         with self.assertRaisesRegex(reporter.ReporterError, "missing or duplicated"):
             bind(event, responses)
+
+    def test_verified_signer_and_rest_identities_must_match(self) -> None:
+        commits_path = (
+            "GET",
+            f"repos/{REPOSITORY}/pulls/{PULL}/commits?per_page=100&page=1",
+        )
+        signature_path = ("GRAPHQL", reporter.SIGNATURE_QUERY)
+
+        def signature(responses: dict[Any, Any]) -> dict[str, Any]:
+            return responses[signature_path]["data"]["repository"]["pullRequest"][
+                "commits"
+            ]["nodes"][0]["commit"]["signature"]
+
+        mutations = {
+            "author ID": lambda responses: responses[commits_path][0][
+                "author"
+            ].__setitem__("id", SIGNER_ID + 1),
+            "committer login": lambda responses: responses[commits_path][0][
+                "committer"
+            ].__setitem__("login", "lookalike"),
+            "signer ID": lambda responses: signature(responses)["signer"].__setitem__(
+                "databaseId", SIGNER_ID + 1
+            ),
+            "raw author email": lambda responses: responses[commits_path][0][
+                "commit"
+            ]["author"].__setitem__("email", "lookalike@example.invalid"),
+            "raw committer email": lambda responses: responses[commits_path][0][
+                "commit"
+            ]["committer"].__setitem__("email", "lookalike@example.invalid"),
+            "signature email": lambda responses: signature(responses).__setitem__(
+                "email", "lookalike@example.invalid"
+            ),
+            "GitHub signature": lambda responses: signature(responses).__setitem__(
+                "wasSignedByGitHub", True
+            ),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(name=name):
+                event, responses = fixture()
+                mutate(responses)
+                with self.assertRaises(reporter.ReporterError):
+                    bind(event, responses)
+
+    def test_null_signer_and_forged_dco_fail_closed(self) -> None:
+        event, responses = fixture()
+        signature = responses[("GRAPHQL", reporter.SIGNATURE_QUERY)]["data"][
+            "repository"
+        ]["pullRequest"]["commits"]["nodes"][0]["commit"]["signature"]
+        signature["signer"] = None
+        with self.assertRaisesRegex(reporter.ReporterError, "signer is not an object"):
+            bind(event, responses)
+
+        event, responses = fixture()
+        commits_path = (
+            "GET",
+            f"repos/{REPOSITORY}/pulls/{PULL}/commits?per_page=100&page=1",
+        )
+        responses[commits_path][0]["commit"]["message"] = (
+            "fix: forged trailer\n\n"
+            f"Signed-off-by: Lookalike <{SIGNER_EMAIL}>"
+        )
+        with self.assertRaisesRegex(reporter.ReporterError, "raw-author DCO"):
+            bind(event, responses)
+
+    def test_signature_inventory_must_be_complete_and_ordered(self) -> None:
+        signature_path = ("GRAPHQL", reporter.SIGNATURE_QUERY)
+
+        def commits(responses: dict[Any, Any]) -> dict[str, Any]:
+            return responses[signature_path]["data"]["repository"]["pullRequest"][
+                "commits"
+            ]
+
+        mutations = {
+            "count": lambda responses: commits(responses).__setitem__("totalCount", 2),
+            "next page": lambda responses: commits(responses)[
+                "pageInfo"
+            ].__setitem__("hasNextPage", True),
+            "OID": lambda responses: commits(responses)["nodes"][0]["commit"].__setitem__(
+                "oid", "b" * 40
+            ),
+            "ambiguous node": lambda responses: commits(responses)["nodes"][0].__setitem__(
+                "unexpected", True
+            ),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(name=name):
+                event, responses = fixture()
+                mutate(responses)
+                with self.assertRaises(reporter.ReporterError):
+                    bind(event, responses)
 
     def test_bounded_terminal_failure_maps_to_failure(self) -> None:
         event, responses = fixture()

@@ -46,6 +46,8 @@ fi
 
 canonical_url="https://github.com/${repository}.git"
 candidate_ref="refs/heads/${copied_ref}"
+pull_number="${copied_ref#pull-request/}"
+pull_ref="refs/pull/${pull_number}/head"
 
 # Tests may provide an explicit local origin. Production leaves this unset and
 # is therefore pinned to the canonical public repository URL.
@@ -77,8 +79,9 @@ while :; do
   ancestor="$(dirname -- "${ancestor}")"
 done
 
-# Initialize only Git metadata, then fetch current main and the exact copied
-# ref without tags, credentials, submodules, or a working tree.
+# Initialize only Git metadata, then fetch current main, the exact copied ref,
+# and GitHub's canonical current pull-request head without tags, credentials,
+# submodules, or a working tree.
 if [[ ! -d .git ]]; then
   git init --quiet --initial-branch=main .
 fi
@@ -89,17 +92,21 @@ else
 fi
 git -c credential.helper= fetch --no-tags --no-recurse-submodules origin \
   "+refs/heads/main:refs/remotes/origin/main" \
-  "+${candidate_ref}:refs/remotes/origin/candidate"
+  "+${candidate_ref}:refs/remotes/origin/candidate" \
+  "+${pull_ref}:refs/remotes/origin/pull-head"
 
 base_sha="$(git rev-parse --verify 'refs/remotes/origin/main^{commit}')"
 copied_sha="$(git rev-parse --verify 'refs/remotes/origin/candidate^{commit}')"
+pull_sha="$(git rev-parse --verify 'refs/remotes/origin/pull-head^{commit}')"
 
-# A moved copied ref or candidate that is no longer based on exact current
-# main needs another human authorization and cannot execute in this run.
+# A moved copied ref, moved canonical pull head, or candidate that is no longer
+# based on exact current main needs another human authorization and cannot
+# execute in this run.
 if [[ "${copied_sha}" != "${head_sha}" \
+  || "${pull_sha}" != "${head_sha}" \
   || ! "${base_sha}" =~ ^[0-9a-f]{40}$ ]] \
   || ! git merge-base --is-ancestor "${base_sha}" "${head_sha}"; then
-  echo "candidate ref, reviewed head, or current main binding changed" >&2
+  echo "candidate ref, pull head, reviewed head, or current main binding changed" >&2
   exit 1
 fi
 

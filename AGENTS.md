@@ -421,11 +421,11 @@ Install `rumdl`, `cargo-audit`, and `cargo-machete` with Cargo, and install
 
 ```shell
 cargo install rumdl
-cargo install cargo-audit
+cargo +1.98.0 install --locked cargo-audit --version 0.22.2
 cargo install --locked cargo-machete --version 0.9.2
 ```
 
-Keep the cargo-machete version aligned with hosted CI. The
+Keep the cargo-audit and cargo-machete versions aligned with hosted CI. The
 `--with-metadata` check resolves normal, development, and build dependency
 names across all features, but remains an unused-dependency heuristic; retain
 the all-target, all-feature Clippy and test checks as the compilation proof.
@@ -454,18 +454,20 @@ xtask and a provider configuration file.
 
 Hosted CI is Linux-only. Pushes to `main` and `ci-testing/*` run trusted CI on
 an NVIDIA Linux runner. Pull-request code runs only after `copy-pr-bot` copies
-an exactly reviewed head to `pull-request/<number>`. The candidate job installs
-fixed tools before materializing source, checks out without credentials, Git
-filters, LFS, or candidate-selected submodules, and has no secret, OIDC,
-protected environment, cache-save, or retained-artifact path.
+an exactly reviewed head to `pull-request/<number>`. The candidate job binds the
+open pull request, copied ref, canonical pull head, and current main before
+materialization. It installs Rust `1.98.0` and cargo-audit `0.22.2` before
+materializing source, checks out without credentials, Git filters, LFS, or
+candidate-selected submodules, and has no secret, OIDC, protected environment,
+cache-save, or retained-artifact path.
 
 The checkout-free `Required CI reporter` runs from protected `main` on a
 GitHub-hosted Linux runner. It binds the completed CI workflow ID and path,
 repository, push event, run ID and attempt, open pull request, copied ref,
-current head, unique authoritative Linux job, terminal conclusion, and zero
-artifacts. Only after repeating that binding may the repository's GitHub App
-create `Required CI` on the exact head. Keep advisory checks out of that
-conclusion.
+current head, exact Verified signer/author/DCO identities, unique authoritative
+Linux job, terminal conclusion, and zero artifacts. Only after repeating that
+binding may the repository's GitHub App create `Required CI` on the exact head.
+Keep advisory checks out of that conclusion.
 
 Keep `.github/scripts/materialize-candidate.sh`, its focused offline test,
 `.github/scripts/install-actionlint.sh`, and
