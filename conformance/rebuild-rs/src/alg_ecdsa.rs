@@ -132,6 +132,37 @@ fn parse_hex(s: &str) -> BigInt {
     BigInt::parse_bytes(s.as_bytes(), 16).expect("hex literal parses")
 }
 
+/// Validate a vendored ACVP private/public key tuple before using it.
+///
+/// The scalar range, canonical affine-coordinate range, curve equation, and scalar
+/// multiplication use the SEC 1 and SEC 2 rules cited by [`crate::p256`]. ACVP supplies both
+/// halves of the key pair, so the generator also requires the supplied public point to equal
+/// `d · G` rather than accepting an independently valid point.
+fn validate_acvp_public_key(d: &BigInt, qx: &BigInt, qy: &BigInt) -> Result<(), &'static str> {
+    let params = p256::params();
+    let zero = BigInt::zero();
+
+    if d <= &zero || d >= &params.n {
+        return Err("private scalar d must satisfy 0 < d < n");
+    }
+    if qx < &zero || qx >= &params.p || qy < &zero || qy >= &params.p {
+        return Err("public key coordinates must satisfy 0 <= qx, qy < p");
+    }
+    if !p256::on_curve(qx, qy) {
+        return Err("public key must satisfy the P-256 curve equation");
+    }
+
+    let supplied = p256::Point {
+        x: qx.clone(),
+        y: qy.clone(),
+    };
+    if p256::point_mul(d, &params.g).as_ref() != Some(&supplied) {
+        return Err("public key must equal d · G");
+    }
+
+    Ok(())
+}
+
 pub fn generate(dir: &PinnedDir) -> std::io::Result<()> {
     let d = parse_hex(D_HEX);
     let k1 = parse_hex(K1_HEX);
@@ -455,6 +486,9 @@ fn emit_acvp_anchored_fixture(dir: &PinnedDir) -> std::io::Result<()> {
     let d = parse_hex(&group.d);
     let qx = parse_hex(&group.qx);
     let qy = parse_hex(&group.qy);
+    validate_acvp_public_key(&d, &qx, &qy)
+        .unwrap_or_else(|error| panic!("ACVP tgId {}: {error}", group.tg_id));
+
     let k = parse_hex(&case.k);
     let message = from_hex(&case.message);
     let expected_r = parse_hex(&case.r);
@@ -544,6 +578,18 @@ mod tests {
     use super::*;
     use sha2::{Digest, Sha256};
 
+    fn first_p256_sha256_acvp_key() -> (BigInt, BigInt, BigInt) {
+        let file = crate::acvp::load();
+        let group = crate::acvp::p256_sha256_aft_groups(&file)
+            .next()
+            .expect("vendored ACVP file has at least one P-256 / SHA-256 AFT group");
+        (
+            parse_hex(&group.d),
+            parse_hex(&group.qx),
+            parse_hex(&group.qy),
+        )
+    }
+
     /// Pinned constants must decode as positive integers in `[1, n)`.
     #[test]
     fn pinned_scalars_are_in_range() {
@@ -577,6 +623,66 @@ mod tests {
         assert!(!p256::on_curve(&gx, &gy));
     }
 
+    #[test]
+    fn current_vendored_acvp_public_keys_are_valid() {
+        let file = crate::acvp::load();
+        let mut total = 0usize;
+        for group in crate::acvp::p256_sha256_aft_groups(&file) {
+            let d = parse_hex(&group.d);
+            let qx = parse_hex(&group.qx);
+            let qy = parse_hex(&group.qy);
+            assert_eq!(
+                validate_acvp_public_key(&d, &qx, &qy),
+                Ok(()),
+                "tgId {} has invalid key material",
+                group.tg_id
+            );
+            total += 1;
+        }
+        assert!(
+            total > 0,
+            "vendored ACVP file produced no P-256/SHA-256 AFT groups"
+        );
+    }
+
+    #[test]
+    fn acvp_public_key_rejects_unreduced_x_coordinate() {
+        let (d, qx, qy) = first_p256_sha256_acvp_key();
+        let unreduced_qx = &qx + &p256::params().p;
+        assert!(p256::on_curve(&unreduced_qx, &qy));
+        assert_eq!(
+            validate_acvp_public_key(&d, &unreduced_qx, &qy),
+            Err("public key coordinates must satisfy 0 <= qx, qy < p")
+        );
+    }
+
+    #[test]
+    fn acvp_public_key_rejects_range_valid_off_curve_point() {
+        let (d, _, _) = first_p256_sha256_acvp_key();
+        let zero = BigInt::zero();
+        assert!(!p256::on_curve(&zero, &zero));
+        assert_eq!(
+            validate_acvp_public_key(&d, &zero, &zero),
+            Err("public key must satisfy the P-256 curve equation")
+        );
+    }
+
+    #[test]
+    fn acvp_public_key_rejects_wrong_private_scalar() {
+        let (d, qx, qy) = first_p256_sha256_acvp_key();
+        let n_minus_one = &p256::params().n - 1u32;
+        let wrong_d = if d == n_minus_one {
+            BigInt::from(1u32)
+        } else {
+            &d + 1u32
+        };
+        assert!(p256::on_curve(&qx, &qy));
+        assert_eq!(
+            validate_acvp_public_key(&wrong_d, &qx, &qy),
+            Err("public key must equal d · G")
+        );
+    }
+
     /// Replay every P-256 / SHA-256 AFT case from the vendored
     /// ACVP-Server file: run `sign(d, SHA-256(message), k)` through
     /// our hand-rolled signer and assert byte-equality with the
@@ -590,6 +696,11 @@ mod tests {
         let mut total = 0usize;
         for group in crate::acvp::p256_sha256_aft_groups(&file) {
             let d = parse_hex(&group.d);
+            let qx = parse_hex(&group.qx);
+            let qy = parse_hex(&group.qy);
+            validate_acvp_public_key(&d, &qx, &qy)
+                .unwrap_or_else(|error| panic!("ACVP tgId {}: {error}", group.tg_id));
+
             for case in &group.tests {
                 let k = parse_hex(&case.k);
                 let message = from_hex(&case.message);
