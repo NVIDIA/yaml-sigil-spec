@@ -26,6 +26,75 @@ defend without the agent open.
 - **Do not** use agents as a substitute for reading the relevant specification
   sections, conformance notes, and maintainer guidance.
 
+## Pull-request CI
+
+Pull-request CI is orchestrated only by workflow and policy loaded from current
+protected `main`. A repository writer must review the exact latest pull-request
+head and comment `/ok to test <head-sha>`. Only that exact lowercase,
+40-character SHA command starts candidate validation; every new head requires
+a new review and command.
+
+Changes to workflow policy, protected validation tools, manifests, lockfiles,
+toolchain or dependency policy, the conformance rebuilder, or its vendored ACVP
+corpus are security-sensitive. Each commit must preserve the original human
+author while a current repository writer becomes the verified committer, and
+its message must contain exact DCO trailers for both identities. For a fork,
+maintainer edits must remain enabled on the original pull request. After
+reviewing that adopted history, a writer comments
+`/ok to test-and-adopt <head-sha>`. Ordinary changes must not use the adoption
+command, and sensitive changes must not use the ordinary command.
+
+Record the authorization comment ID and time. GitHub event delivery may take
+up to 20 minutes, so the absence of a run or acknowledgement during that
+window is not a reason to repeat the command. After 25 minutes, inspect the
+Actions run list and the original comment, and distinguish a queued run from a
+missing event before posting at most one replacement command for the still
+current head.
+
+An authorization is invalid after any head, base, protected-policy, comment
+body or timestamp, repository identity, or writer-permission change. Never
+accept a late acknowledgement or job result for an invalidated binding.
+
+The protected parent uses a contents-read token only to fetch and verify the
+exact authorized head. Candidate-controlled processes then run as a
+purpose-created disposable operating-system identity with read-only source and
+tool inputs, a minimal environment, and no repository credential, secret,
+OIDC, write permission, cache save, or retained artifact. The runner-command
+directory is inaccessible to that identity, no trusted Action or post-step
+follows candidate execution, and the job fails unless every candidate process
+is quiescent and the identity is removed.
+
+Every human-authored pull-request commit must form a linear history from
+current `main`, be GitHub Verified, and contain the exact DCO identity required
+for direct or adopted history. The contributor's fork branch remains the
+pull-request head; a writer's command authorizes testing only and does not
+authorize integration.
+
+Protected checkout verifier regressions also run on GitHub-hosted Linux,
+macOS, and Windows workers. The Windows leg uses a real directory junction and
+a short-name-shaped path to prove fail-closed handling without retaining
+artifacts.
+
+Before final authorization, fetch current upstream `main`, rebase the original
+contributor branch with `git rebase --gpg-sign <upstream>/main`, and push the
+rewritten branch back to the same fork with `--force-with-lease`. Confirm every
+rewritten commit is GitHub Verified and DCO-compliant, then request testing for
+the new exact SHA. Do not copy the contribution onto a repository-owned branch
+merely to run CI.
+
+The protected conformance job bounds the vendored ACVP snapshot before Cargo
+compiles candidate Rust. The rebuilder then uses one anchored no-follow read,
+preflights byte, group, case, decoded-field, and replay-work limits without
+retaining corpus collections, and deserializes the same byte snapshot.
+Oversized or noncanonical input fails before cryptographic replay.
+
+Repository Actions execution protection is an additional platform control,
+not the source of `/ok to test` authority. When that policy is in **Evaluate**
+mode, its warnings are telemetry only: they neither allow nor block a workflow.
+The protected `issue_comment` controller and its exact-SHA reauthorization
+remain the operational boundary. A maintainer reviews the completed results
+and separately decides whether to integrate the pull request.
+
 #### Signing Off Your Work
 
 * We require that all contributors "sign-off" on their commits. This certifies that the contribution is your original work, or you have rights to submit it under the same license, or a compatible license.

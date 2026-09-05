@@ -8,6 +8,7 @@
 //!
 //! ```text
 //! cargo xtask ci
+//! cargo xtask candidate-preflight --candidate-root PATH
 //! cargo xtask update-acvp [--commit <40-character-lowercase-commit>]
 //! ```
 //!
@@ -15,6 +16,7 @@
 //! vectors through a size- and time-bounded HTTPS client.
 
 mod ci;
+mod isolated_process;
 
 use std::env;
 use std::io::{self, Read};
@@ -96,6 +98,26 @@ fn main() -> ExitCode {
                 }
             }
         }
+        "candidate-preflight" => {
+            let remaining: Vec<_> = args.collect();
+            if is_help_request(&remaining) {
+                print_usage();
+                ExitCode::SUCCESS
+            } else {
+                match parse_candidate_preflight_root(&remaining)
+                    .and_then(|root| candidate_preflight(&root).map_err(|error| error.to_string()))
+                {
+                    Ok(bytes) => {
+                        println!("candidate ACVP preflight passed ({bytes} bytes)");
+                        ExitCode::SUCCESS
+                    }
+                    Err(e) => {
+                        eprintln!("candidate-preflight failed: {e}");
+                        ExitCode::FAILURE
+                    }
+                }
+            }
+        }
         "" | "help" | "--help" | "-h" => {
             print_usage();
             ExitCode::SUCCESS
@@ -112,10 +134,13 @@ fn print_usage() {
     eprintln!(
         "usage:\n  \
          cargo xtask ci [--candidate-root PATH]\n  \
+         cargo xtask candidate-preflight --candidate-root PATH\n  \
          cargo xtask update-acvp [--commit <40-character-lowercase-commit>]\n\n\
          Runs the repository's complete non-release validation sequence.\n\
          --candidate-root validates another repository checkout with this\n\
          protected xtask implementation.\n\n\
+         Candidate preflight performs the protected, no-follow, bounded ACVP\n\
+         corpus read before any candidate-controlled process executes.\n\n\
          Refreshes vendor/acvp/{VENDORED_FILE_NAME} and the matching\n\
          vendor/acvp/README.md to track the requested commit of\n\
          https://github.com/{UPSTREAM_REPO}."
@@ -456,6 +481,28 @@ fn parse_ci_root(args: &[String]) -> Result<PathBuf, String> {
     Ok(rebuild_root)
 }
 
+fn parse_candidate_preflight_root(args: &[String]) -> Result<PathBuf, String> {
+    match args {
+        [flag, value] if flag == "--candidate-root" && !value.is_empty() => {
+            Ok(PathBuf::from(value))
+        }
+        [flag, _] if flag == "--candidate-root" => {
+            Err("--candidate-root needs a nonempty path".to_string())
+        }
+        _ => Err("candidate-preflight requires --candidate-root PATH".to_string()),
+    }
+}
+
+fn candidate_preflight(candidate_root: &std::path::Path) -> io::Result<usize> {
+    let root = PinnedDir::open(candidate_root)?;
+    let conformance = root.open_child("conformance")?;
+    let rebuild = conformance.open_child("rebuild-rs")?;
+    let vendor = rebuild.open_child("vendor")?;
+    let acvp = vendor.open_child("acvp")?;
+    let corpus = acvp.read_regular_file_bounded(VENDORED_FILE_NAME, MAX_ACVP_CORPUS_BYTES)?;
+    Ok(corpus.len())
+}
+
 fn render_readme(commit: &str, size: u64) -> String {
     let raw_url =
         format!("https://raw.githubusercontent.com/{UPSTREAM_REPO}/{commit}/{UPSTREAM_PATH}");
@@ -639,6 +686,73 @@ mod tests {
 
         assert!(parse_ci_root(&["--candidate-root".to_string()]).is_err());
         assert!(parse_ci_root(&["--unknown".to_string(), "value".to_string()]).is_err());
+    }
+
+    #[test]
+    fn candidate_preflight_arguments_are_strict() {
+        let root = repository_root();
+        assert_eq!(
+            parse_candidate_preflight_root(&[
+                "--candidate-root".to_string(),
+                root.display().to_string(),
+            ])
+            .expect("candidate root is accepted"),
+            root
+        );
+        assert!(parse_candidate_preflight_root(&[]).is_err());
+        assert!(parse_candidate_preflight_root(&["--candidate-root".to_string()]).is_err());
+        assert!(parse_candidate_preflight_root(&[
+            "--unknown".to_string(),
+            root.display().to_string(),
+        ])
+        .is_err());
+    }
+
+    fn write_candidate_corpus(root: &std::path::Path, bytes: usize) {
+        let directory = root.join("conformance/rebuild-rs/vendor/acvp");
+        fs::create_dir_all(&directory).expect("create candidate corpus directory");
+        let file =
+            fs::File::create(directory.join(VENDORED_FILE_NAME)).expect("create candidate corpus");
+        file.set_len(bytes as u64).expect("size candidate corpus");
+    }
+
+    #[test]
+    fn candidate_preflight_enforces_the_exact_byte_bound() {
+        let root = test_dir("candidate-preflight-bound");
+        write_candidate_corpus(&root, MAX_ACVP_CORPUS_BYTES);
+        assert_eq!(
+            candidate_preflight(&root).expect("accept exact-size corpus"),
+            MAX_ACVP_CORPUS_BYTES
+        );
+
+        fs::remove_file(
+            root.join("conformance/rebuild-rs/vendor/acvp")
+                .join(VENDORED_FILE_NAME),
+        )
+        .expect("remove exact corpus");
+        write_candidate_corpus(&root, MAX_ACVP_CORPUS_BYTES + 1);
+        let error = candidate_preflight(&root).expect_err("reject oversized corpus");
+        assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+
+        fs::remove_dir_all(root).expect("remove candidate root");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn candidate_preflight_rejects_redirected_candidate_root() {
+        use std::os::unix::fs::symlink;
+
+        let root = test_dir("candidate-preflight-redirect");
+        let actual = root.join("actual");
+        write_candidate_corpus(&actual, 4);
+        let redirected = root.join("candidate");
+        symlink(&actual, &redirected).expect("create redirected candidate root");
+
+        candidate_preflight(&redirected).expect_err("redirected candidate root must fail");
+
+        fs::remove_file(redirected).expect("remove candidate symlink");
+        fs::remove_dir_all(actual).expect("remove actual candidate");
+        fs::remove_dir(root).expect("remove test root");
     }
 
     fn test_dir(label: &str) -> PathBuf {

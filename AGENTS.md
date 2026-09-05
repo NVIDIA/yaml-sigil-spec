@@ -385,6 +385,16 @@ repository root:
 cargo xtask ci
 ```
 
+To apply the validator from the current checkout to another repository
+checkout, pass its root explicitly:
+
+```shell
+cargo xtask ci --candidate-root PATH
+```
+
+The command still builds and runs the xtask from the current checkout; only
+the repository content being validated comes from `PATH`.
+
 The command runs these checks in order:
 
 ```shell
@@ -421,11 +431,12 @@ names across all features, but remains an unused-dependency heuristic; retain
 the all-target, all-feature Clippy and test checks as the compilation proof.
 
 For Buf, the xtask uses the executable named by `BUF` when set, then searches
-`PATH`, and confirms that the selected executable can run. The repository
-follows Buf's rolling latest release instead of pinning a numeric CLI version.
-Hosted CI expresses that policy by omitting the `version` input when it uses
-`bufbuild/buf-action`. Install or update the latest `buf-toolchain` release and
-ensure `$CARGO_HOME/bin` is on `PATH`:
+`PATH`, and confirms that the selected executable can run. Local development
+retains a rolling latest release policy, but hosted workflow configuration is
+a separate control. The current omitted `bufbuild/buf-action` `version` input
+is a consistency gap to review during a coordinated Buf upgrade; it does not
+inherit a Rust dependency or protected-runner pin. Install or update the latest
+`buf-toolchain` release and ensure `$CARGO_HOME/bin` is on `PATH`:
 
 ```shell
 cargo install --force buf-toolchain
@@ -442,6 +453,16 @@ repository-owned command plan and actionable prerequisite guidance. Hosted CI
 may declare the same checks as independent steps, but behavioral alignment is
 a review responsibility rather than a source-level dependency between the
 xtask and a provider configuration file.
+
+A separate GitHub-hosted Linux job runs the protected checkout verifier
+regressions. This repository is Linux-only and must not schedule or require
+macOS or Windows jobs. Shared verifier code may remain portable, while hosted
+cross-platform regressions belong in the traits and Rust implementation
+repositories. This provider-specific validation stays outside `cargo xtask ci`.
+The Linux job also runs `.github/scripts/test-cargo-egress-topology.sh` as a
+test-only Docker check of the parentless internal IPvlan, unexposed proxy,
+blocked direct egress, TLS-authenticated crates.io path, and exact cleanup. It
+must not execute candidate or release code.
 
 Validate shell scripts under `.github/scripts` with Shuck before landing
 changes. Install it from the `shuck-cli` crate and run it from the repository
@@ -474,6 +495,46 @@ the hosted provider's configuration.
 
 Keep maintenance commands such as `cargo xtask update-acvp` separate from CI
 unless hosted validation explicitly needs them.
+
+## Coordinated Buf upgrades
+
+Publishing a new `buf-tools` or `buf-toolchain` release does not automatically
+update this repository. Coordinate Buf upgrades with `yaml-sigil-rs` and
+`yaml-sigil-traits`, and update every applicable pin and verification surface
+in one reviewed change.
+
+This repository currently has no product `buf-tools` dependency. Reconfirm
+that before an upgrade, but do not add or update a product dependency without
+source evidence that it is required. The applicable surfaces here are the
+ordinary and protected `bufbuild/buf-action` configuration under
+`.github/workflows/`, the exact Buf CLI version installed by
+`.github/scripts/run-terminal-candidate.sh`, and the associated policy tests in
+`.github/scripts/test_protected_pr_ci.py`. The Action's immutable SHA and its
+Buf CLI `version` input are separate controls. Keep both workflow paths aligned
+with the selected CLI version, and report any omitted `version` input as a
+consistency gap.
+
+`buf-toolchain` installs and verifies the standalone trusted Buf executable for
+protected CI. Confirm the published mapping between the selected
+`buf-toolchain` release and Buf CLI release instead of assuming that their
+version strings match, and require the installed executable to report the
+intended CLI version. A repository `buf.lock` locks BSR or module dependencies,
+not the installed CLI, so do not update it solely for a CLI or Rust helper
+upgrade.
+
+For each future coordinated upgrade:
+
+- Review the selected Buf, `buf-tools`, and `buf-toolchain` releases and their
+  published mapping.
+- Update every applicable pin in one coordinated change, and regenerate only
+  Cargo lockfiles that the affected repositories already commit.
+- Confirm that no unplanned protobuf-generated output changed.
+- Run the local Cargo and protected-policy suites, ShellCheck or Shuck,
+  actionlint, and Markdown checks.
+- Require successful ordinary and App-owned protected CI at the exact reviewed
+  heads.
+- Confirm that the protected sandbox used the intended authenticated Buf
+  binary and retained no artifacts.
 
 ## Style guide
 

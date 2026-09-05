@@ -15,7 +15,7 @@ compile_error!(
 
 use std::ffi::OsStr;
 use std::fs::{self, File, OpenOptions};
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 use std::os::fd::AsRawFd;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Component, Path, PathBuf};
@@ -97,6 +97,47 @@ impl PinnedDir {
     pub fn symlink_metadata(&self, name: &str) -> io::Result<fs::Metadata> {
         validate_name(name)?;
         fs::symlink_metadata(self.entry_path(name))
+    }
+
+    /// Read one regular child file through the pinned directory handle.
+    ///
+    /// The file is opened without following a final symlink. Both its opened
+    /// metadata and a limit-plus-one read enforce `max_bytes`, so a concurrent
+    /// size change cannot turn the caller's bound into an unbounded read.
+    pub fn read_regular_file_bounded(&self, name: &str, max_bytes: usize) -> io::Result<Vec<u8>> {
+        validate_name(name)?;
+        let sentinel = max_bytes.checked_add(1).ok_or_else(|| {
+            io::Error::new(io::ErrorKind::InvalidInput, "file bound has no sentinel")
+        })?;
+        let mut file = OpenOptions::new()
+            .read(true)
+            .custom_flags(O_NOFOLLOW)
+            .open(self.entry_path(name))?;
+        let metadata = file.metadata()?;
+        if !metadata.file_type().is_file() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("refusing non-regular input: {name}"),
+            ));
+        }
+        if metadata.len() > max_bytes as u64 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("input exceeds {max_bytes}-byte limit: {name}"),
+            ));
+        }
+
+        let mut content = Vec::with_capacity(metadata.len() as usize);
+        (&mut file)
+            .take(sentinel as u64)
+            .read_to_end(&mut content)?;
+        if content.len() > max_bytes {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("input exceeds {max_bytes}-byte limit while reading: {name}"),
+            ));
+        }
+        Ok(content)
     }
 
     /// Replace a regular child file without following a child or parent
@@ -205,6 +246,50 @@ mod tests {
         drop(pinned);
         fs::remove_file(root.join("destination")).expect("remove symlink");
         fs::remove_file(target).expect("remove target");
+        fs::remove_dir(root).expect("remove test root");
+    }
+
+    #[test]
+    fn bounded_read_accepts_exact_limit_and_rejects_limit_plus_one() {
+        let root = test_dir("bounded-read");
+        fs::write(root.join("exact"), b"1234").expect("write exact input");
+        fs::write(root.join("large"), b"12345").expect("write large input");
+        let pinned = PinnedDir::open(&root).expect("pin root");
+
+        assert_eq!(
+            pinned
+                .read_regular_file_bounded("exact", 4)
+                .expect("read exact-sized input"),
+            b"1234"
+        );
+        let error = pinned
+            .read_regular_file_bounded("large", 4)
+            .expect_err("limit-plus-one input must fail");
+        assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+
+        drop(pinned);
+        fs::remove_file(root.join("exact")).expect("remove exact input");
+        fs::remove_file(root.join("large")).expect("remove large input");
+        fs::remove_dir(root).expect("remove test root");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn bounded_read_rejects_symlink_source() {
+        use std::os::unix::fs::symlink;
+
+        let root = test_dir("bounded-read-symlink");
+        fs::write(root.join("target"), b"content").expect("write target");
+        symlink(root.join("target"), root.join("source")).expect("create source symlink");
+        let pinned = PinnedDir::open(&root).expect("pin root");
+
+        pinned
+            .read_regular_file_bounded("source", 16)
+            .expect_err("source symlink must fail");
+
+        drop(pinned);
+        fs::remove_file(root.join("source")).expect("remove source symlink");
+        fs::remove_file(root.join("target")).expect("remove target");
         fs::remove_dir(root).expect("remove test root");
     }
 

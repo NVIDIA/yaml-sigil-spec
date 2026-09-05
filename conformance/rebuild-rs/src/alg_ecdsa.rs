@@ -443,7 +443,7 @@ pub fn generate(dir: &PinnedDir) -> std::io::Result<()> {
 /// against the published `(r, s)` before writing the fixture — so
 /// fixture generation is itself a NIST-vector conformance check.
 fn emit_acvp_anchored_fixture(dir: &PinnedDir) -> std::io::Result<()> {
-    let file = acvp::load();
+    let file = acvp::load()?;
     let group = acvp::p256_sha256_aft_groups(&file)
         .next()
         .expect("vendored ACVP file has at least one P-256 / SHA-256 AFT group");
@@ -586,7 +586,7 @@ mod tests {
     /// fails before any fixture is written.
     #[test]
     fn p256_sha256_acvp_aft_replay_matches() {
-        let file = crate::acvp::load();
+        let file = crate::acvp::load().expect("vendored ACVP JSON parses within bounds");
         let mut total = 0usize;
         for group in crate::acvp::p256_sha256_aft_groups(&file) {
             let d = parse_hex(&group.d);
