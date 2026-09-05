@@ -26,7 +26,7 @@ filters for `curve = P-256` and `hashAlg = SHA2-256`.
 
 ## Resource limits
 
-Protected CI and the native rebuilder accept at most 3 MiB of
+Candidate preflight and the native rebuilder accept at most 3 MiB of
 encoded JSON, 512 test groups, 64 cases per group, and 4,096
 cases in total. The selected P-256 / SHA2-256 replay is further
 limited to eight groups and 256 cases. Scalar-like hex fields are

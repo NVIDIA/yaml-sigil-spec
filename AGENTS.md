@@ -421,21 +421,19 @@ Install `rumdl`, `cargo-audit`, and `cargo-machete` with Cargo, and install
 
 ```shell
 cargo install rumdl
-cargo install cargo-audit
+cargo +1.98.0 install --locked cargo-audit --version 0.22.2
 cargo install --locked cargo-machete --version 0.9.2
 ```
 
-Keep the cargo-machete version aligned with hosted CI. The
+Keep the cargo-audit and cargo-machete versions aligned with hosted CI. The
 `--with-metadata` check resolves normal, development, and build dependency
 names across all features, but remains an unused-dependency heuristic; retain
 the all-target, all-feature Clippy and test checks as the compilation proof.
 
 For Buf, the xtask uses the executable named by `BUF` when set, then searches
 `PATH`, and confirms that the selected executable can run. Local development
-retains a rolling latest release policy, but hosted workflow configuration is
-a separate control. The current omitted `bufbuild/buf-action` `version` input
-is a consistency gap to review during a coordinated Buf upgrade; it does not
-inherit a Rust dependency or protected-runner pin. Install or update the latest
+retains a rolling latest release policy, while hosted workflow configuration
+pins Buf CLI `1.72.0` as a separate control. Install or update the latest
 `buf-toolchain` release and ensure `$CARGO_HOME/bin` is on `PATH`:
 
 ```shell
@@ -454,15 +452,32 @@ may declare the same checks as independent steps, but behavioral alignment is
 a review responsibility rather than a source-level dependency between the
 xtask and a provider configuration file.
 
-A separate GitHub-hosted Linux job runs the protected checkout verifier
-regressions. This repository is Linux-only and must not schedule or require
-macOS or Windows jobs. Shared verifier code may remain portable, while hosted
-cross-platform regressions belong in the traits and Rust implementation
-repositories. This provider-specific validation stays outside `cargo xtask ci`.
-The Linux job also runs `.github/scripts/test-cargo-egress-topology.sh` as a
-test-only Docker check of the parentless internal IPvlan, unexposed proxy,
-blocked direct egress, TLS-authenticated crates.io path, and exact cleanup. It
-must not execute candidate or release code.
+Hosted CI is Linux-only. Pushes to `main` and `ci-testing/*` run trusted CI on
+an NVIDIA Linux runner. Pull-request code runs only after `copy-pr-bot` copies
+an exactly reviewed head to `pull-request/<number>`. The candidate job binds the
+open pull request, copied ref, canonical pull head, and current main before
+materialization. It installs Rust `1.98.0` and cargo-audit `0.22.2` before
+materializing source, checks out without credentials, Git filters, LFS, or
+candidate-selected submodules, and has no secret, OIDC, protected environment,
+cache-save, or retained-artifact path.
+
+The checkout-free `Required CI reporter` runs from protected `main` on a
+GitHub-hosted Linux runner. It binds the completed CI workflow ID and path,
+repository, push event, run ID and attempt, open pull request, copied ref,
+current head, exact Verified signer/author/DCO identities, unique authoritative
+Linux job, terminal conclusion, and zero artifacts. Only after repeating that
+binding may the repository's GitHub App create `Required CI` on the exact head.
+Keep advisory checks out of that conclusion.
+
+Keep `.github/scripts/materialize-candidate.sh`, its focused offline test,
+`.github/scripts/install-actionlint.sh`, and
+`.github/scripts/check-pull-request-commits.sh` identical across
+`yaml-sigil-spec`, `yaml-sigil-traits`, and `yaml-sigil-rs`. The commit helper
+checks the exact current-main range for merge commits and matching DCO
+sign-offs. Keep the reporter and its transport-fixture tests byte-identical as
+well; repository constants belong in protected workflow arguments. Hosted
+Rust caches may retain Cargo registry source data, but must not retain target
+directories or compiled executable outputs.
 
 Validate shell scripts under `.github/scripts` with Shuck before landing
 changes. Install it from the `shuck-cli` crate and run it from the repository
@@ -506,19 +521,11 @@ in one reviewed change.
 This repository currently has no product `buf-tools` dependency. Reconfirm
 that before an upgrade, but do not add or update a product dependency without
 source evidence that it is required. The applicable surfaces here are the
-ordinary and protected `bufbuild/buf-action` configuration under
-`.github/workflows/`, the exact Buf CLI version installed by
-`.github/scripts/run-terminal-candidate.sh`, and the associated policy tests in
-`.github/scripts/test_protected_pr_ci.py`. The Action's immutable SHA and its
-Buf CLI `version` input are separate controls. Keep both workflow paths aligned
-with the selected CLI version, and report any omitted `version` input as a
-consistency gap.
-
-`buf-toolchain` installs and verifies the standalone trusted Buf executable for
-protected CI. Confirm the published mapping between the selected
-`buf-toolchain` release and Buf CLI release instead of assuming that their
-version strings match, and require the installed executable to report the
-intended CLI version. A repository `buf.lock` locks BSR or module dependencies,
+trusted and candidate `bufbuild/buf-action` steps under `.github/workflows/`
+and the rolling local `buf-toolchain` prerequisite. The Action's immutable SHA
+and its Buf CLI `version` input are separate controls. Keep both hosted paths
+aligned with the selected CLI version, and report any omitted `version` input
+as a consistency gap. A repository `buf.lock` locks BSR or module dependencies,
 not the installed CLI, so do not update it solely for a CLI or Rust helper
 upgrade.
 
@@ -529,12 +536,11 @@ For each future coordinated upgrade:
 - Update every applicable pin in one coordinated change, and regenerate only
   Cargo lockfiles that the affected repositories already commit.
 - Confirm that no unplanned protobuf-generated output changed.
-- Run the local Cargo and protected-policy suites, ShellCheck or Shuck,
+- Run the local Cargo and reporter/materializer suites, ShellCheck or Shuck,
   actionlint, and Markdown checks.
-- Require successful ordinary and App-owned protected CI at the exact reviewed
+- Require successful trusted and App-owned candidate CI at the exact reviewed
   heads.
-- Confirm that the protected sandbox used the intended authenticated Buf
-  binary and retained no artifacts.
+- Confirm that candidate CI retained no artifacts.
 
 ## Style guide
 
