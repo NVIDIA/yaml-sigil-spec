@@ -33,6 +33,7 @@ const DEFAULT_COMMIT: &str = "15c0f3deeefbfa8cb6cd32a99e1ca3b738c66bf0";
 const UPSTREAM_REPO: &str = "usnistgov/ACVP-Server";
 const UPSTREAM_PATH: &str = "gen-val/json-files/ECDSA-SigGen-FIPS186-5/internalProjection.json";
 const VENDORED_FILE_NAME: &str = "ECDSA-SigGen-FIPS186-5.json";
+const MAX_ACVP_CORPUS_BYTES: usize = 3 * 1024 * 1024;
 
 fn main() -> ExitCode {
     let mut args = env::args().skip(1);
@@ -43,12 +44,10 @@ fn main() -> ExitCode {
             if is_help_request(&remaining) {
                 print_usage();
                 ExitCode::SUCCESS
-            } else if !remaining.is_empty() {
-                eprintln!("ci does not accept arguments");
-                print_usage();
-                ExitCode::FAILURE
             } else {
-                match ci::run(&workspace_root()) {
+                match parse_ci_root(&remaining)
+                    .and_then(|root| ci::run(&root).map_err(|error| error.to_string()))
+                {
                     Ok(()) => ExitCode::SUCCESS,
                     Err(e) => {
                         eprintln!("ci failed: {e}");
@@ -93,9 +92,11 @@ fn main() -> ExitCode {
 fn print_usage() {
     eprintln!(
         "usage:\n  \
-         cargo xtask ci\n  \
+         cargo xtask ci [--candidate-root PATH]\n  \
          cargo xtask update-acvp [--commit <hash>]\n\n\
-         Runs the repository's complete non-release validation sequence.\n\n\
+         Runs the repository's complete non-release validation sequence.\n\
+         --candidate-root validates another repository checkout with this\n\
+         protected xtask implementation.\n\n\
          Refreshes vendor/acvp/{VENDORED_FILE_NAME} and the matching\n\
          vendor/acvp/README.md to track the requested commit of\n\
          https://github.com/{UPSTREAM_REPO}."
@@ -140,6 +141,8 @@ fn update_acvp(commit: &str) -> io::Result<()> {
     let output = Command::new("curl")
         .arg("--fail")
         .arg("--location")
+        .arg("--max-filesize")
+        .arg(MAX_ACVP_CORPUS_BYTES.to_string())
         .arg("--silent")
         .arg("--show-error")
         .arg(&url)
@@ -151,6 +154,12 @@ fn update_acvp(commit: &str) -> io::Result<()> {
             output.status,
             detail.trim()
         )));
+    }
+    if output.stdout.len() > MAX_ACVP_CORPUS_BYTES {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("download exceeds the {MAX_ACVP_CORPUS_BYTES}-byte ACVP corpus limit"),
+        ));
     }
 
     let size = u64::try_from(output.stdout.len())
@@ -176,6 +185,39 @@ fn workspace_root() -> PathBuf {
         }
     }
     env::current_dir().expect("cwd available")
+}
+
+fn repository_root() -> PathBuf {
+    workspace_root()
+        .parent()
+        .and_then(std::path::Path::parent)
+        .expect("rebuild-rs is nested under conformance/")
+        .to_path_buf()
+}
+
+fn parse_ci_root(args: &[String]) -> Result<PathBuf, String> {
+    let candidate = match args {
+        [] => repository_root(),
+        [flag, value] if flag == "--candidate-root" && !value.is_empty() => PathBuf::from(value),
+        [flag, _] if flag == "--candidate-root" => {
+            return Err("--candidate-root needs a nonempty path".to_string());
+        }
+        _ => return Err("ci accepts only --candidate-root PATH".to_string()),
+    };
+    let candidate = candidate.canonicalize().map_err(|error| {
+        format!(
+            "cannot resolve candidate root {}: {error}",
+            candidate.display()
+        )
+    })?;
+    let rebuild_root = candidate.join("conformance/rebuild-rs");
+    if !rebuild_root.join("Cargo.toml").is_file() {
+        return Err(format!(
+            "candidate root {} lacks conformance/rebuild-rs/Cargo.toml",
+            candidate.display()
+        ));
+    }
+    Ok(rebuild_root)
 }
 
 fn render_readme(commit: &str, size: u64) -> String {
@@ -208,6 +250,20 @@ fn render_readme(commit: &str, size: u64) -> String {
          byte-equality against the published `(r, s)`. The file\n\
          covers multiple curve / hash combinations; the rebuilder\n\
          filters for `curve = P-256` and `hashAlg = SHA2-256`.\n\
+         \n\
+         ## Resource limits\n\
+         \n\
+         Protected CI and the native rebuilder accept at most 3 MiB of\n\
+         encoded JSON, 512 test groups, 64 cases per group, and 4,096\n\
+         cases in total. The selected P-256 / SHA2-256 replay is further\n\
+         limited to eight groups and 256 cases. Scalar-like hex fields are\n\
+         capped at 160 characters, messages at 4,096 characters, and\n\
+         randomized-hashing values at 256 characters. The rebuilder reads\n\
+         one anchored no-follow byte snapshot, validates these limits before\n\
+         retaining collections, and deserializes that same snapshot before\n\
+         replay. A refresh outside these limits requires an explicit review\n\
+         and coordinated limit change. `cargo xtask ci` exercises every\n\
+         exact-boundary and limit-plus-one regression.\n\
          \n\
          The National Institute of Standards and Technology is explicitly\n\
          acknowledged as the source of this test data. The local file name\n\
@@ -261,6 +317,20 @@ mod tests {
 
     static NEXT_TEST_DIR: AtomicU64 = AtomicU64::new(0);
 
+    #[test]
+    fn ci_candidate_root_is_repository_scoped() {
+        let root = repository_root();
+        let parsed = parse_ci_root(&["--candidate-root".to_string(), root.display().to_string()])
+            .expect("repository root is a valid candidate");
+        assert_eq!(
+            parsed,
+            root.canonicalize().unwrap().join("conformance/rebuild-rs")
+        );
+
+        assert!(parse_ci_root(&["--candidate-root".to_string()]).is_err());
+        assert!(parse_ci_root(&["--unknown".to_string(), "value".to_string()]).is_err());
+    }
+
     fn test_dir(label: &str) -> PathBuf {
         let sequence = NEXT_TEST_DIR.fetch_add(1, Ordering::Relaxed);
         let path = env::temp_dir().join(format!(
@@ -305,6 +375,18 @@ mod tests {
         assert!(out.contains("0123456789abcdef"));
         assert!(out.contains("42 bytes"));
         assert!(out.contains(UPSTREAM_REPO));
+    }
+
+    #[test]
+    fn rendered_readme_matches_checked_in_companion() {
+        let root = workspace_root();
+        let corpus_size = fs::metadata(root.join("vendor/acvp").join(VENDORED_FILE_NAME))
+            .expect("read vendored corpus metadata")
+            .len();
+        let checked_in = fs::read_to_string(root.join("vendor/acvp/README.md"))
+            .expect("read checked-in ACVP README");
+
+        assert_eq!(render_readme(DEFAULT_COMMIT, corpus_size), checked_in);
     }
 
     #[cfg(unix)]

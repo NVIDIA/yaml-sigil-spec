@@ -8,8 +8,9 @@ minimal and exact-pinned in `Cargo.toml`, grouped by role:
   `num-traits`.
 - Vendored ACVP test-vector ingestion (JSON parsing of the pinned NIST
   ACVP-Server snapshot under `vendor/`): `serde`, `serde_json`.
-- Output isolation: the repository-local `yamlsigil-pinned-dir` crate pins
-  output directories before replacing fixture or vendor files.
+- Input and output isolation: the repository-local `yamlsigil-pinned-dir`
+  crate anchors no-follow ACVP reads and pins output directories before
+  replacing fixture or vendor files.
 
 The full transitive graph is locked in `Cargo.lock`. The Docker image
 defined here packages everything needed to rebuild every fixture in
@@ -84,7 +85,10 @@ cargo xtask update-acvp [--commit <hash>]
 ```
 
 The xtask rewrites both the data file and the vendor `README.md` so
-the pin is always self-describing.
+the pin is always self-describing. Downloads and replay are limited to a
+3 MiB encoded snapshot. Group, case, selected-replay, and decoded-field limits
+are documented in that generated vendor README and exercised by
+exact-boundary and limit-plus-one tests.
 
 ## Running locally without Docker
 
