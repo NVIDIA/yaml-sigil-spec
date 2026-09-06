@@ -412,20 +412,26 @@ jq empty schema/YamlSigilSignature.v1alpha1.schema.json
 cargo-machete --with-metadata
 (
   cd conformance/rebuild-rs
+  cargo-deny --locked --workspace check bans licenses sources -D warnings
   cargo audit
 )
 ```
 
-Install `rumdl`, `cargo-audit`, and `cargo-machete` with Cargo, and install
-`jq`, before running the wrapper:
+Install `rumdl`, `cargo-audit`, `cargo-deny`, and `cargo-machete` with Cargo,
+and install `jq`, before running the wrapper:
 
 ```shell
 cargo install rumdl
 cargo +1.98.0 install --locked cargo-audit --version 0.22.2
+cargo install --locked cargo-deny --version 0.20.2
 cargo install --locked cargo-machete --version 0.9.2
 ```
 
-Keep the cargo-audit and cargo-machete versions aligned with hosted CI. The
+Keep the cargo-audit, cargo-deny, and cargo-machete versions aligned with
+hosted CI. Cargo Deny reads the repository-wide policy from `deny.toml` and
+the workspace-specific license exceptions from
+`conformance/rebuild-rs/deny.exceptions.toml`. The locked workspace check
+covers the rebuilder, its local helper crate, and the developer xtask. The
 `--with-metadata` check resolves normal, development, and build dependency
 names across all features, but remains an unused-dependency heuristic; retain
 the all-target, all-feature Clippy and test checks as the compilation proof.
@@ -456,10 +462,10 @@ Hosted CI is Linux-only. Pushes to `main` and `ci-testing/*` run trusted CI on
 an NVIDIA Linux runner. Pull-request code runs only after `copy-pr-bot` copies
 an exactly reviewed head to `pull-request/<number>`. The candidate job binds the
 open pull request, copied ref, canonical pull head, and current main before
-materialization. It installs Rust `1.98.0` and cargo-audit `0.22.2` before
-materializing source, checks out without credentials, Git filters, LFS, or
-candidate-selected submodules, and has no secret, OIDC, protected environment,
-cache-save, or retained-artifact path.
+materialization. It installs Rust `1.98.0`, cargo-audit `0.22.2`, and
+cargo-deny `0.20.2` before materializing source, checks out without
+credentials, Git filters, LFS, or candidate-selected submodules, and has no
+secret, OIDC, protected environment, cache-save, or retained-artifact path.
 
 The checkout-free `Required CI reporter` runs from protected `main` on a
 GitHub-hosted Linux runner. It binds the completed CI workflow ID and path,

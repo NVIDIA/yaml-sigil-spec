@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 
-# Enforce only the reviewed trusted Rust and cargo-audit source pins. This is a
-# narrow supply-chain lint, not a workflow graph or permissions parser.
+# Enforce only the reviewed trusted Rust and Cargo policy-tool source pins.
+# This is a narrow supply-chain lint, not a workflow graph or permissions
+# parser.
 set -euo pipefail
 
 workflow="${1:-.github/workflows/ci.yml}"
 expected_audit="cargo-audit@0.22.2"
+expected_deny="cargo-deny@0.20.2"
 expected_toolchain="1.98.0"
 compatibility_toolchain="1.95.0"
 # This is a literal GitHub expression admitted by the source check, not shell.
@@ -18,13 +20,14 @@ if [[ ! -f "${workflow}" || -L "${workflow}" ]]; then
 fi
 
 # Keep install-action tool inventories on one reviewable line. Multiline tool
-# scalars could hide an unversioned cargo-audit entry from this focused check.
+# scalars could hide an unversioned policy-tool entry from this focused check.
 if grep -Eq '^[[:space:]]*tool:[[:space:]]*[>|]' "${workflow}"; then
   echo "trusted tool inventories must use an inline scalar" >&2
   exit 1
 fi
 
 audit_specs=0
+deny_specs=0
 while IFS= read -r line; do
   [[ "${line}" == *"tool:"* ]] || continue
   value="${line#*tool:}"
@@ -40,12 +43,24 @@ while IFS= read -r line; do
           exit 1
         fi
         ;;
+      cargo-deny*)
+        deny_specs=$((deny_specs + 1))
+        if [[ "${tool}" != "${expected_deny}" ]]; then
+          echo "trusted cargo-deny install is not pinned to ${expected_deny}" >&2
+          exit 1
+        fi
+        ;;
     esac
   done
 done < "${workflow}"
 
 if ((audit_specs == 0)); then
   echo "trusted cargo-audit install is missing" >&2
+  exit 1
+fi
+
+if ((deny_specs == 0)); then
+  echo "trusted cargo-deny install is missing" >&2
   exit 1
 fi
 

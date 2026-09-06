@@ -1,0 +1,40 @@
+[graph]
+all-features = true
+
+[licenses]
+allow = [
+    "MIT",
+    "BSD-3-Clause",
+    "BSD-2-Clause",
+    "Apache-2.0",
+    "ISC",
+    "Zlib",
+    "CDLA-Permissive-2.0",
+]
+confidence-threshold = 0.8
+unused-allowed-license = "allow"
+unused-license-exception = "deny"
+include-dev = true
+include-build = true
+
+[licenses.private]
+ignore = false
+registries = []
+
+[bans]
+multiple-versions = "deny"
+multiple-versions-include-dev = true
+wildcards = "deny"
+allow-wildcard-paths = true
+highlight = "all"
+skip = [
+    { crate = "syn@2.0.117", reason = "jni-macros 0.22.4 still requires syn 2 while thiserror 2.0.20 requires syn 3" },
+    { crate = "windows-sys@0.52.0", reason = "ring 0.17.14 still requires windows-sys 0.52 while current platform support uses 0.61" },
+]
+skip-tree = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
