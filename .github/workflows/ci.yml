@@ -176,15 +176,13 @@ jobs:
           install-only: true
           version: "0.2.54"
 
-      # Install Buf without a token while no contributor path exists. Candidate
-      # Protobuf checks invoke this fixed executable directly after checkout.
+      # Install the exact crate-packaged Buf toolchain without a token while no
+      # contributor path exists. Its build verifies Buf's signed checksum
+      # manifest before placing the official binaries in ephemeral CARGO_HOME.
       - name: Install Buf
-        uses: bufbuild/buf-action@8c6a16e16f12ba20b6470afa9c2ba9b5ba8c97c3 # v1.5.0
-        with:
-          github_token: ""
-          setup_only: true
-          token: ""
-          version: "1.72.0"
+        run: |
+          cargo install buf-toolchain@1.72.0-hotfix.2 --locked
+          test "$("${CARGO_HOME}/bin/buf" --version)" = '1.72.0'
 
       # Load checkout-boundary scripts from current protected main
       # while the workspace still contains no contributor-controlled path.
@@ -273,13 +271,16 @@ jobs:
         run: rumdl check .
 
       - name: Build Protobuf
-        run: buf build proto
+        run: |
+          "${CARGO_HOME}/bin/buf" build proto
 
       - name: Lint Protobuf
-        run: buf lint proto
+        run: |
+          "${CARGO_HOME}/bin/buf" lint proto
 
       - name: Check Protobuf formatting
-        run: buf format proto --diff --exit-code
+        run: |
+          "${CARGO_HOME}/bin/buf" format proto --diff --exit-code
 
       - name: Validate JSON Schema
         run: jq empty schema/YamlSigilSignature.v1alpha1.schema.json
