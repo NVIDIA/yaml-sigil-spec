@@ -159,6 +159,13 @@ fn mod_p(x: BigInt) -> BigInt {
     x.mod_floor(p)
 }
 
+fn assert_scalar_in_range(name: &str, scalar: &BigInt) {
+    assert!(
+        scalar.sign() == Sign::Plus && scalar < &params().n,
+        "{name} must be in the range [1, n)"
+    );
+}
+
 /// Affine point addition / doubling, per the SEC 1 §2.2.1 formulae
 /// quoted in the module docstring. `None` is the point at infinity.
 pub fn point_add(p1: Option<&Point>, p2: Option<&Point>) -> Option<Point> {
@@ -193,7 +200,13 @@ pub fn point_add(p1: Option<&Point>, p2: Option<&Point>) -> Option<Point> {
 /// Scalar multiplication via the standard double-and-add ladder.
 /// Per SEC 1 §3.2.2.1 ("Elliptic Curve Domain Parameters Validation"),
 /// any positive scalar `k < n` is admissible.
+///
+/// # Panics
+///
+/// Panics if `k` is outside the supported range `[1, n)`.
 pub fn point_mul(k: &BigInt, point: &Point) -> Option<Point> {
+    assert_scalar_in_range("point-multiplication scalar", k);
+
     let mut result: Option<Point> = None;
     let mut addend: Option<Point> = Some(point.clone());
     let mut kk = k.clone();
@@ -224,8 +237,15 @@ pub fn on_curve(x: &BigInt, y: &BigInt) -> bool {
 /// Caller pins `(d, z, k)`; this crate's fixtures all use
 /// caller-pinned `k` so the `r = 0` / `s = 0` retry branches cannot
 /// fire and are asserted instead.
+///
+/// # Panics
+///
+/// Panics if `d` or `k` is outside the supported range `[1, n)`.
 pub fn ecdsa_sign(d: &BigInt, z: &BigInt, k: &BigInt) -> (BigInt, BigInt) {
     let n = &params().n;
+    assert_scalar_in_range("private scalar", d);
+    assert_scalar_in_range("nonce scalar", k);
+
     let r_point = point_mul(k, &params().g).expect("k*G non-identity");
     let r = r_point.x.mod_floor(n);
     assert!(!r.is_zero());
@@ -244,10 +264,17 @@ pub fn ecdsa_verify(q: &Point, z: &BigInt, r: &BigInt, s: &BigInt) -> bool {
     let w = inv(s, n);
     let u1 = (z * &w).mod_floor(n);
     let u2 = (r * &w).mod_floor(n);
-    let rp = point_add(
-        point_mul(&u1, &params().g).as_ref(),
-        point_mul(&u2, q).as_ref(),
-    );
+    let u1_g = if u1.is_zero() {
+        None
+    } else {
+        point_mul(&u1, &params().g)
+    };
+    let u2_q = if u2.is_zero() {
+        None
+    } else {
+        point_mul(&u2, q)
+    };
+    let rp = point_add(u1_g.as_ref(), u2_q.as_ref());
     match rp {
         None => false,
         Some(rp) => rp.x.mod_floor(n) == *r,
@@ -297,7 +324,31 @@ mod tests {
     #[test]
     fn group_order_annihilates_generator() {
         let p = params();
-        assert!(point_mul(&p.n, &p.g).is_none());
+        let n_minus_one = &p.n - BigInt::one();
+        let n_minus_one_g = point_mul(&n_minus_one, &p.g);
+        assert!(point_add(n_minus_one_g.as_ref(), Some(&p.g)).is_none());
+    }
+
+    #[test]
+    fn multiplication_and_signing_reject_invalid_scalars() {
+        let p = params();
+        let one = BigInt::one();
+        let invalid_scalars = [BigInt::from(-1), BigInt::zero(), p.n.clone()];
+
+        for scalar in invalid_scalars {
+            assert!(
+                std::panic::catch_unwind(|| point_mul(&scalar, &p.g)).is_err(),
+                "point multiplication accepted scalar {scalar}"
+            );
+            assert!(
+                std::panic::catch_unwind(|| ecdsa_sign(&scalar, &one, &one)).is_err(),
+                "ECDSA signing accepted private scalar {scalar}"
+            );
+            assert!(
+                std::panic::catch_unwind(|| ecdsa_sign(&one, &one, &scalar)).is_err(),
+                "ECDSA signing accepted nonce scalar {scalar}"
+            );
+        }
     }
 
     /// Doubling identity: `G + G = 2·G`.
@@ -324,6 +375,11 @@ mod tests {
         // Tampered `s` MUST be rejected.
         let bad_s = (&s + 1u32).mod_floor(&p.n);
         assert!(!ecdsa_verify(&q, &z, &r, &bad_s));
+
+        // A zero digest gives verification a zero `u1` coefficient.
+        let zero_z = BigInt::zero();
+        let (r, s) = ecdsa_sign(&d, &zero_z, &k);
+        assert!(ecdsa_verify(&q, &zero_z, &r, &s));
     }
 
     /// Range checks: r or s outside (0, n) MUST fail verification
