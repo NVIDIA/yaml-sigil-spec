@@ -134,14 +134,10 @@ const CI_STEPS: &[Step] = &[
     },
 ];
 
-pub(crate) fn run(rebuild_root: &Path) -> io::Result<()> {
+pub(crate) fn run(repository_root: &Path, rebuild_root: &Path) -> io::Result<()> {
     require_cargo_machete()?;
     require_cargo_deny()?;
     let buf = resolve_buf()?;
-    let repository_root = rebuild_root
-        .parent()
-        .and_then(Path::parent)
-        .ok_or_else(|| io::Error::other("rebuild-rs is not nested under conformance/"))?;
 
     for step in CI_STEPS {
         let current_dir = match step.working_directory {

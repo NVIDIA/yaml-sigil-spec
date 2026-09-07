@@ -65,9 +65,10 @@ fn main() -> ExitCode {
                 print_usage();
                 ExitCode::SUCCESS
             } else {
-                match parse_ci_root(&remaining)
-                    .and_then(|root| ci::run(&root).map_err(|error| error.to_string()))
-                {
+                match parse_ci_root(&remaining).and_then(|roots| {
+                    ci::run(roots.repository.path(), roots.rebuild_workspace.path())
+                        .map_err(|error| error.to_string())
+                }) {
                     Ok(()) => ExitCode::SUCCESS,
                     Err(e) => {
                         eprintln!("ci failed: {e}");
@@ -455,7 +456,13 @@ fn repository_root() -> PathBuf {
         .to_path_buf()
 }
 
-fn parse_ci_root(args: &[String]) -> Result<PathBuf, String> {
+#[derive(Debug)]
+struct CiRoots {
+    repository: PinnedDir,
+    rebuild_workspace: PinnedDir,
+}
+
+fn parse_ci_root(args: &[String]) -> Result<CiRoots, String> {
     let candidate = match args {
         [] => repository_root(),
         [flag, value] if flag == "--candidate-root" && !value.is_empty() => PathBuf::from(value),
@@ -464,20 +471,43 @@ fn parse_ci_root(args: &[String]) -> Result<PathBuf, String> {
         }
         _ => return Err("ci accepts only --candidate-root PATH".to_string()),
     };
-    let candidate = candidate.canonicalize().map_err(|error| {
+    let candidate = if candidate.is_absolute() {
+        candidate
+    } else {
+        env::current_dir()
+            .map_err(|error| format!("cannot resolve current directory: {error}"))?
+            .join(candidate)
+    };
+    let repository = PinnedDir::open(&candidate).map_err(|error| {
         format!(
-            "cannot resolve candidate root {}: {error}",
+            "cannot pin candidate root {} without following symlinks: {error}",
             candidate.display()
         )
     })?;
-    let rebuild_root = candidate.join("conformance/rebuild-rs");
-    if !rebuild_root.join("Cargo.toml").is_file() {
-        return Err(format!(
-            "candidate root {} lacks conformance/rebuild-rs/Cargo.toml",
+    let conformance = repository.open_child("conformance").map_err(|error| {
+        format!(
+            "cannot pin candidate conformance directory under {}: {error}",
             candidate.display()
-        ));
-    }
-    Ok(rebuild_root)
+        )
+    })?;
+    let rebuild_workspace = conformance.open_child("rebuild-rs").map_err(|error| {
+        format!(
+            "cannot pin candidate rebuild-rs directory under {}: {error}",
+            candidate.display()
+        )
+    })?;
+    rebuild_workspace
+        .require_regular_file("Cargo.toml")
+        .map_err(|error| {
+            format!(
+                "candidate root {} lacks a regular conformance/rebuild-rs/Cargo.toml: {error}",
+                candidate.display()
+            )
+        })?;
+    Ok(CiRoots {
+        repository,
+        rebuild_workspace,
+    })
 }
 
 fn parse_candidate_preflight_root(args: &[String]) -> Result<PathBuf, String> {
@@ -604,6 +634,7 @@ mod tests {
     use super::*;
     use std::fs;
     use std::io::Cursor;
+    use std::process::Command;
     use std::sync::atomic::{AtomicU64, Ordering};
 
     static NEXT_TEST_DIR: AtomicU64 = AtomicU64::new(0);
@@ -675,16 +706,139 @@ mod tests {
 
     #[test]
     fn ci_candidate_root_is_repository_scoped() {
+        use std::os::unix::fs::MetadataExt;
+
         let root = repository_root();
         let parsed = parse_ci_root(&["--candidate-root".to_string(), root.display().to_string()])
             .expect("repository root is a valid candidate");
         assert_eq!(
-            parsed,
-            root.canonicalize().unwrap().join("conformance/rebuild-rs")
+            (
+                fs::metadata(parsed.repository.path()).unwrap().dev(),
+                fs::metadata(parsed.repository.path()).unwrap().ino(),
+            ),
+            (
+                fs::metadata(&root).unwrap().dev(),
+                fs::metadata(&root).unwrap().ino()
+            )
+        );
+        assert_eq!(
+            (
+                fs::metadata(parsed.rebuild_workspace.path()).unwrap().dev(),
+                fs::metadata(parsed.rebuild_workspace.path()).unwrap().ino(),
+            ),
+            (
+                fs::metadata(root.join("conformance/rebuild-rs"))
+                    .unwrap()
+                    .dev(),
+                fs::metadata(root.join("conformance/rebuild-rs"))
+                    .unwrap()
+                    .ino(),
+            )
         );
 
         assert!(parse_ci_root(&["--candidate-root".to_string()]).is_err());
         assert!(parse_ci_root(&["--unknown".to_string(), "value".to_string()]).is_err());
+    }
+
+    fn write_ci_candidate(root: &std::path::Path) -> PathBuf {
+        let rebuild = root.join("conformance/rebuild-rs");
+        fs::create_dir_all(&rebuild).expect("create candidate rebuild workspace");
+        fs::write(rebuild.join("Cargo.toml"), b"[workspace]\n").expect("write candidate manifest");
+        rebuild
+    }
+
+    #[test]
+    fn ci_candidate_root_rejects_symlinked_rebuild_workspace() {
+        use std::os::unix::fs::symlink;
+
+        let root = test_dir("ci-root-rebuild-symlink");
+        let candidate = root.join("candidate");
+        fs::create_dir_all(candidate.join("conformance")).expect("create candidate conformance");
+        let outside = root.join("outside");
+        fs::create_dir(&outside).expect("create outside workspace");
+        fs::write(outside.join("Cargo.toml"), b"[workspace]\n").expect("write outside manifest");
+        symlink(&outside, candidate.join("conformance/rebuild-rs"))
+            .expect("redirect candidate rebuild workspace");
+
+        parse_ci_root(&[
+            "--candidate-root".to_string(),
+            candidate.display().to_string(),
+        ])
+        .expect_err("redirected rebuild workspace must fail");
+
+        fs::remove_dir_all(root).expect("remove symlink test root");
+    }
+
+    #[test]
+    fn ci_candidate_root_rejects_non_regular_manifest() {
+        use std::os::unix::fs::symlink;
+
+        let root = test_dir("ci-root-manifest-kind");
+        let candidate = root.join("candidate");
+        let rebuild = candidate.join("conformance/rebuild-rs");
+        fs::create_dir_all(&rebuild).expect("create candidate rebuild workspace");
+        let outside_manifest = root.join("outside-Cargo.toml");
+        fs::write(&outside_manifest, b"[workspace]\n").expect("write outside manifest");
+        let manifest = rebuild.join("Cargo.toml");
+        symlink(&outside_manifest, &manifest).expect("redirect candidate manifest");
+
+        parse_ci_root(&[
+            "--candidate-root".to_string(),
+            candidate.display().to_string(),
+        ])
+        .expect_err("symlinked manifest must fail");
+
+        fs::remove_file(&manifest).expect("remove manifest symlink");
+        fs::create_dir(&manifest).expect("create non-regular manifest");
+        parse_ci_root(&[
+            "--candidate-root".to_string(),
+            candidate.display().to_string(),
+        ])
+        .expect_err("directory manifest must fail");
+
+        fs::remove_dir_all(root).expect("remove manifest-kind test root");
+    }
+
+    #[test]
+    fn ci_candidate_working_directory_stays_pinned_after_path_replacement() {
+        use std::os::unix::fs::symlink;
+
+        let root = test_dir("ci-root-path-replacement");
+        let candidate = root.join("candidate");
+        let rebuild = write_ci_candidate(&candidate);
+        fs::write(rebuild.join("pinned-marker"), b"pinned").expect("write pinned marker");
+        let outside = root.join("outside");
+        fs::create_dir(&outside).expect("create redirected workspace");
+        fs::write(outside.join("redirected-marker"), b"redirected")
+            .expect("write redirected marker");
+        let roots = parse_ci_root(&[
+            "--candidate-root".to_string(),
+            candidate.display().to_string(),
+        ])
+        .expect("pin candidate roots");
+        let moved = root.join("moved-rebuild");
+        fs::rename(&rebuild, &moved).expect("move pinned rebuild workspace");
+        symlink(&outside, &rebuild).expect("replace rebuild path with symlink");
+
+        let pinned_status = Command::new("/usr/bin/test")
+            .args(["-f", "pinned-marker"])
+            .current_dir(roots.rebuild_workspace.path())
+            .status()
+            .expect("run child from pinned workspace");
+        assert!(pinned_status.success());
+        let redirected_status = Command::new("/usr/bin/test")
+            .args(["-f", "redirected-marker"])
+            .current_dir(roots.rebuild_workspace.path())
+            .status()
+            .expect("check redirected marker from pinned workspace");
+        assert!(!redirected_status.success());
+
+        drop(roots);
+        fs::remove_file(rebuild).expect("remove replacement symlink");
+        fs::remove_dir_all(candidate).expect("remove candidate root");
+        fs::remove_dir_all(moved).expect("remove moved pinned workspace");
+        fs::remove_dir_all(outside).expect("remove redirected workspace");
+        fs::remove_dir(root).expect("remove path-replacement test root");
     }
 
     #[test]
