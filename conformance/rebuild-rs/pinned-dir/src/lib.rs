@@ -28,10 +28,19 @@ const O_NOFOLLOW: i32 = 0o400000;
 /// An open directory used as the authority for child operations.
 #[derive(Debug)]
 pub struct PinnedDir {
-    handle: File,
+    _handle: File,
+    authority_path: PathBuf,
 }
 
 impl PinnedDir {
+    fn from_handle(handle: File) -> Self {
+        let authority_path = PathBuf::from("/proc/self/fd").join(handle.as_raw_fd().to_string());
+        Self {
+            _handle: handle,
+            authority_path,
+        }
+    }
+
     /// Open and pin an existing absolute directory path without following
     /// symlinks in any component.
     pub fn open(path: &Path) -> io::Result<Self> {
@@ -42,16 +51,12 @@ impl PinnedDir {
             ));
         }
 
-        let mut current = Self {
-            handle: open_directory(Path::new("/"))?,
-        };
+        let mut current = Self::from_handle(open_directory(Path::new("/"))?);
         for component in path.components() {
             match component {
                 Component::RootDir => {}
                 Component::Normal(name) => {
-                    current = Self {
-                        handle: open_directory(&current.entry_path(name))?,
-                    };
+                    current = Self::from_handle(open_directory(&current.entry_path(name))?);
                 }
                 _ => {
                     return Err(io::Error::new(
@@ -71,9 +76,14 @@ impl PinnedDir {
     /// symlink.
     pub fn open_child(&self, name: &str) -> io::Result<Self> {
         validate_name(name)?;
-        Ok(Self {
-            handle: open_directory(&self.entry_path(name))?,
-        })
+        Ok(Self::from_handle(open_directory(&self.entry_path(name))?))
+    }
+
+    /// Return the descriptor-backed path for this pinned directory.
+    ///
+    /// The path remains valid only while this `PinnedDir` remains alive.
+    pub fn path(&self) -> &Path {
+        &self.authority_path
     }
 
     /// Open a child directory, creating it if absent.
@@ -97,6 +107,22 @@ impl PinnedDir {
     pub fn symlink_metadata(&self, name: &str) -> io::Result<fs::Metadata> {
         validate_name(name)?;
         fs::symlink_metadata(self.entry_path(name))
+    }
+
+    /// Require an existing regular child file without following a symlink.
+    pub fn require_regular_file(&self, name: &str) -> io::Result<()> {
+        validate_name(name)?;
+        let file = OpenOptions::new()
+            .read(true)
+            .custom_flags(O_NOFOLLOW)
+            .open(self.entry_path(name))?;
+        if !file.metadata()?.file_type().is_file() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("refusing non-regular input: {name}"),
+            ));
+        }
+        Ok(())
     }
 
     /// Read one regular child file through the pinned directory handle.
@@ -167,9 +193,7 @@ impl PinnedDir {
     }
 
     fn entry_path(&self, name: impl AsRef<OsStr>) -> PathBuf {
-        PathBuf::from("/proc/self/fd")
-            .join(self.handle.as_raw_fd().to_string())
-            .join(name.as_ref())
+        self.path().join(name.as_ref())
     }
 }
 
