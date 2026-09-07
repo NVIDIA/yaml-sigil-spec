@@ -311,6 +311,7 @@ jobs:
       # wrappers, and replaced tools cannot influence a later policy step.
       - name: Run terminal candidate validation
         run: |
+          "${GITHUB_WORKSPACE}/.github/scripts/candidate-state-canary.sh"
           cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
           cargo test --locked --workspace --all-features
           cd "${GITHUB_WORKSPACE}"
