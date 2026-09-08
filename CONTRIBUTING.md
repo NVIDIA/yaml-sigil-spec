@@ -47,6 +47,10 @@ authoritative job result, and zero-artifact inventory. Only then does the
 repository's GitHub App report `Required CI` on the exact head. Other checks
 are advisory.
 
+The copied `.github/workflows/ci.yml` must exactly match protected current
+`main`. Coordinate a proposed change to that workflow with a maintainer
+before requesting candidate testing.
+
 Pull-request commits must be linear from current `main`, cryptographically
 signed, and DCO-compliant. Rebase and request a new exact-head test whenever
 `main` or the pull-request head changes.
