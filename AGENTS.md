@@ -1,5 +1,16 @@
 # AGENTS.md
 
+## Maintainer operations
+
+Ordinary repository work does not require the maintainer guide. Before
+performing or advising on hosted maintainer operations—authorizing pull-request
+tests, merging, exceptional integration, or reverting `main`—read
+[`MAINTAINERS.md`](MAINTAINERS.md) completely.
+
+Whenever a workflow or supporting policy changes, update the matching
+procedure in `MAINTAINERS.md` in the same change. Keep that runbook concise,
+coherent, and aligned with the executable behavior.
+
 ## Agent Documentation Standards
 
 Project-local skills exist under `.agents/skills/` and should remain
@@ -464,16 +475,19 @@ an exactly reviewed head to `pull-request/<number>`. The candidate job binds the
 open pull request, copied ref, canonical pull head, and current main before
 materialization. It installs Rust `1.98.0`, cargo-audit `0.22.2`, and
 cargo-deny `0.20.2` before materializing source, checks out without
-credentials, Git filters, LFS, or candidate-selected submodules, and has no
-secret, OIDC, protected environment, cache-save, or retained-artifact path.
+credentials, Git filters, LFS, or candidate-selected submodules, requires a
+fresh empty runner-temporary source root, and permits root Cargo configuration
+only when it is identical to protected current `main`. It has no secret, OIDC,
+protected environment, cache-save, or retained-artifact path.
 
 The checkout-free `Required CI reporter` runs from protected `main` on a
 GitHub-hosted Linux runner. It binds the completed CI workflow ID and path,
+exact protected workflow blob, live protected-main and pull-request base,
 repository, push event, run ID and attempt, open pull request, copied ref,
 current head, exact Verified signer/author/DCO identities, unique authoritative
 Linux job, terminal conclusion, and zero artifacts. Only after repeating that
-binding may the repository's GitHub App create `Required CI` on the exact head.
-Keep advisory checks out of that conclusion.
+binding may the repository's GitHub App create `Required CI` on the exact
+head. Keep advisory checks out of that conclusion.
 
 Keep `.github/scripts/materialize-candidate.sh`, its focused offline test,
 `.github/scripts/install-actionlint.sh`, and

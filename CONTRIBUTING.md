@@ -4,6 +4,9 @@
 specification, diagrams, schemas, conformance fixtures, and rendered companion
 material, then review the result as the responsible author before submitting it.
 
+Repository writers use [`MAINTAINERS.md`](MAINTAINERS.md) for exact-head test
+authorization, protected-policy staging, merges, exceptions, and reverts.
+
 ## The Critical Rule
 
 **You must understand your contribution.** AI-assisted contributions are
@@ -46,6 +49,10 @@ open pull request, copied ref, current head, exact workflow and run attempt,
 authoritative job result, and zero-artifact inventory. Only then does the
 repository's GitHub App report `Required CI` on the exact head. Other checks
 are advisory.
+
+The copied `.github/workflows/ci.yml` must exactly match protected current
+`main`. Coordinate a proposed change to that workflow with a maintainer
+before requesting candidate testing.
 
 Pull-request commits must be linear from current `main`, cryptographically
 signed, and DCO-compliant. Rebase and request a new exact-head test whenever

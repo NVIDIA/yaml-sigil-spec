@@ -146,12 +146,32 @@ jobs:
       GIT_TERMINAL_PROMPT: "0"
       GITHUB_TOKEN: ""
     steps:
-      # Allocate Cargo state beneath this runner job's fresh temporary root.
-      - name: Initialize ephemeral Cargo state
+      # Allocate every mutable candidate path beneath one fresh job-temporary
+      # root. The materializer separately proves that source starts empty.
+      - name: Initialize fresh candidate state
         shell: bash
         run: |
           set -euo pipefail
-          printf '%s\n' "CARGO_HOME=${RUNNER_TEMP}/cargo-home" >> "${GITHUB_ENV}"
+          state="${RUNNER_TEMP}/yaml-sigil-candidate-state"
+          test ! -e "${state}"
+          install -d -m 0700 \
+            "${state}" \
+            "${state}/actionlint" \
+            "${state}/bootstrap" \
+            "${state}/cargo-home" \
+            "${state}/policy-bin" \
+            "${state}/source" \
+            "${state}/target" \
+            "${state}/tmp"
+          printf '%s\n' \
+            "CANDIDATE_STATE=${state}" \
+            "CARGO_HOME=${state}/cargo-home" \
+            "CARGO_TARGET_DIR=${state}/target" \
+            "POLICY_BIN=${state}/policy-bin" \
+            "TEMP=${state}/tmp" \
+            "TMP=${state}/tmp" \
+            "TMPDIR=${state}/tmp" >> "${GITHUB_ENV}"
+        working-directory: ${{ github.workspace }}
 
       # Install fixed tools before any contributor-controlled path exists.
       - name: Set up Rust
@@ -174,6 +194,7 @@ jobs:
           rustc --version --verbose | grep -Fx 'release: 1.98.0'
           test "$(cargo-audit --version)" = 'cargo-audit 0.22.2'
           test "$(cargo-deny --version)" = 'cargo-deny 0.20.2'
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/bootstrap
 
       - name: Install Markdown linter
         # Refresh this immutable pin frequently to keep pace with rumdl releases.
@@ -189,6 +210,7 @@ jobs:
         run: |
           cargo install buf-toolchain@1.72.0-hotfix.2 --locked
           test "$("${CARGO_HOME}/bin/buf" --version)" = '1.72.0'
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/bootstrap
 
       # Load checkout-boundary scripts from current protected main
       # while the workspace still contains no contributor-controlled path.
@@ -196,38 +218,36 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test ! -e "${GITHUB_WORKSPACE}/.git"
-          git -c credential.helper= init --quiet --initial-branch=main \
-            "${GITHUB_WORKSPACE}"
-          git -C "${GITHUB_WORKSPACE}" remote add origin \
+          git -c credential.helper= init --quiet --initial-branch=main .
+          git remote add origin \
             "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
           git -c credential.helper= -c http.extraHeader= \
-            -C "${GITHUB_WORKSPACE}" fetch --no-tags \
-            --no-recurse-submodules --depth=1 origin \
+            fetch --no-tags --no-recurse-submodules --depth=1 origin \
             refs/heads/main:refs/remotes/origin/main
-          git -C "${GITHUB_WORKSPACE}" show \
+          git show \
             refs/remotes/origin/main:.github/scripts/materialize-candidate.sh \
-            > "${RUNNER_TEMP}/materialize-candidate.sh"
-          git -C "${GITHUB_WORKSPACE}" show \
+            > "${POLICY_BIN}/materialize-candidate.sh"
+          git show \
             refs/remotes/origin/main:.github/scripts/bind-candidate-pr.py \
-            > "${RUNNER_TEMP}/bind-candidate-pr.py"
-          git -C "${GITHUB_WORKSPACE}" show \
+            > "${POLICY_BIN}/bind-candidate-pr.py"
+          git show \
             refs/remotes/origin/main:.github/scripts/check-pull-request-commits.sh \
-            > "${RUNNER_TEMP}/check-pull-request-commits.sh"
-          git -C "${GITHUB_WORKSPACE}" show \
+            > "${POLICY_BIN}/check-pull-request-commits.sh"
+          git show \
             refs/remotes/origin/main:.github/scripts/install-actionlint.sh \
-            > "${RUNNER_TEMP}/install-actionlint.sh"
-          test -s "${RUNNER_TEMP}/materialize-candidate.sh"
-          test -s "${RUNNER_TEMP}/bind-candidate-pr.py"
-          test -s "${RUNNER_TEMP}/check-pull-request-commits.sh"
-          test -s "${RUNNER_TEMP}/install-actionlint.sh"
-          /bin/bash -n "${RUNNER_TEMP}/materialize-candidate.sh"
-          /bin/bash -n "${RUNNER_TEMP}/check-pull-request-commits.sh"
-          /bin/bash -n "${RUNNER_TEMP}/install-actionlint.sh"
-          python3 -m py_compile "${RUNNER_TEMP}/bind-candidate-pr.py"
+            > "${POLICY_BIN}/install-actionlint.sh"
+          test -s "${POLICY_BIN}/materialize-candidate.sh"
+          test -s "${POLICY_BIN}/bind-candidate-pr.py"
+          test -s "${POLICY_BIN}/check-pull-request-commits.sh"
+          test -s "${POLICY_BIN}/install-actionlint.sh"
+          /bin/bash -n "${POLICY_BIN}/materialize-candidate.sh"
+          /bin/bash -n "${POLICY_BIN}/check-pull-request-commits.sh"
+          /bin/bash -n "${POLICY_BIN}/install-actionlint.sh"
+          python3 -m py_compile "${POLICY_BIN}/bind-candidate-pr.py"
           /bin/bash --noprofile --norc \
-            "${RUNNER_TEMP}/install-actionlint.sh" \
-            "${RUNNER_TEMP}/actionlint-bin"
+            "${POLICY_BIN}/install-actionlint.sh" \
+            "${CANDIDATE_STATE}/actionlint"
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/bootstrap
 
       # Anonymous protected policy rejects a closed or moved pull request
       # before any contributor-controlled path is materialized.
@@ -237,13 +257,13 @@ jobs:
           CANDIDATE_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          base_sha="$(git -C "${GITHUB_WORKSPACE}" \
-            rev-parse refs/remotes/origin/main)"
-          python3 "${RUNNER_TEMP}/bind-candidate-pr.py" \
+          base_sha="$(git rev-parse refs/remotes/origin/main)"
+          python3 "${POLICY_BIN}/bind-candidate-pr.py" \
             --repository "${GITHUB_REPOSITORY}" \
             --copied-ref "${CANDIDATE_REF}" \
             --head-sha "${CANDIDATE_SHA}" \
             --base-sha "${base_sha}"
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/bootstrap
 
       # The protected helper performs the only candidate checkout, disables
       # filters and LFS, and never reads candidate submodule configuration.
@@ -251,16 +271,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cd "${GITHUB_WORKSPACE}"
           /bin/bash --noprofile --norc \
-            "${RUNNER_TEMP}/materialize-candidate.sh" \
+            "${POLICY_BIN}/materialize-candidate.sh" \
             "${GITHUB_REPOSITORY}" "${GITHUB_SHA}" "${GITHUB_REF_NAME}"
           export BASE_SHA
           export HEAD_SHA="${GITHUB_SHA}"
-          BASE_SHA="$(git -C "${GITHUB_WORKSPACE}" \
-            rev-parse refs/remotes/origin/main)"
+          BASE_SHA="$(git rev-parse refs/remotes/origin/main)"
           /bin/bash --noprofile --norc \
-            "${RUNNER_TEMP}/check-pull-request-commits.sh"
+            "${POLICY_BIN}/check-pull-request-commits.sh"
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source
 
       # Policy-oriented checks run before any candidate script, build script,
       # or test can modify Cargo state or GitHub command files. Candidate code
@@ -268,43 +287,51 @@ jobs:
       # state afterward.
       - name: Lint GitHub Actions workflows
         run: |
-          "${RUNNER_TEMP}/actionlint-bin/actionlint"
+          "${CANDIDATE_STATE}/actionlint/actionlint"
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source
 
       - name: Lint shell scripts
         run: shellcheck .github/scripts/*.sh
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source
 
       - name: Lint Markdown
         run: rumdl check .
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source
 
       - name: Build Protobuf
         run: |
           "${CARGO_HOME}/bin/buf" build proto
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source
 
       - name: Lint Protobuf
         run: |
           "${CARGO_HOME}/bin/buf" lint proto
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source
 
       - name: Check Protobuf formatting
         run: |
           "${CARGO_HOME}/bin/buf" format proto --diff --exit-code
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source
 
       - name: Validate JSON Schema
         run: jq empty schema/YamlSigilSignature.v1alpha1.schema.json
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source
 
       - name: Check Rust formatting
         run: cargo-fmt --all --check
-        working-directory: conformance/rebuild-rs
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source/conformance/rebuild-rs
 
       - name: Check unused Rust dependencies
         run: cargo-machete --with-metadata
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source
 
       - name: Check Rust dependency policy
         run: cargo-deny --locked --workspace check bans licenses sources -D warnings
-        working-directory: conformance/rebuild-rs
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source/conformance/rebuild-rs
 
       - name: Audit Rust dependencies
         run: cargo-audit audit
-        working-directory: conformance/rebuild-rs
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source/conformance/rebuild-rs
 
       # Rust builds and project-owned test scripts execute candidate code. Keep
       # them together at the end so GITHUB_ENV, GITHUB_PATH, Cargo aliases,
@@ -313,7 +340,7 @@ jobs:
         run: |
           cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
           cargo test --locked --workspace --all-features
-          cd "${GITHUB_WORKSPACE}"
+          cd "${CANDIDATE_STATE}/source"
           python3 -m py_compile \
             .github/scripts/bind-candidate-pr.py \
             .github/scripts/report_required_ci.py \
@@ -323,4 +350,4 @@ jobs:
             -s .github/scripts -p 'test_*.py'
           .github/scripts/test-materialize-candidate.sh
           .github/scripts/test-trusted-tool-pins.sh
-        working-directory: conformance/rebuild-rs
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source/conformance/rebuild-rs
