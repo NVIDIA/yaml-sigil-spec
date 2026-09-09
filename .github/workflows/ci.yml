@@ -156,7 +156,6 @@ jobs:
           test ! -e "${state}"
           install -d -m 0700 \
             "${state}" \
-            "${state}/actionlint" \
             "${state}/bootstrap" \
             "${state}/cargo-home" \
             "${state}/policy-bin" \
@@ -244,6 +243,7 @@ jobs:
           /bin/bash -n "${POLICY_BIN}/check-pull-request-commits.sh"
           /bin/bash -n "${POLICY_BIN}/install-actionlint.sh"
           python3 -m py_compile "${POLICY_BIN}/bind-candidate-pr.py"
+          test ! -e "${CANDIDATE_STATE}/actionlint"
           /bin/bash --noprofile --norc \
             "${POLICY_BIN}/install-actionlint.sh" \
             "${CANDIDATE_STATE}/actionlint"
