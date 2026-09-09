@@ -352,3 +352,4 @@ transparency, replay protection, context binding, or multi-party approval.
 | **Transcription** | The bytes-only envelope process that composes and decomposes YAML or protobuf forms. |
 | **Transcoding** | Round-tripping between YAML and protobuf forms. |
 | **Artifact Decomposition** | The byte-level YAML algorithm that separates a YAML-form artifact into payload and signature ranges. |
+| **In toto** | Latin for “in the whole.” In ordinary English, *in toto* means completely or as a whole, with no part omitted. See [Merriam-Webster](https://www.merriam-webster.com/dictionary/in%20toto) and [Cornell Law School's Legal Information Institute](https://www.law.cornell.edu/wex/in_toto). |
