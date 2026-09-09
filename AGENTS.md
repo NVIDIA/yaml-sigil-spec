@@ -282,8 +282,6 @@ cover.
 - **`original-readme.md`** — the historical starting point of the
   repository, preserved for lineage. Not normative.
 
-- **`notes.txt`** — scratchpad. Not normative.
-
 ### Diagrams and visual aids (non-normative)
 
 The diagrams below are illustrative companions to the normative
@@ -380,8 +378,8 @@ corresponding conformance update, treat it as a defect.
   **Payload stream**, **Signature document**, **Verified payload
   bytes**, **Artifact Decomposition**). Renaming a term means updating
   all affected documents.
-- **When editing normative Markdown** (everything under this repo
-  except `original-readme.md` and `notes.txt`): follow
+- **When editing normative Markdown** (everything under this repo except
+  `original-readme.md`): follow
   the **Style guide** section below (voice, formatting, word list).
   Use GitHub Flavored Markdown as the source dialect unless a file
   documents a narrower renderer requirement.
@@ -567,9 +565,8 @@ For each future coordinated upgrade:
 Applies to normative and maintenance Markdown: repository-root spec
 documents, `schema/`, `algorithms/`, `conformance/` (including
 per-subdirectory `README.md` files), `DIAGRAM.md`, and proto-adjacent
-companions. **Exempt:** `original-readme.md` and `notes.txt`. Those
-files keep their own voice; do not rewrite them to satisfy this guide
-unless the author explicitly asks.
+companions. **Exempt:** `original-readme.md`. That file keeps its own voice;
+do not rewrite it to satisfy this guide unless the author explicitly asks.
 
 Write like you are explaining something to a colleague. Be direct,
 specific, and concise. This repository is a specification, not

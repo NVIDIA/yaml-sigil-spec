@@ -28,8 +28,8 @@ Do not hide a normative contract change inside a non-normative cleanup.
   material to match the normative source, not the other way around.
 - Treat listed paths as a starting point, not a closed list.
 - Keep source diagrams and rendered images synchronized when both are tracked.
-- Preserve `original-readme.md` and `notes.txt` unless the request explicitly
-  asks to update historical or scratchpad material.
+- Preserve `original-readme.md` unless the request explicitly asks to update
+  historical material.
 - Keep changes scoped to `yaml-sigil-spec`. Coordinate downstream repository
   updates after this repository's change is ready and after it merges.
 
