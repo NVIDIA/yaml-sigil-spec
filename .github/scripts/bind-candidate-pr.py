@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bind one open copied-ref pull request before candidate materialization."""
+"""Bind anonymous copied-ref PR metadata before candidate materialization."""
 
 from __future__ import annotations
 
@@ -8,21 +8,46 @@ import json
 import re
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Protocol
 
 
 API_ROOT = "https://api.github.com"
 API_VERSION = "2026-03-10"
 MAX_RESPONSE_BYTES = 1024 * 1024
+RELEASE_BRANCH_PREFIX = "release-plz-manual-"
+MAIN_REF = "refs/heads/main"
+MAIN_CHECK = "Required CI"
+SUPPORTED_REPOSITORIES = {
+    "NVIDIA/yaml-sigil-rs",
+    "NVIDIA/yaml-sigil-spec",
+    "NVIDIA/yaml-sigil-traits",
+}
+VERSION_COMPONENT = r"(?:0|[1-9][0-9]{0,8})"
+RUST_COORDINATION_BRANCH = re.compile(
+    rf"dev/{VERSION_COMPONENT}\.{VERSION_COMPONENT}\.{VERSION_COMPONENT}"
+)
+SPEC_COORDINATION_BRANCH = re.compile(
+    r"v[1-9][0-9]{0,8}(?:(?:alpha|beta)[1-9][0-9]{0,8})?"
+)
+SEMVER = re.compile(
+    r"(?:0|[1-9][0-9]*)\."
+    r"(?:0|[1-9][0-9]*)\."
+    r"(?:0|[1-9][0-9]*)"
+    r"(?:-(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)"
+    r"(?:\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?"
+)
 
 
 class BindingError(RuntimeError):
-    """The anonymous pull-request binding failed closed."""
+    """A copied-ref or release-branch binding failed closed."""
 
 
 class Api(Protocol):
-    """Minimal anonymous GitHub read boundary used by tests and production."""
+    """Minimal anonymous GitHub read boundary used by fixtures and production."""
 
     def get(self, path: str) -> Any:
         """Fetch and decode one JSON response."""
@@ -58,9 +83,31 @@ class AnonymousGitHubApi:
             raise BindingError("GitHub API returned invalid JSON") from error
 
 
+@dataclass(frozen=True)
+class CandidatePrBinding:
+    """One copied head bound to independent policy and contribution bases."""
+
+    base_ref: str
+    base_sha: str
+    check_name: str
+    release_branch: str | None
+
+
 def _mapping(value: Any, label: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise BindingError(f"{label} is not an object")
+    return value
+
+
+def _sequence(value: Any, label: str) -> list[Any]:
+    if not isinstance(value, list):
+        raise BindingError(f"{label} is not an array")
+    return value
+
+
+def _integer(value: Any, label: str) -> int:
+    if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+        raise BindingError(f"{label} is not a positive integer")
     return value
 
 
@@ -81,41 +128,89 @@ def _repository(value: Any, label: str) -> str:
     return _text(_mapping(value, label).get("full_name"), f"{label} full name")
 
 
+def base_policy(repository: str, branch: str) -> tuple[str, str]:
+    """Return the canonical full ref and App check for one allowed PR base."""
+
+    branch = _text(branch, "pull request base ref")
+    if repository not in SUPPORTED_REPOSITORIES:
+        raise BindingError("repository has no protected candidate policy")
+    if branch == "main":
+        return MAIN_REF, MAIN_CHECK
+    if repository in {
+        "NVIDIA/yaml-sigil-rs",
+        "NVIDIA/yaml-sigil-traits",
+    }:
+        allowed = RUST_COORDINATION_BRANCH.fullmatch(branch) is not None
+    else:
+        allowed = SPEC_COORDINATION_BRANCH.fullmatch(branch) is not None
+    if not allowed:
+        raise BindingError("pull request base is not an allowed coordination branch")
+    full_ref = f"refs/heads/{branch}"
+    check_name = f"Required CI [{full_ref}]"
+    if len(check_name) > 128:
+        raise BindingError("coordination required-check name is oversized")
+    return full_ref, check_name
+
+
 def bind_candidate_pr(
     api: Api,
     repository: str,
     copied_ref: str,
     head_sha: str,
-    base_sha: str,
-) -> None:
-    """Require one open PR, copied ref, head, and protected-main snapshot."""
+    policy_sha: str,
+) -> CandidatePrBinding:
+    """Rebind one PR base, copied ref, and protected policy without a token."""
 
-    if (
-        re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository) is None
-        or ".." in repository
-    ):
+    if re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository) is None:
         raise BindingError("repository is malformed")
     copied = re.fullmatch(r"pull-request/([1-9][0-9]*)", copied_ref)
     if copied is None:
         raise BindingError("copied ref is malformed")
     head_sha = _sha(head_sha, "expected head SHA")
-    base_sha = _sha(base_sha, "expected base SHA")
+    policy_sha = _sha(policy_sha, "expected policy SHA")
     number = int(copied.group(1))
 
     prefix = f"repos/{repository}"
     pull = _mapping(api.get(f"{prefix}/pulls/{number}"), "pull request")
     base = _mapping(pull.get("base"), "pull request base")
     head = _mapping(pull.get("head"), "pull request head")
-    if (
-        pull.get("number") != number
-        or pull.get("state") != "open"
-        or _text(base.get("ref"), "pull request base ref") != "main"
-        or _repository(base.get("repo"), "pull request base repository")
-        != repository
-        or _sha(base.get("sha"), "pull request base SHA") != base_sha
-        or _sha(head.get("sha"), "pull request head SHA") != head_sha
-    ):
+    if pull.get("number") != number or pull.get("state") != "open":
         raise BindingError("pull request no longer binds the copied candidate")
+    if _repository(base.get("repo"), "pull request base repository") != repository:
+        raise BindingError("pull request no longer binds the copied candidate")
+    if _sha(head.get("sha"), "pull request head SHA") != head_sha:
+        raise BindingError("pull request no longer binds the copied candidate")
+    base_ref, check_name = base_policy(
+        repository, _text(base.get("ref"), "pull request base ref")
+    )
+    base_sha = _sha(base.get("sha"), "pull request base SHA")
+
+    expected_commits = _integer(pull.get("commits"), "pull request commit count")
+    if expected_commits > 100:
+        raise BindingError("pull request commit inventory exceeds its bound")
+    commits = _sequence(
+        api.get(f"{prefix}/pulls/{number}/commits?per_page=100"),
+        "pull request commits",
+    )
+    if len(commits) != expected_commits:
+        raise BindingError("pull request commit inventory is incomplete")
+    commit_shas = []
+    for item in commits:
+        commit = _mapping(item, "pull request commit")
+        commit_shas.append(_sha(commit.get("sha"), "pull request commit SHA"))
+        verification = _mapping(
+            _mapping(commit.get("commit"), "pull request commit body").get(
+                "verification"
+            ),
+            "pull request commit verification",
+        )
+        if (
+            verification.get("verified") is not True
+            or verification.get("reason") != "valid"
+        ):
+            raise BindingError("pull request commit is not GitHub Verified")
+    if commit_shas[-1] != head_sha:
+        raise BindingError("pull request commit inventory does not end at the head")
 
     copied_readback = _mapping(
         api.get(f"{prefix}/git/ref/heads/{copied_ref}"), "copied ref"
@@ -128,14 +223,70 @@ def bind_candidate_pr(
     ):
         raise BindingError("copied ref no longer points to the reviewed head")
 
-    main_readback = _mapping(api.get(f"{prefix}/git/ref/heads/main"), "main ref")
+    main_readback = _mapping(
+        api.get(f"{prefix}/git/ref/heads/main"), "protected policy ref"
+    )
     main_object = _mapping(main_readback.get("object"), "main ref object")
     if (
-        main_readback.get("ref") != "refs/heads/main"
+        main_readback.get("ref") != MAIN_REF
         or main_object.get("type") != "commit"
-        or _sha(main_object.get("sha"), "main ref SHA") != base_sha
+        or _sha(main_object.get("sha"), "protected policy SHA") != policy_sha
     ):
         raise BindingError("main changed after protected policy was staged")
+
+    if base_ref == MAIN_REF:
+        base_readback = main_readback
+    else:
+        encoded_ref = urllib.parse.quote(base_ref.removeprefix("refs/"), safe="/")
+        base_readback = _mapping(
+            api.get(f"{prefix}/git/ref/{encoded_ref}"), "contribution base ref"
+        )
+    base_object = _mapping(base_readback.get("object"), "contribution base object")
+    if (
+        base_readback.get("ref") != base_ref
+        or base_object.get("type") != "commit"
+        or _sha(base_object.get("sha"), "contribution base SHA") != base_sha
+    ):
+        raise BindingError("pull request contribution base is not current")
+
+    head_ref = _text(head.get("ref"), "pull request head ref")
+    if not head_ref.startswith(RELEASE_BRANCH_PREFIX):
+        return CandidatePrBinding(
+            base_ref=base_ref,
+            base_sha=base_sha,
+            check_name=check_name,
+            release_branch=None,
+        )
+    version = head_ref.removeprefix(RELEASE_BRANCH_PREFIX)
+    if SEMVER.fullmatch(version) is None or _repository(
+        head.get("repo"), "pull request head repository"
+    ) != repository or base_ref != MAIN_REF:
+        raise BindingError("release branch is not one canonical repository branch")
+    return CandidatePrBinding(
+        base_ref=base_ref,
+        base_sha=base_sha,
+        check_name=check_name,
+        release_branch=head_ref,
+    )
+
+
+def append_output(path: Path, binding: CandidatePrBinding) -> None:
+    """Append only validated one-line binding scalars to runner output."""
+
+    values = {
+        "base_ref": binding.base_ref,
+        "base_sha": binding.base_sha,
+        "check_name": binding.check_name,
+        "release_branch": binding.release_branch or "",
+    }
+    if any(any(c in value for c in "\r\n") for value in values.values()):
+        raise BindingError("candidate binding output is malformed")
+    try:
+        with path.open("a", encoding="utf-8", newline="\n") as output:
+            for name, value in values.items():
+                output.write(f"{name}={value}\n")
+    except OSError as error:
+        raise BindingError("cannot write the runner output") from error
 
 
 def parser() -> argparse.ArgumentParser:
@@ -143,20 +294,22 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--repository", required=True)
     result.add_argument("--copied-ref", required=True)
     result.add_argument("--head-sha", required=True)
-    result.add_argument("--base-sha", required=True)
+    result.add_argument("--policy-sha", required=True)
+    result.add_argument("--output", required=True, type=Path)
     return result
 
 
 def main() -> int:
     arguments = parser().parse_args()
     try:
-        bind_candidate_pr(
+        binding = bind_candidate_pr(
             AnonymousGitHubApi(),
             arguments.repository,
             arguments.copied_ref,
             arguments.head_sha,
-            arguments.base_sha,
+            arguments.policy_sha,
         )
+        append_output(arguments.output, binding)
     except BindingError as error:
         print(f"candidate PR binding: {error}", file=sys.stderr)
         return 1

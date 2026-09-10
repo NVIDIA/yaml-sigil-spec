@@ -11,6 +11,11 @@ Whenever a workflow or supporting policy changes, update the matching
 procedure in `MAINTAINERS.md` in the same change. Keep that runbook concise,
 coherent, and aligned with the executable behavior.
 
+Use [`CONTRIBUTING.md`](CONTRIBUTING.md) to choose `main` or an advertised
+next-line coordination base before starting work. Keep compatible and
+protected-policy changes on `main`; target the active coordination branch only
+for next-line work. A coordination branch never supplies its own CI policy.
+
 ## Agent Documentation Standards
 
 Project-local skills exist under `.agents/skills/` and should remain
@@ -467,11 +472,13 @@ may declare the same checks as independent steps, but behavioral alignment is
 a review responsibility rather than a source-level dependency between the
 xtask and a provider configuration file.
 
-Hosted CI is Linux-only. Pushes to `main` and `ci-testing/*` run trusted CI on
-an NVIDIA Linux runner. Pull-request code runs only after `copy-pr-bot` copies
-an exactly reviewed head to `pull-request/<number>`. The candidate job binds the
-open pull request, copied ref, canonical pull head, and current main before
-materialization. It installs Rust `1.98.0`, cargo-audit `0.22.2`, and
+Hosted CI is Linux-only. Pushes to `main`, `ci-testing/*`, and an activated
+canonical specification coordination ref run non-publishing CI on an NVIDIA
+Linux runner. Pull-request code runs only after `copy-pr-bot` copies an exactly
+reviewed head to `pull-request/<number>`. The candidate job binds the open pull
+request, copied ref, canonical pull head, exact contribution base, and
+protected current `main` before materialization. It installs Rust `1.98.0`,
+cargo-audit `0.22.2`, and
 cargo-deny `0.20.2` before materializing source, checks out without
 credentials, Git filters, LFS, or candidate-selected submodules, requires a
 fresh empty runner-temporary source root, and permits root Cargo configuration
@@ -483,15 +490,18 @@ GitHub-hosted Linux runner. It binds the completed CI workflow ID and path,
 exact protected workflow blob, live protected-main and pull-request base,
 repository, push event, run ID and attempt, open pull request, copied ref,
 current head, exact Verified signer/author/DCO identities, unique authoritative
-Linux job, terminal conclusion, and zero artifacts. Only after repeating that
-binding may the repository's GitHub App create `Required CI` on the exact
-head. Keep advisory checks out of that conclusion.
+Linux job, terminal conclusion, and zero artifacts. The authoritative job name
+must attest the protected-policy and base objects captured before candidate
+execution. Only after exactly repeating that binding may the repository's
+GitHub App create `Required CI` for `main` or
+the coordination ref's distinct base-specific required verdict on the exact
+head. A verdict for one base must not satisfy another.
 
 Keep `.github/scripts/materialize-candidate.sh`, its focused offline test,
 `.github/scripts/install-actionlint.sh`, and
 `.github/scripts/check-pull-request-commits.sh` identical across
 `yaml-sigil-spec`, `yaml-sigil-traits`, and `yaml-sigil-rs`. The commit helper
-checks the exact current-main range for merge commits and matching DCO
+checks the exact current-base range for merge commits and matching DCO
 sign-offs. Keep the reporter and its transport-fixture tests byte-identical as
 well; repository constants belong in protected workflow arguments. Hosted
 Rust caches may retain Cargo registry source data, but must not retain target

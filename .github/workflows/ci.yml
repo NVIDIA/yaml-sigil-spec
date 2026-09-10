@@ -2,8 +2,11 @@ name: CI
 
 on:
   push:
+    # Canonical next-line refs run Linux CI; rollback refs do not match and
+    # never execute candidate or protected reporter policy.
     branches:
       - main
+      - "v[1-9]*"
       - "ci-testing/*"
       - "pull-request/[0-9]+"
 
@@ -16,7 +19,10 @@ concurrency:
 jobs:
   trusted_ci:
     name: Trusted CI (Linux)
-    if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/ci-testing/') }}
+    if: >-
+      ${{ github.ref == 'refs/heads/main' ||
+          startsWith(github.ref, 'refs/heads/v') ||
+          startsWith(github.ref, 'refs/heads/ci-testing/') }}
     runs-on: linux-amd64-cpu8
     timeout-minutes: 120
     permissions:
@@ -124,9 +130,69 @@ jobs:
         run: cargo audit
         working-directory: conformance/rebuild-rs
 
-  candidate_ci:
-    name: Candidate CI (Linux)
+  candidate_binding:
+    name: Bind candidate to protected policy and base
     if: ${{ startsWith(github.ref, 'refs/heads/pull-request/') }}
+    runs-on: linux-amd64-cpu4
+    timeout-minutes: 5
+    permissions: {}
+    outputs:
+      base_ref: ${{ steps.pull.outputs.base_ref }}
+      base_sha: ${{ steps.pull.outputs.base_sha }}
+      policy_sha: ${{ steps.policy.outputs.policy_sha }}
+    env:
+      GH_TOKEN: ""
+      GITHUB_TOKEN: ""
+      GIT_ASKPASS: /bin/false
+      GIT_CONFIG_GLOBAL: /dev/null
+      GIT_CONFIG_NOSYSTEM: "1"
+      GIT_CONFIG_SYSTEM: /dev/null
+      GIT_TERMINAL_PROMPT: "0"
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      # Bind the run before any candidate-executable job starts. Downstream
+      # jobs rebind these exact objects before materializing contributor code.
+      - name: Initialize fresh binding state
+        run: install -d -m 0700 "${RUNNER_TEMP}/candidate-binding"
+
+      - name: Stage binder from protected current main
+        id: policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init --quiet --initial-branch=main .
+          git remote add origin \
+            "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
+          git -c credential.helper= -c http.extraHeader= \
+            fetch --quiet --no-tags --no-recurse-submodules --depth=1 \
+            origin "+refs/heads/main:refs/remotes/origin/main"
+          policy_sha="$(git rev-parse refs/remotes/origin/main)"
+          git show \
+            "${policy_sha}:.github/scripts/bind-candidate-pr.py" \
+            > bind-candidate-pr.py
+          chmod 0500 bind-candidate-pr.py
+          python3 -m py_compile bind-candidate-pr.py
+          printf 'policy_sha=%s\n' "${policy_sha}" >> "${GITHUB_OUTPUT}"
+        working-directory: ${{ runner.temp }}/candidate-binding
+
+      - name: Bind copied ref to exact policy and contribution base
+        id: pull
+        env:
+          POLICY_SHA: ${{ steps.policy.outputs.policy_sha }}
+        run: >-
+          python3 ./bind-candidate-pr.py
+          --repository "${GITHUB_REPOSITORY}"
+          --copied-ref "${GITHUB_REF_NAME}"
+          --head-sha "${GITHUB_SHA}"
+          --policy-sha "${POLICY_SHA}"
+          --output "${GITHUB_OUTPUT}"
+        working-directory: ${{ runner.temp }}/candidate-binding
+
+  candidate_ci:
+    name: Candidate execution (Linux)
+    if: ${{ startsWith(github.ref, 'refs/heads/pull-request/') }}
+    needs:
+      - candidate_binding
     runs-on: linux-amd64-cpu8
     timeout-minutes: 120
     permissions: {}
@@ -214,6 +280,7 @@ jobs:
       # Load checkout-boundary scripts from current protected main
       # while the workspace still contains no contributor-controlled path.
       - name: Load protected candidate policy
+        id: protected_policy
         shell: bash
         run: |
           set -euo pipefail
@@ -247,36 +314,60 @@ jobs:
           /bin/bash --noprofile --norc \
             "${POLICY_BIN}/install-actionlint.sh" \
             "${CANDIDATE_STATE}/actionlint"
+          printf 'policy_sha=%s\n' \
+            "$(git rev-parse refs/remotes/origin/main)" >> "${GITHUB_OUTPUT}"
         working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/bootstrap
 
       # Anonymous protected policy rejects a closed or moved pull request
       # before any contributor-controlled path is materialized.
       - name: Bind current open pull request
+        id: candidate_pr
         env:
           CANDIDATE_REF: ${{ github.ref_name }}
           CANDIDATE_SHA: ${{ github.sha }}
+          POLICY_SHA: ${{ steps.protected_policy.outputs.policy_sha }}
         run: |
           set -euo pipefail
-          base_sha="$(git rev-parse refs/remotes/origin/main)"
           python3 "${POLICY_BIN}/bind-candidate-pr.py" \
             --repository "${GITHUB_REPOSITORY}" \
             --copied-ref "${CANDIDATE_REF}" \
             --head-sha "${CANDIDATE_SHA}" \
-            --base-sha "${base_sha}"
+            --policy-sha "${POLICY_SHA}" \
+            --output "${GITHUB_OUTPUT}"
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/bootstrap
+
+      # The reporter consumes the pre-execution binding from the final job
+      # name. Rebinding here closes movement before materialization.
+      - name: Match pre-execution policy and base binding
+        env:
+          BASE_REF: ${{ steps.candidate_pr.outputs.base_ref }}
+          BASE_SHA: ${{ steps.candidate_pr.outputs.base_sha }}
+          EXPECTED_BASE_REF: ${{ needs.candidate_binding.outputs.base_ref }}
+          EXPECTED_BASE_SHA: ${{ needs.candidate_binding.outputs.base_sha }}
+          EXPECTED_POLICY_SHA: ${{ needs.candidate_binding.outputs.policy_sha }}
+          POLICY_SHA: ${{ steps.protected_policy.outputs.policy_sha }}
+        run: |
+          test "${POLICY_SHA}" = "${EXPECTED_POLICY_SHA}"
+          test "${BASE_REF}" = "${EXPECTED_BASE_REF}"
+          test "${BASE_SHA}" = "${EXPECTED_BASE_SHA}"
         working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/bootstrap
 
       # The protected helper performs the only candidate checkout, disables
       # filters and LFS, and never reads candidate submodule configuration.
       - name: Materialize the exact copied candidate
+        env:
+          BASE_REF: ${{ steps.candidate_pr.outputs.base_ref }}
+          BASE_SHA: ${{ steps.candidate_pr.outputs.base_sha }}
+          POLICY_SHA: ${{ steps.protected_policy.outputs.policy_sha }}
         shell: bash
         run: |
           set -euo pipefail
           /bin/bash --noprofile --norc \
             "${POLICY_BIN}/materialize-candidate.sh" \
-            "${GITHUB_REPOSITORY}" "${GITHUB_SHA}" "${GITHUB_REF_NAME}"
+            "${GITHUB_REPOSITORY}" "${GITHUB_SHA}" "${GITHUB_REF_NAME}" \
+            "${POLICY_SHA}" "${BASE_REF}" "${BASE_SHA}"
           export BASE_SHA
           export HEAD_SHA="${GITHUB_SHA}"
-          BASE_SHA="$(git rev-parse refs/remotes/origin/main)"
           /bin/bash --noprofile --norc \
             "${POLICY_BIN}/check-pull-request-commits.sh"
         working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source
@@ -351,3 +442,24 @@ jobs:
           .github/scripts/test-materialize-candidate.sh
           .github/scripts/test-trusted-tool-pins.sh
         working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source/conformance/rebuild-rs
+
+  candidate_result:
+    name: >-
+      Candidate CI (Linux) [policy=${{ needs.candidate_binding.outputs.policy_sha }};base=${{ needs.candidate_binding.outputs.base_ref }}@${{ needs.candidate_binding.outputs.base_sha }}]
+    if: ${{ always() && startsWith(github.ref, 'refs/heads/pull-request/') }}
+    needs:
+      - candidate_binding
+      - candidate_ci
+    runs-on: linux-amd64-cpu4
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      # This fresh runner consumes no candidate-writable state. Its exact name
+      # is the immutable run-to-reporter policy/base attestation.
+      - name: Require bound candidate execution
+        env:
+          BINDING_RESULT: ${{ needs.candidate_binding.result }}
+          CANDIDATE_RESULT: ${{ needs.candidate_ci.result }}
+        run: |
+          test "${BINDING_RESULT}" = success
+          test "${CANDIDATE_RESULT}" = success
