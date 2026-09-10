@@ -59,6 +59,54 @@ Recheck after the base, protected `main` policy, or head moves.
 4. If the PR head or `main` changes, rebase, review, and authorize the new
    exact head. Never reuse a stale command or verdict.
 
+### Create and activate a coordination line
+
+Landing coordination support does not activate a line. Use this procedure only
+for a concrete approved next track, with one separately reviewed repository-
+administrator activation packet and explicit authorization for its exact
+objects and settings.
+
+1. Select exactly one unused `vX`, `vXalphaY`, or `vXbetaY` line. Record
+   exact current `main`, the full coordination and
+   `refs/heads/rollback/<LINE>` refs, active runs, and complete branch and tag
+   rulesets. Require both new refs to be absent.
+2. Before ref creation, prepare, authorize, apply, and read back the exact
+   coordination and rollback protection payloads, required context
+   `Required CI [refs/heads/<LINE>]`, any minimum creation-only exception,
+   and unconditional restoration/readback. The rules must retain non-fast-
+   forward and deletion protection, exclude rollback from CI, and grant no
+   release, environment, App-token, or publication path.
+3. From a clean checkout, bind creation to exact live `main` and an absent
+   destination:
+
+   ```shell
+   repository=NVIDIA/yaml-sigil-spec
+   line=vXalphaY
+   destination="refs/heads/${line}"
+   rollback="refs/heads/rollback/${line}"
+   git fetch origin main --tags
+   main_sha="$(gh api "repos/${repository}/git/ref/heads/main" --jq .object.sha)"
+   test "$(git rev-parse origin/main)" = "${main_sha}"
+   test -z "$(git ls-remote origin "${destination}" "${rollback}")"
+   git push --force-with-lease="${destination}:" \
+     origin "${main_sha}:${destination}"
+   test "$(gh api "repos/${repository}/git/ref/heads/${line}" \
+     --jq .object.sha)" = "${main_sha}"
+   ```
+
+   The empty expected value in the exact lease is an absent-ref compare-and-
+   swap guard. It does not authorize a rewrite or a generic force push. Never
+   retry an ambiguous push; read the ref and stop on any value other than the
+   exact proposed SHA.
+4. In the same serialized window, reread the new ref and unconditionally
+   remove any creation-only exception. Digest-compare the complete protected
+   state with the reviewed target and prove tag protection unchanged.
+5. Require the automatic coordination-ref CI at the exact SHA to succeed with
+   zero artifacts, deployments, tags, Releases, or publication effects.
+   Advertise the full ref as a pull-request base only after every check and
+   settings readback is exact. Keep the rollback ref absent until the first
+   authorized synchronization.
+
 ### Test a coordination-line pull request
 
 Use this only after one canonical next-line base has been explicitly activated,

@@ -4,7 +4,8 @@
 
 Ordinary repository work does not require the maintainer guide. Before
 performing or advising on hosted maintainer operations—authorizing pull-request
-tests, merging, exceptional integration, or reverting `main`—read
+tests, merging, activating or synchronizing a coordination line, exceptional
+integration, or reverting `main`—read
 [`MAINTAINERS.md`](MAINTAINERS.md) completely.
 
 Whenever a workflow or supporting policy changes, update the matching
