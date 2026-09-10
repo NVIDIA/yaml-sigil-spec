@@ -29,6 +29,22 @@ defend without the agent open.
 - **Do not** use agents as a substitute for reading the relevant specification
   sections, conformance notes, and maintainer guidance.
 
+## Choose the pull-request base
+
+Target `main` for changes compatible with the current specification line. A
+maintainer may advertise one protected next-line branch named `vX`,
+`vXalphaY`, or `vXbetaY` for a breaking schema, format, or behavior change,
+work that depends on that unpromoted change, or its migration documentation
+and tests. Do not invent a coordination branch. When compatibility is
+uncertain, ask a maintainer before opening the pull request.
+
+Apply a fix needed by both lines to `main` first; the release coordinator moves
+it forward. Protected CI and admission changes always target `main`.
+
+Squash is the default integration method on either base. A trusted writer may
+preserve an intentional commit series only through the separately authorized
+procedure in [`MAINTAINERS.md`](MAINTAINERS.md).
+
 ## Pull-request CI
 
 Pull requests do not run repository CI directly. A repository writer reviews
@@ -47,16 +63,19 @@ credentials, secrets, OIDC, protected environments, cache writes, or retained
 artifacts. A separate checkout-free workflow from protected `main` verifies the
 open pull request, copied ref, current head, exact workflow and run attempt,
 authoritative job result, and zero-artifact inventory. Only then does the
-repository's GitHub App report `Required CI` on the exact head. Other checks
-are advisory.
+repository's GitHub App report `Required CI` for `main`, or
+`Required CI [<full-coordination-ref>]` for the exact active next-line base.
+A result for one base never satisfies another. Other checks are advisory.
+The authoritative aggregate job records its pre-execution protected-policy SHA
+and exact base ref/SHA; movement of either object invalidates the run.
 
 The copied `.github/workflows/ci.yml` must exactly match protected current
 `main`. Coordinate a proposed change to that workflow with a maintainer
 before requesting candidate testing.
 
-Pull-request commits must be linear from current `main`, cryptographically
-signed, and DCO-compliant. Rebase and request a new exact-head test whenever
-`main` or the pull-request head changes.
+Pull-request commits must be linear from the exact current pull-request base,
+cryptographically signed, and DCO-compliant. Rebase and request a new
+exact-head test whenever that base or the pull-request head changes.
 
 Maintainers normally squash accepted pull requests. A current trusted writer
 may request preservation of their exact linear commit series when every commit
