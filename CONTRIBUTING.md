@@ -58,6 +58,13 @@ Pull-request commits must be linear from current `main`, cryptographically
 signed, and DCO-compliant. Rebase and request a new exact-head test whenever
 `main` or the pull-request head changes.
 
+Maintainers normally squash accepted pull requests. A current trusted writer
+may request preservation of their exact linear commit series when every commit
+is signed and DCO-compliant. That exceptional path requires explicit
+authorization and the protected transaction in `MAINTAINERS.md`; it is not
+available for external or otherwise untrusted authors and is never a history
+rewrite.
+
 #### Signing Off Your Work
 
 * We require that all contributors "sign-off" on their commits. This certifies that the contribution is your original work, or you have rights to submit it under the same license, or a compatible license.
