@@ -498,25 +498,26 @@ GitHub App create `Required CI` for `main` or
 the coordination ref's distinct base-specific required verdict on the exact
 head. A verdict for one base must not satisfy another.
 
-Python is permitted here only for the checkout-free protected reporter and
-its deterministic fixtures: that policy must run before any candidate
-checkout or App token and must not compile candidate-controlled Rust. Every
-Python file added or materially changed must begin with comments explaining
-why Python is justified at that boundary, then document its inputs, trust
-assumptions, outputs, mutations, and fail-closed behavior. Keep it standard-
-library-only unless a separately reviewed dependency is demonstrably needed.
-Use a provider-neutral Cargo xtask for repository validation or maintenance
-logic that does not require this pre-checkout boundary.
+Python is permitted here only for the pre-checkout candidate binder, the
+checkout-free protected reporter, and their deterministic fixtures. Those
+policies must run before candidate materialization or App-token creation, as
+applicable, and must not compile candidate-controlled Rust. Every Python file
+added or materially changed must begin with comments explaining why Python is
+justified at that boundary, then document its inputs, trust assumptions,
+outputs, mutations, and fail-closed behavior. Keep it standard-library-only
+unless a separately reviewed dependency is demonstrably needed. Use a
+provider-neutral Cargo xtask for repository validation or maintenance logic
+that does not require this pre-checkout boundary.
 
 Keep `.github/scripts/materialize-candidate.sh`, its focused offline test,
 `.github/scripts/install-actionlint.sh`, and
 `.github/scripts/check-pull-request-commits.sh` identical across
 `yaml-sigil-spec`, `yaml-sigil-traits`, and `yaml-sigil-rs`. The commit helper
 checks the exact current-base range for merge commits and matching DCO
-sign-offs. Keep the reporter and its transport-fixture tests byte-identical as
-well; repository constants belong in protected workflow arguments. Hosted
-Rust caches may retain Cargo registry source data, but must not retain target
-directories or compiled executable outputs.
+sign-offs. Keep both Python policy helpers and their focused fixture tests
+byte-identical as well; repository constants belong in protected workflow
+arguments. Hosted Rust caches may retain Cargo registry source data, but must
+not retain target directories or compiled executable outputs.
 
 Validate shell scripts under `.github/scripts` with Shuck before landing
 changes. Install it from the `shuck-cli` crate and run it from the repository

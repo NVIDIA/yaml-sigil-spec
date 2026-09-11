@@ -345,9 +345,11 @@ gh workflow run required-ci.yml --ref main \
 
 Require fewer than 49,152 bytes and capture the returned run URL directly.
 Never retry an ambiguous dispatch; locate and read back the single attempted
-run instead. Approve its existing `protected-automation` deployment only for
-the exact recorded manifest and run. Require the resulting App-owned check on
-the exact head and zero artifacts before the separately authorized promotion.
+run instead. The `protected-automation` deployment proceeds automatically
+under its main-only branch policy; bind it to the exact recorded policy SHA,
+manifest, and run and require it to succeed. Require the resulting App-owned
+check on the exact head and zero artifacts before the separately authorized
+promotion.
 
 ### Retire, abandon, or restart a line
 
