@@ -498,6 +498,16 @@ GitHub App create `Required CI` for `main` or
 the coordination ref's distinct base-specific required verdict on the exact
 head. A verdict for one base must not satisfy another.
 
+Python is permitted here only for the checkout-free protected reporter and
+its deterministic fixtures: that policy must run before any candidate
+checkout or App token and must not compile candidate-controlled Rust. Every
+Python file added or materially changed must begin with comments explaining
+why Python is justified at that boundary, then document its inputs, trust
+assumptions, outputs, mutations, and fail-closed behavior. Keep it standard-
+library-only unless a separately reviewed dependency is demonstrably needed.
+Use a provider-neutral Cargo xtask for repository validation or maintenance
+logic that does not require this pre-checkout boundary.
+
 Keep `.github/scripts/materialize-candidate.sh`, its focused offline test,
 `.github/scripts/install-actionlint.sh`, and
 `.github/scripts/check-pull-request-commits.sh` identical across
