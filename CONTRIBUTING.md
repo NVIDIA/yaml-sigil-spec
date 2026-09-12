@@ -73,9 +73,11 @@ The copied `.github/workflows/ci.yml` must exactly match protected current
 `main`. Coordinate a proposed change to that workflow with a maintainer
 before requesting candidate testing.
 
-Pull-request commits must be linear from the exact current pull-request base,
-cryptographically signed, and DCO-compliant. Rebase and request a new
-exact-head test whenever that base or the pull-request head changes.
+Every human-authored pull-request commit must form a linear history from the
+exact current pull-request base and contain a `Signed-off-by` trailer that
+exactly matches its Git author. Cryptographic signatures are optional for
+ordinary contributor commits. Rebase and request a new exact-head test whenever
+that base or the pull-request head changes.
 
 Maintainers normally squash accepted pull requests. A current trusted writer
 may request preservation of their exact linear commit series when every commit
