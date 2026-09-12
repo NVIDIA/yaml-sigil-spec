@@ -490,9 +490,9 @@ The checkout-free `Required CI reporter` runs from protected `main` on a
 GitHub-hosted Linux runner. It binds the completed CI workflow ID and path,
 exact protected workflow blob, live protected-main and pull-request base,
 repository, push event, run ID and attempt, open pull request, copied ref,
-current head, exact Verified signer/author/DCO identities, unique authoritative
-Linux job, terminal conclusion, and zero artifacts. The authoritative job name
-must attest the protected-policy and base objects captured before candidate
+current head, exact raw-author DCO identities, unique authoritative Linux job,
+terminal conclusion, and zero artifacts. The authoritative job name must
+attest the protected-policy and base objects captured before candidate
 execution. Only after exactly repeating that binding may the repository's
 GitHub App create `Required CI` for `main` or
 the coordination ref's distinct base-specific required verdict on the exact
