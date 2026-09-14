@@ -1,5 +1,7 @@
 # Maintainer guide
 
+<!-- Temporary copied-ref binding smoke test; close without merging. -->
+
 This is the concise human maintainer operations runbook for
 `yaml-sigil-spec`. Contributor guidance lives in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
