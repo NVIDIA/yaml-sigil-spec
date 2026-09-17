@@ -64,6 +64,14 @@ protected `main` policy, or head moves.
 4. If the PR head or `main` changes, rebase, review, and authorize the new
    exact head. Never reuse a stale command or verdict.
 
+### Maintain dependency license exceptions
+
+Review the resolved dependency's license terms before changing an exception.
+Keep each exception scoped to its intended crate, license, and version range,
+and explain its purpose and scope in an adjacent Cargo Deny configuration
+comment. After dependency or policy changes, run the documented Cargo Deny
+checks for every affected dependency graph.
+
 ### Diagnose copied-ref binding failures
 
 The anonymous binder reports the failed endpoint, HTTP status, request ID,
@@ -551,3 +559,11 @@ Repository scope, commands, documentation and style, third-party material
 and attribution, coordinated Buf upgrades, and other working guidance remain
 in [`AGENTS.md`](AGENTS.md). Agents performing maintainer operations must
 read both files completely.
+
+## Shared admission policy
+
+The binder, reporter, materializer, and their fixtures are shared with the
+Rust repositories. Their `support/M.N` contribution bases apply only to
+`yaml-sigil-rs` and `yaml-sigil-traits`. The specification continues to accept
+main and its canonical `vX`, `vXalphaY`, or `vXbetaY` coordination bases and
+rejects support bases. Shared helper updates must preserve that distinction.
