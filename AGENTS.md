@@ -461,19 +461,28 @@ names across all features, but remains an unused-dependency heuristic; retain
 the all-target, all-feature Clippy and test checks as the compilation proof.
 
 For Buf, the xtask uses the executable named by `BUF` when set, then searches
-`PATH`, and confirms that the selected executable can run. Local development
-retains a rolling latest release policy, while hosted workflow configuration
-pins Buf CLI `1.72.0` as a separate control. Install or update the latest
-`buf-toolchain` release and ensure `$CARGO_HOME/bin` is on `PATH`:
+`PATH`, and checks its semantic version against the minimum CLI requirement in
+[`conformance/rebuild-rs/xtask/src/ci.rs`](conformance/rebuild-rs/xtask/src/ci.rs).
+That file also provides the supported `buf-toolchain` installation command.
+Use its Cargo version requirement when installing, and ensure `$CARGO_HOME/bin`
+is on `PATH`:
 
 ```shell
-cargo install --force buf-toolchain
+cargo install --locked --force --version '<supported-version-requirement>' buf-toolchain
 ```
 
+Replace the placeholder with the requirement from the xtask's installation
+guidance. Both hosted paths declare the same crate minimum in
+[the trusted workflow](.github/workflows/ci-trusted.yml) and
+[the candidate workflow](.github/workflows/ci-candidate.yml). Each runs the
+installed validator, enabled by the crate's default features, before using Buf.
+The installer verifies the official release's signed checksum manifest and
+binary hashes; the validator confirms the installed CLI matches the resolved
+crate's upstream version. The crate and CLI versions have distinct roles.
+
 See the [official Buf installation instructions](https://buf.build/docs/cli/installation/)
-for other installation methods. Keep the rolling Buf version policy and exact
-local validation sequence aligned between
-`conformance/rebuild-rs/xtask/src/ci.rs` and this file.
+for other installation methods. Keep the minimum CLI requirement and local
+validation sequence aligned with this guidance.
 
 Keep `cargo xtask ci` provider-neutral. It must not read, parse, or test a
 hosted CI provider's configuration. Its tests should validate the
@@ -562,27 +571,30 @@ unless hosted validation explicitly needs them.
 
 ## Coordinated Buf upgrades
 
-Publishing a new `buf-tools` or `buf-toolchain` release does not automatically
-update this repository. Coordinate Buf upgrades with `yaml-sigil-rs` and
-`yaml-sigil-traits`, and update every applicable pin and verification surface
-in one reviewed change.
+Cargo may select a newer compatible `buf-tools` or `buf-toolchain` release
+when resolving dependencies. Coordinate minimum-version changes with
+`yaml-sigil-rs` and `yaml-sigil-traits`, updating every applicable requirement
+and verification surface in one reviewed change.
 
 This repository currently has no product `buf-tools` dependency. Reconfirm
 that before an upgrade, but do not add or update a product dependency without
 source evidence that it is required. The applicable surfaces here are the
-trusted and candidate `bufbuild/buf-action` steps under `.github/workflows/`
-and the rolling local `buf-toolchain` prerequisite. The Action's immutable SHA
-and its Buf CLI `version` input are separate controls. Keep both hosted paths
-aligned with the selected CLI version, and report any omitted `version` input
-as a consistency gap. A repository `buf.lock` locks BSR or module dependencies,
-not the installed CLI, so do not update it solely for a CLI or Rust helper
-upgrade.
+trusted and candidate `buf-toolchain` Cargo installations in
+[the trusted workflow](.github/workflows/ci-trusted.yml) and
+[the candidate workflow](.github/workflows/ci-candidate.yml), their validators,
+and the provider-neutral CLI prerequisite in
+[`conformance/rebuild-rs/xtask/src/ci.rs`](conformance/rebuild-rs/xtask/src/ci.rs).
+Keep both hosted paths aligned with the local crate minimum, and update the
+CLI minimum according to the published crate-to-CLI mapping. Keep release
+numbers in executable configuration rather than prose. A repository `buf.lock`
+locks BSR or module dependencies, not the installed CLI, so do not update it
+solely for a CLI or Rust helper upgrade.
 
 For each future coordinated upgrade:
 
 - Review the selected Buf, `buf-tools`, and `buf-toolchain` releases and their
   published mapping.
-- Update every applicable pin in one coordinated change, and regenerate only
+- Update every applicable minimum in one coordinated change, and regenerate only
   Cargo lockfiles that the affected repositories already commit.
 - Confirm that no unplanned protobuf-generated output changed.
 - Run the local Cargo and reporter/materializer suites, ShellCheck or Shuck,

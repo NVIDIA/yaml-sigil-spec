@@ -7,6 +7,10 @@ on:
 
 permissions: {}
 
+# Workflow-level caller env is not inherited by local reusable workflows.
+env:
+  BUF_TOOLCHAIN_VERSION_REQUIREMENT: ">=1.73.0-rc.3"
+
 jobs:
   trusted_ci:
     name: Trusted CI (Linux)
@@ -50,27 +54,26 @@ jobs:
         with:
           version: "0.2.54"
 
-      - name: Check Protobuf
-        uses: bufbuild/buf-action@8c6a16e16f12ba20b6470afa9c2ba9b5ba8c97c3 # v1.5.0
-        with:
-          archive: false
-          breaking: false
-          format: true
-          input: proto
-          lint: true
-          pr_comment: false
-          push: false
-          version: "1.72.0"
-
-      - name: Validate JSON Schema
-        run: jq empty schema/YamlSigilSignature.v1alpha1.schema.json
-
       - name: Set up Rust
         uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
         with:
           cache: false
           components: clippy, rustfmt
           toolchain: 1.98.0
+
+      - name: Install Buf
+        run: |
+          cargo install --locked --version "${BUF_TOOLCHAIN_VERSION_REQUIREMENT}" buf-toolchain
+          BUF_RS_VALIDATE_OFFLINE=1 "${CARGO_HOME:-${HOME}/.cargo}/bin/validate-cargo-buf-toolchain"
+
+      - name: Check Protobuf
+        run: |
+          "${CARGO_HOME:-${HOME}/.cargo}/bin/buf" build proto
+          "${CARGO_HOME:-${HOME}/.cargo}/bin/buf" lint proto
+          "${CARGO_HOME:-${HOME}/.cargo}/bin/buf" format proto --diff --exit-code
+
+      - name: Validate JSON Schema
+        run: jq empty schema/YamlSigilSignature.v1alpha1.schema.json
 
       # This section would benefit by a change to the action allowlist
       - name: Install Rust validation tools
