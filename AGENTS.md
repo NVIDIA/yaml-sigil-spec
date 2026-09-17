@@ -12,6 +12,13 @@ Whenever a workflow or supporting policy changes, update the matching
 procedure in `MAINTAINERS.md` in the same change. Keep that runbook concise,
 coherent, and aligned with the executable behavior.
 
+Ordinary copied-ref tests require protected workflow equality. Reviewed
+maintainer staging uses a separate main-only route and canonical
+`ci-testing/pr-<number>-<head-sha>` refs. Follow `MAINTAINERS.md` for exact-head
+admission, the authoritative Linux aggregate, and automatic App reporting.
+The reporter must authenticate the original writer, exact source, current
+main ancestry and terminal result before its checks-only token can be used.
+
 Use [`CONTRIBUTING.md`](CONTRIBUTING.md) to choose `main` or an advertised
 next-line coordination base before starting work. Keep compatible and
 protected-policy changes on `main`; target the active coordination branch only
@@ -475,9 +482,9 @@ xtask and a provider configuration file.
 
 Hosted CI is Linux-only. Pushes to `main`, `ci-testing/*`, and an activated
 canonical specification coordination ref run non-publishing CI on an NVIDIA
-Linux runner. Pull-request code runs only after `copy-pr-bot` copies an exactly
-reviewed head to `pull-request/<number>`. The candidate job binds the open pull
-request, copied ref, canonical pull head, exact contribution base, and
+Linux runner. Ordinary pull-request code runs after `copy-pr-bot` copies an
+exactly reviewed head to `pull-request/<number>`. The candidate job binds the
+open pull request, copied ref, canonical pull head, exact contribution base, and
 protected current `main` before materialization. It installs Rust `1.98.0`,
 cargo-audit `0.22.2`, and
 cargo-deny `0.20.2` before materializing source, checks out without
@@ -487,8 +494,8 @@ only when it is identical to protected current `main`. It has no secret, OIDC,
 protected environment, cache-save, or retained-artifact path.
 
 The checkout-free `Required CI reporter` runs from protected `main` on a
-GitHub-hosted Linux runner. It binds the completed CI workflow ID and path,
-exact protected workflow blob, live protected-main and pull-request base,
+GitHub-hosted Linux runner. For copied refs, it binds the CI workflow ID,
+path, exact protected workflow blob, live protected-main and pull-request base,
 repository, push event, run ID and attempt, open pull request, copied ref,
 current head, exact raw-author DCO identities, unique authoritative Linux job,
 terminal conclusion, and zero artifacts. The authoritative job name must
