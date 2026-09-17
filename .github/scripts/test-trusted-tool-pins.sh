@@ -123,4 +123,25 @@ if "${checker}" "${fixture_root}/ci.yml"; then
   exit 1
 fi
 
+# Default invocation must inspect both fixed callees, including candidate-only
+# drift, even when the trusted workflow passes. Fixtures remain source text.
+mkdir -p "${fixture_root}/.github/workflows"
+write_fixture cargo-audit@0.22.2 cargo-deny@0.20.2 1.98.0
+cp "${fixture_root}/ci.yml" "${fixture_root}/.github/workflows/ci-trusted.yml"
+cp "${fixture_root}/ci.yml" "${fixture_root}/.github/workflows/ci-candidate.yml"
+(cd "${fixture_root}" && "${checker}")
+write_fixture cargo-audit@0.22.2 cargo-deny@0.20.2 stable
+cp "${fixture_root}/ci.yml" "${fixture_root}/.github/workflows/ci-candidate.yml"
+# A valid trusted callee cannot mask a floating candidate toolchain.
+if (cd "${fixture_root}" && "${checker}"); then
+  echo "candidate-only tool drift unexpectedly passed source lint" >&2
+  exit 1
+fi
+rm "${fixture_root}/.github/workflows/ci-candidate.yml"
+# Missing candidate policy cannot silently narrow the checked input set.
+if (cd "${fixture_root}" && "${checker}"); then
+  echo "missing candidate workflow unexpectedly passed source lint" >&2
+  exit 1
+fi
+
 echo "trusted tool pin checks passed"

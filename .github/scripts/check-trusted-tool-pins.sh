@@ -5,7 +5,15 @@
 # parser.
 set -euo pipefail
 
-workflow="${1:-.github/workflows/ci.yml}"
+# With no fixture arguments, validate both fixed local callees independently.
+# The router contains no tool setup; neither execution route may hide drift.
+if (($# == 0)); then
+  "$0" .github/workflows/ci-trusted.yml
+  "$0" .github/workflows/ci-candidate.yml
+  exit 0
+fi
+
+workflow="$1"
 expected_audit="cargo-audit@0.22.2"
 expected_deny="cargo-deny@0.20.2"
 expected_toolchain="1.98.0"
