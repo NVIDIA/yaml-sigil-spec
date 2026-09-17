@@ -1,0 +1,747 @@
+{
+  "schema_version": 1,
+  "normative": false,
+  "fixture_asset_count": 130,
+  "authority": {
+    "specification": "README.md",
+    "fixture_index": "conformance/README.md",
+    "conflict_rule": "The normative specification, suite README files, sidecars, and fixture bytes win if this manifest disagrees."
+  },
+  "suites": [
+    {
+      "id": "yaml-decomposition",
+      "readme": "conformance/yaml-decomposition/README.md",
+      "cases": [
+        {
+          "id": "signed-single-lf",
+          "assets": ["conformance/yaml-decomposition/signed-single-lf.yaml"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [
+            {"type": "decompose_outcome", "value": "DECOMPOSE_OUTCOME_OK"},
+            {"type": "property", "name": "marker_line_ending", "value": "LF"}
+          ]
+        },
+        {
+          "id": "signed-single-crlf",
+          "assets": ["conformance/yaml-decomposition/signed-single-crlf.yaml"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [
+            {"type": "decompose_outcome", "value": "DECOMPOSE_OUTCOME_OK"},
+            {"type": "property", "name": "marker_line_ending", "value": "CRLF"}
+          ]
+        },
+        {
+          "id": "signed-multi",
+          "assets": ["conformance/yaml-decomposition/signed-multi.yaml"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [
+            {"type": "decompose_outcome", "value": "DECOMPOSE_OUTCOME_OK"},
+            {"type": "property", "name": "selected_marker", "value": "last_constrained_marker"}
+          ]
+        },
+        {
+          "id": "empty-payload",
+          "assets": ["conformance/yaml-decomposition/empty-payload.yaml"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [
+            {"type": "decompose_outcome", "value": "DECOMPOSE_OUTCOME_OK"},
+            {"type": "property", "name": "payload_length", "value": 0}
+          ]
+        },
+        {
+          "id": "no-marker",
+          "assets": ["conformance/yaml-decomposition/no-marker.yaml"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [
+            {"type": "decompose_outcome", "value": "DECOMPOSE_OUTCOME_UNSIGNED"}
+          ]
+        },
+        {
+          "id": "extra-marker-inside-carrier",
+          "assets": ["conformance/yaml-decomposition/extra-marker-inside-carrier.yaml"],
+          "operations": ["Decompose", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [
+            {"type": "decompose_outcome", "value": "DECOMPOSE_OUTCOME_OK"},
+            {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"},
+            {"type": "property", "name": "selected_marker", "value": "last_constrained_marker"}
+          ]
+        },
+        {
+          "id": "marker-at-eof-empty-body",
+          "assets": ["conformance/yaml-decomposition/marker-at-eof-empty-body.yaml"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [
+            {"type": "decompose_outcome", "value": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED"}
+          ]
+        },
+        {
+          "id": "invalid-utf8-no-marker",
+          "assets": ["conformance/yaml-decomposition/invalid-utf8-no-marker.yaml"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [
+            {"type": "decompose_outcome", "value": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED"},
+            {"type": "property", "name": "encoding_checked_before_marker_scan", "value": true}
+          ]
+        },
+        {
+          "id": "invalid-utf8-before-marker",
+          "assets": ["conformance/yaml-decomposition/invalid-utf8-before-marker.yaml"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [
+            {"type": "decompose_outcome", "value": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED"},
+            {"type": "property", "name": "encoding_checked_before_marker_scan", "value": true}
+          ]
+        },
+        {
+          "id": "bom-signed",
+          "assets": ["conformance/yaml-decomposition/bom-signed.yaml"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [
+            {"type": "decompose_outcome", "value": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED"}
+          ]
+        },
+        {
+          "id": "bom-no-marker",
+          "assets": ["conformance/yaml-decomposition/bom-no-marker.yaml"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [
+            {"type": "decompose_outcome", "value": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED"}
+          ]
+        },
+        {
+          "id": "marker-dense",
+          "assets": ["conformance/yaml-decomposition/marker-dense.yaml"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [
+            {"type": "decompose_outcome", "value": "DECOMPOSE_OUTCOME_OK"},
+            {"type": "property", "name": "selected_marker", "value": "last_constrained_marker"},
+            {"type": "property", "name": "earlier_marker_count", "value": 256}
+          ]
+        },
+        {
+          "id": "document-end-in-payload",
+          "assets": ["conformance/yaml-decomposition/document-end-in-payload.yaml"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [
+            {"type": "decompose_outcome", "value": "DECOMPOSE_OUTCOME_OK"},
+            {"type": "property", "name": "payload_retains_document_end_marker", "value": true}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "protobuf-conformance",
+      "readme": "conformance/protobuf-conformance/README.md",
+      "cases": [
+        {
+          "id": "valid-baseline",
+          "assets": ["conformance/protobuf-conformance/valid-baseline.binpb"],
+          "operations": ["Decompose", "Verify"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": ["OUTER_CONFORMANCE_STRICT", "OUTER_CONFORMANCE_SIGNATURE_STRICT"]},
+          "expectations": [
+            {"type": "paired_profile_outcomes", "values": {"Strict": "DECOMPOSE_OUTCOME_OK", "SignatureStrict": "DECOMPOSE_OUTCOME_OK", "Permissive": "DECOMPOSE_OUTCOME_OK"}}
+          ]
+        },
+        {
+          "id": "duplicate-outer-payload",
+          "assets": ["conformance/protobuf-conformance/duplicate-outer-payload.binpb"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": ["OUTER_CONFORMANCE_STRICT", "OUTER_CONFORMANCE_SIGNATURE_STRICT"]},
+          "expectations": [
+            {"type": "paired_profile_outcomes", "values": {"Strict": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED", "SignatureStrict": "DECOMPOSE_OUTCOME_OK", "Permissive": "DECOMPOSE_OUTCOME_OK"}},
+            {"type": "property", "name": "accepted_payload_value", "value": "last_wire_occurrence"}
+          ]
+        },
+        {
+          "id": "duplicate-outer-signature",
+          "assets": ["conformance/protobuf-conformance/duplicate-outer-signature.binpb"],
+          "operations": ["Decompose", "Verify"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": ["OUTER_CONFORMANCE_STRICT", "OUTER_CONFORMANCE_SIGNATURE_STRICT"]},
+          "expectations": [
+            {"type": "paired_profile_outcomes", "values": {"Strict": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED", "SignatureStrict": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED", "Permissive": "DECOMPOSE_OUTCOME_OK"}},
+            {"type": "property", "name": "permissive_duplicate_submessage_behavior", "value": "merge"}
+          ]
+        },
+        {
+          "id": "unknown-outer-field",
+          "assets": ["conformance/protobuf-conformance/unknown-outer-field.binpb"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": ["OUTER_CONFORMANCE_STRICT", "OUTER_CONFORMANCE_SIGNATURE_STRICT"]},
+          "expectations": [
+            {"type": "paired_profile_outcomes", "values": {"Strict": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED", "SignatureStrict": "DECOMPOSE_OUTCOME_OK", "Permissive": "DECOMPOSE_OUTCOME_OK"}}
+          ]
+        },
+        {
+          "id": "inner-strict-duplicate-alg",
+          "assets": ["conformance/protobuf-conformance/inner-strict-duplicate-alg.binpb"],
+          "operations": ["Verify"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": ["OUTER_CONFORMANCE_STRICT", "OUTER_CONFORMANCE_SIGNATURE_STRICT"]},
+          "expectations": [
+            {"type": "paired_profile_outcomes", "values": {"Strict": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED", "SignatureStrict": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED", "Permissive": "REACHES_VERIFICATION_STAGE"}},
+            {"type": "property", "name": "permissive_alg_value", "value": "last_wire_occurrence"}
+          ]
+        },
+        {
+          "id": "present-empty-outer-signature",
+          "assets": ["conformance/protobuf-conformance/present-empty-outer-signature.binpb"],
+          "operations": ["Decompose", "Verify"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": ["OUTER_CONFORMANCE_STRICT", "OUTER_CONFORMANCE_SIGNATURE_STRICT"]},
+          "expectations": [
+            {"type": "paired_profile_outcomes", "values": {"Strict": "DECOMPOSE_OUTCOME_OK", "SignatureStrict": "DECOMPOSE_OUTCOME_OK", "Permissive": "DECOMPOSE_OUTCOME_OK"}},
+            {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}
+          ]
+        },
+        {
+          "id": "binary-payload-no-yaml-fit",
+          "assets": ["conformance/protobuf-conformance/binary-payload-no-yaml-fit.binpb"],
+          "operations": ["Decompose", "Verify"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": ["OUTER_CONFORMANCE_STRICT", "OUTER_CONFORMANCE_SIGNATURE_STRICT"]},
+          "expectations": [
+            {"type": "paired_profile_outcomes", "values": {"Strict": "DECOMPOSE_OUTCOME_OK", "SignatureStrict": "DECOMPOSE_OUTCOME_OK", "Permissive": "DECOMPOSE_OUTCOME_OK"}},
+            {"type": "property", "name": "yaml_payload_envelope_checks_applied", "value": false}
+          ]
+        },
+        {
+          "id": "invalid-field-zero",
+          "assets": ["conformance/protobuf-conformance/invalid-field-zero.binpb"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": ["OUTER_CONFORMANCE_STRICT", "OUTER_CONFORMANCE_SIGNATURE_STRICT"]},
+          "expectations": [{"type": "paired_profile_outcomes", "values": {"Strict": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED", "SignatureStrict": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED", "Permissive": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED"}}]
+        },
+        {
+          "id": "out-of-range-field-number",
+          "assets": ["conformance/protobuf-conformance/out-of-range-field-number.binpb"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": ["OUTER_CONFORMANCE_STRICT", "OUTER_CONFORMANCE_SIGNATURE_STRICT"]},
+          "expectations": [{"type": "paired_profile_outcomes", "values": {"Strict": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED", "SignatureStrict": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED", "Permissive": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED"}}]
+        },
+        {
+          "id": "overflowing-tag-varint",
+          "assets": ["conformance/protobuf-conformance/overflowing-tag-varint.binpb"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": ["OUTER_CONFORMANCE_STRICT", "OUTER_CONFORMANCE_SIGNATURE_STRICT"]},
+          "expectations": [{"type": "paired_profile_outcomes", "values": {"Strict": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED", "SignatureStrict": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED", "Permissive": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED"}}]
+        },
+        {
+          "id": "truncated-tag-varint",
+          "assets": ["conformance/protobuf-conformance/truncated-tag-varint.binpb"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": ["OUTER_CONFORMANCE_STRICT", "OUTER_CONFORMANCE_SIGNATURE_STRICT"]},
+          "expectations": [{"type": "paired_profile_outcomes", "values": {"Strict": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED", "SignatureStrict": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED", "Permissive": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED"}}]
+        },
+        {
+          "id": "truncated-length-varint",
+          "assets": ["conformance/protobuf-conformance/truncated-length-varint.binpb"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": ["OUTER_CONFORMANCE_STRICT", "OUTER_CONFORMANCE_SIGNATURE_STRICT"]},
+          "expectations": [{"type": "paired_profile_outcomes", "values": {"Strict": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED", "SignatureStrict": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED", "Permissive": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED"}}]
+        },
+        {
+          "id": "overflowing-length-varint",
+          "assets": ["conformance/protobuf-conformance/overflowing-length-varint.binpb"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": ["OUTER_CONFORMANCE_STRICT", "OUTER_CONFORMANCE_SIGNATURE_STRICT"]},
+          "expectations": [{"type": "paired_profile_outcomes", "values": {"Strict": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED", "SignatureStrict": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED", "Permissive": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED"}}]
+        },
+        {
+          "id": "oversized-length",
+          "assets": ["conformance/protobuf-conformance/oversized-length.binpb"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": ["OUTER_CONFORMANCE_STRICT", "OUTER_CONFORMANCE_SIGNATURE_STRICT"]},
+          "expectations": [{"type": "paired_profile_outcomes", "values": {"Strict": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED", "SignatureStrict": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED", "Permissive": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED"}}]
+        },
+        {
+          "id": "invalid-wire-type-6",
+          "assets": ["conformance/protobuf-conformance/invalid-wire-type-6.binpb"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": ["OUTER_CONFORMANCE_STRICT", "OUTER_CONFORMANCE_SIGNATURE_STRICT"]},
+          "expectations": [{"type": "paired_profile_outcomes", "values": {"Strict": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED", "SignatureStrict": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED", "Permissive": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED"}}]
+        },
+        {
+          "id": "invalid-wire-type-7",
+          "assets": ["conformance/protobuf-conformance/invalid-wire-type-7.binpb"],
+          "operations": ["Decompose"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": ["OUTER_CONFORMANCE_STRICT", "OUTER_CONFORMANCE_SIGNATURE_STRICT"]},
+          "expectations": [{"type": "paired_profile_outcomes", "values": {"Strict": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED", "SignatureStrict": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED", "Permissive": "DECOMPOSE_OUTCOME_MALFORMED_ATTEMPTED_SIGNED"}}]
+        }
+      ]
+    },
+    {
+      "id": "yaml-signature-conformance",
+      "readme": "conformance/yaml-signature-conformance/README.md",
+      "cases": [
+        {
+          "id": "valid-baseline",
+          "assets": ["conformance/yaml-signature-conformance/valid-baseline.yaml"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": []},
+          "expectations": [{"type": "paired_profile_outcomes", "values": {"Strict": "REACHES_VERIFICATION_STAGE", "SignatureStrict": "REACHES_VERIFICATION_STAGE", "Permissive": "REACHES_VERIFICATION_STAGE"}}, {"type": "pre_verify_outcome", "value": "PRE_VERIFY_OUTCOME_OK"}]
+        },
+        {
+          "id": "wrong-schema",
+          "assets": ["conformance/yaml-signature-conformance/wrong-schema.yaml"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": []},
+          "expectations": [{"type": "pre_verify_outcome", "value": "PRE_VERIFY_OUTCOME_METADATA_PARSE_FAILURE"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "missing-schema",
+          "assets": ["conformance/yaml-signature-conformance/missing-schema.yaml"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": []},
+          "expectations": [{"type": "pre_verify_outcome", "value": "PRE_VERIFY_OUTCOME_METADATA_PARSE_FAILURE"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "duplicate-schema",
+          "assets": ["conformance/yaml-signature-conformance/duplicate-schema.yaml"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": []},
+          "expectations": [{"type": "pre_verify_outcome", "value": "PRE_VERIFY_OUTCOME_METADATA_PARSE_FAILURE"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "duplicate-alg",
+          "assets": ["conformance/yaml-signature-conformance/duplicate-alg.yaml"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": []},
+          "expectations": [{"type": "pre_verify_outcome", "value": "PRE_VERIFY_OUTCOME_METADATA_PARSE_FAILURE"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "duplicate-keyid",
+          "assets": ["conformance/yaml-signature-conformance/duplicate-keyid.yaml"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": []},
+          "expectations": [{"type": "pre_verify_outcome", "value": "PRE_VERIFY_OUTCOME_METADATA_PARSE_FAILURE"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "duplicate-signature",
+          "assets": ["conformance/yaml-signature-conformance/duplicate-signature.yaml"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": []},
+          "expectations": [{"type": "pre_verify_outcome", "value": "PRE_VERIFY_OUTCOME_METADATA_PARSE_FAILURE"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "unknown-key",
+          "assets": ["conformance/yaml-signature-conformance/unknown-key.yaml"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": []},
+          "expectations": [{"type": "paired_profile_outcomes", "values": {"Strict": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED", "SignatureStrict": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED", "Permissive": "REACHES_VERIFICATION_STAGE"}}, {"type": "property", "name": "permissive_unknown_key_handling", "value": "drop"}]
+        },
+        {
+          "id": "oversized-carrier",
+          "assets": ["conformance/yaml-signature-conformance/oversized-carrier.yaml"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": []},
+          "expectations": [{"type": "pre_verify_outcome", "value": "PRE_VERIFY_OUTCOME_METADATA_PARSE_FAILURE"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "document-end-at-eof",
+          "assets": ["conformance/yaml-signature-conformance/document-end-at-eof.yaml"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": []},
+          "expectations": [{"type": "pre_verify_outcome", "value": "PRE_VERIFY_OUTCOME_OK"}, {"type": "paired_profile_outcomes", "values": {"Strict": "REACHES_VERIFICATION_STAGE", "SignatureStrict": "REACHES_VERIFICATION_STAGE", "Permissive": "REACHES_VERIFICATION_STAGE"}}]
+        },
+        {
+          "id": "document-end-with-second-document",
+          "assets": ["conformance/yaml-signature-conformance/document-end-with-second-document.yaml"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": []},
+          "expectations": [{"type": "pre_verify_outcome", "value": "PRE_VERIFY_OUTCOME_METADATA_PARSE_FAILURE"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "non-mapping-root",
+          "assets": ["conformance/yaml-signature-conformance/non-mapping-root.yaml"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": []},
+          "expectations": [{"type": "pre_verify_outcome", "value": "PRE_VERIFY_OUTCOME_METADATA_PARSE_FAILURE"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "non-string-schema",
+          "assets": ["conformance/yaml-signature-conformance/non-string-schema.yaml"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": []},
+          "expectations": [{"type": "pre_verify_outcome", "value": "PRE_VERIFY_OUTCOME_METADATA_PARSE_FAILURE"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "non-string-alg",
+          "assets": ["conformance/yaml-signature-conformance/non-string-alg.yaml"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": []},
+          "expectations": [{"type": "pre_verify_outcome", "value": "PRE_VERIFY_OUTCOME_METADATA_PARSE_FAILURE"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "non-string-keyid",
+          "assets": ["conformance/yaml-signature-conformance/non-string-keyid.yaml"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": []},
+          "expectations": [{"type": "pre_verify_outcome", "value": "PRE_VERIFY_OUTCOME_METADATA_PARSE_FAILURE"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "non-string-signature",
+          "assets": ["conformance/yaml-signature-conformance/non-string-signature.yaml"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": ["CONFORMANCE_PROFILE_STRICT", "CONFORMANCE_PROFILE_SIGNATURE_STRICT", "CONFORMANCE_PROFILE_PERMISSIVE"], "outer_conformance": []},
+          "expectations": [{"type": "pre_verify_outcome", "value": "PRE_VERIFY_OUTCOME_METADATA_PARSE_FAILURE"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        }
+      ]
+    },
+    {
+      "id": "verification-runtime",
+      "readme": "conformance/verification-runtime/README.md",
+      "cases": [
+        {
+          "id": "runtime-classification",
+          "assets": [
+            "conformance/verification-runtime/valid.yaml",
+            "conformance/verification-runtime/valid.binpb",
+            "conformance/verification-runtime/cryptographic-mismatch.yaml",
+            "conformance/verification-runtime/cryptographic-mismatch.binpb",
+            "conformance/verification-runtime/runtime-classification.expected.txt"
+          ],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [
+            {"type": "pre_verify_outcome", "cases": ["valid", "cryptographic-mismatch"], "value": "PRE_VERIFY_OUTCOME_OK"},
+            {"type": "verifier_state_matrix", "values": {"supported-valid": "VERIFIER_STATE_VERIFIED", "unsupported-valid": "VERIFIER_STATE_SIGNED_BUT_ALGORITHM_UNSUPPORTED", "supported-cryptographic-mismatch": "VERIFIER_STATE_SIGNED_BUT_FAILED_VERIFICATION"}},
+            {"type": "property", "name": "verified_payload_bytes_present_only_for", "value": "supported-valid"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "transcoding",
+      "readme": "conformance/transcoding/README.md",
+      "cases": [
+        {
+          "id": "empty",
+          "assets": ["conformance/transcoding/empty.yaml", "conformance/transcoding/empty.binpb"],
+          "operations": ["Transcode"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "property", "name": "effective_fields_preserved_both_directions", "value": true}, {"type": "yaml_string_value", "field": "signature", "value": ""}, {"type": "decoded_octets_hex", "field": "signature", "value": ""}]
+        },
+        {
+          "id": "boolean-like-true",
+          "assets": ["conformance/transcoding/boolean-like-true.yaml", "conformance/transcoding/boolean-like-true.binpb"],
+          "operations": ["Transcode"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "property", "name": "effective_fields_preserved_both_directions", "value": true}, {"type": "yaml_string_value", "field": "signature", "value": "true"}, {"type": "decoded_octets_hex", "field": "signature", "value": "b6bb9e"}]
+        },
+        {
+          "id": "null-like-null",
+          "assets": ["conformance/transcoding/null-like-null.yaml", "conformance/transcoding/null-like-null.binpb"],
+          "operations": ["Transcode"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "property", "name": "effective_fields_preserved_both_directions", "value": true}, {"type": "yaml_string_value", "field": "signature", "value": "null"}, {"type": "decoded_octets_hex", "field": "signature", "value": "9ee965"}]
+        },
+        {
+          "id": "numeric-looking-1234",
+          "assets": ["conformance/transcoding/numeric-looking-1234.yaml", "conformance/transcoding/numeric-looking-1234.binpb"],
+          "operations": ["Transcode"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "property", "name": "effective_fields_preserved_both_directions", "value": true}, {"type": "yaml_string_value", "field": "signature", "value": "1234"}, {"type": "decoded_octets_hex", "field": "signature", "value": "d76df8"}]
+        }
+      ]
+    },
+    {
+      "id": "schema-alignment",
+      "readme": "conformance/schema-alignment/README.md",
+      "cases": [
+        {
+          "id": "ed25519-mapping",
+          "assets": ["conformance/schema-alignment/yaml-alg-ed25519.yaml", "conformance/schema-alignment/proto-alg-ed25519.binpb"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "algorithm_mapping", "yaml": "ED25519_PUREEDDSA_RAW_RS64_CANONICAL", "protobuf": "ALGORITHM_ED25519_PUREEDDSA_RAW_RS64_CANONICAL"}, {"type": "stage_reached", "value": "verification"}]
+        },
+        {
+          "id": "ecdsa-mapping",
+          "assets": ["conformance/schema-alignment/yaml-alg-ecdsa.yaml", "conformance/schema-alignment/proto-alg-ecdsa.binpb"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "algorithm_mapping", "yaml": "ECDSA_SECP256R1_SHA256_RAW_RS64", "protobuf": "ALGORITHM_ECDSA_SECP256R1_SHA256_RAW_RS64"}, {"type": "stage_reached", "value": "verification"}]
+        },
+        {
+          "id": "yaml-unknown-string",
+          "assets": ["conformance/schema-alignment/yaml-alg-unknown-string.yaml"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "pre_verify_outcome", "value": "PRE_VERIFY_OUTCOME_METADATA_PARSE_FAILURE"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "yaml-prefixed-rejected",
+          "assets": ["conformance/schema-alignment/yaml-alg-prefixed-rejected.yaml"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "pre_verify_outcome", "value": "PRE_VERIFY_OUTCOME_METADATA_PARSE_FAILURE"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "unspecified-rejected",
+          "assets": ["conformance/schema-alignment/yaml-alg-unspecified-rejected.yaml", "conformance/schema-alignment/proto-alg-unspecified.binpb"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "asset_outcomes", "values": {"yaml-alg-unspecified-rejected.yaml": "PRE_VERIFY_OUTCOME_METADATA_PARSE_FAILURE", "proto-alg-unspecified.binpb": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}}]
+        },
+        {
+          "id": "proto-unknown-integer",
+          "assets": ["conformance/schema-alignment/proto-alg-unknown-integer.binpb"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "pre_verify_outcome", "value": "PRE_VERIFY_OUTCOME_STRUCTURAL_FAILURE"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "empty-signature-before-unsupported",
+          "assets": ["conformance/schema-alignment/yaml-alg-ecdsa-empty-signature.yaml", "conformance/schema-alignment/proto-alg-ecdsa-empty-signature.binpb", "conformance/schema-alignment/empty-signature-before-unsupported.expected.txt"],
+          "operations": ["PreVerify", "Verify"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "pre_verify_outcome", "value": "PRE_VERIFY_OUTCOME_OK"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}, {"type": "property", "name": "classification_precedes_algorithm_support", "value": "empty_signature"}]
+        }
+      ]
+    },
+    {
+      "id": "key-id",
+      "readme": "conformance/key-id/README.md",
+      "cases": [
+        {
+          "id": "absent",
+          "assets": ["conformance/key-id/keyid-absent.yaml", "conformance/key-id/keyid-absent.binpb"],
+          "operations": ["Verify"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "stage_reached", "value": "verification"}]
+        },
+        {
+          "id": "present-empty",
+          "assets": ["conformance/key-id/keyid-present-empty.yaml", "conformance/key-id/keyid-present-empty.binpb"],
+          "operations": ["Sign", "Verify"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}, {"type": "signer_invocation_error", "value": "SIGNER_INVOCATION_ERROR_CATEGORY_INVALID_KEYID"}]
+        },
+        {
+          "id": "ascii-1024",
+          "assets": ["conformance/key-id/keyid-1024-ascii.yaml", "conformance/key-id/keyid-1024-ascii.binpb"],
+          "operations": ["Verify"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "stage_reached", "value": "verification"}, {"type": "property", "name": "keyid_utf8_octet_length", "value": 1024}]
+        },
+        {
+          "id": "ascii-1025",
+          "assets": ["conformance/key-id/keyid-1025-ascii.yaml", "conformance/key-id/keyid-1025-ascii.binpb"],
+          "operations": ["Sign", "Verify"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}, {"type": "signer_invocation_error", "value": "SIGNER_INVOCATION_ERROR_CATEGORY_INVALID_KEYID"}]
+        },
+        {
+          "id": "multibyte-under",
+          "assets": ["conformance/key-id/keyid-multibyte-under.yaml", "conformance/key-id/keyid-multibyte-under.binpb"],
+          "operations": ["Verify"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "stage_reached", "value": "verification"}, {"type": "property", "name": "keyid_utf8_octet_length", "value": 1024}]
+        },
+        {
+          "id": "multibyte-over",
+          "assets": ["conformance/key-id/keyid-multibyte-over.yaml", "conformance/key-id/keyid-multibyte-over.binpb"],
+          "operations": ["Sign", "Verify"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}, {"type": "signer_invocation_error", "value": "SIGNER_INVOCATION_ERROR_CATEGORY_INVALID_KEYID"}, {"type": "property", "name": "keyid_utf8_octet_length", "value": 1028}]
+        },
+        {
+          "id": "line-break",
+          "assets": ["conformance/key-id/keyid-line-break.yaml", "conformance/key-id/keyid-line-break.binpb"],
+          "operations": ["Sign", "Verify"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}, {"type": "signer_invocation_error", "value": "SIGNER_INVOCATION_ERROR_CATEGORY_INVALID_KEYID"}]
+        },
+        {
+          "id": "marker-injection",
+          "assets": ["conformance/key-id/keyid-marker-injection.carrier.txt"],
+          "operations": ["Compose"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "transcriber_error", "value": "TRANSCRIBER_ERROR_CATEGORY_INVALID_SIGNATURE_CARRIER"}]
+        }
+      ]
+    },
+    {
+      "id": "base64",
+      "readme": "conformance/base64/README.md",
+      "cases": [
+        {
+          "id": "valid-64-octet",
+          "assets": ["conformance/base64/valid-64-octet.txt"],
+          "operations": ["DecodeYamlSignatureBase64"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "decoder_result", "value": "success"}, {"type": "decoded_octet_length", "value": 64}]
+        },
+        {
+          "id": "empty",
+          "assets": ["conformance/base64/empty.txt"],
+          "operations": ["DecodeYamlSignatureBase64", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "decoder_result", "value": "success"}, {"type": "decoded_octet_length", "value": 0}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "invalid-alphabet-plus",
+          "assets": ["conformance/base64/invalid-alphabet-plus.txt"],
+          "operations": ["DecodeYamlSignatureBase64", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "decoder_result", "value": "failure"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "invalid-alphabet-slash",
+          "assets": ["conformance/base64/invalid-alphabet-slash.txt"],
+          "operations": ["DecodeYamlSignatureBase64", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "decoder_result", "value": "failure"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "padding-present",
+          "assets": ["conformance/base64/padding-present.txt"],
+          "operations": ["DecodeYamlSignatureBase64", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "decoder_result", "value": "failure"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "length-mod-4-eq-1",
+          "assets": ["conformance/base64/length-mod-4-eq-1.txt"],
+          "operations": ["DecodeYamlSignatureBase64", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "decoder_result", "value": "failure"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "whitespace-internal",
+          "assets": ["conformance/base64/whitespace-internal.txt"],
+          "operations": ["DecodeYamlSignatureBase64", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "decoder_result", "value": "failure"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "nonzero-trailing-bits",
+          "assets": ["conformance/base64/nonzero-trailing-bits.txt"],
+          "operations": ["DecodeYamlSignatureBase64", "Verify"],
+          "context": {"forms": ["YAML"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "decoder_result", "value": "failure"}, {"type": "verifier_state", "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}, {"type": "property", "name": "unused_final_quantum_bits_are_zero", "value": false}]
+        }
+      ]
+    },
+    {
+      "id": "alg-ed25519",
+      "readme": "conformance/alg-ed25519/README.md",
+      "cases": [
+        {
+          "id": "rfc8032-vector-1-empty-message",
+          "assets": ["conformance/alg-ed25519/rfc8032-vec1-empty-message.binpb", "conformance/alg-ed25519/rfc8032-vec1-empty-message.yaml", "conformance/alg-ed25519/rfc8032-vec1-empty-message.expected.txt"],
+          "operations": ["Verify"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "verifier_state", "value": "VERIFIER_STATE_VERIFIED"}, {"type": "property", "name": "verified_payload_length", "value": 0}]
+        },
+        {
+          "id": "rfc8032-vector-2-one-octet",
+          "assets": ["conformance/alg-ed25519/rfc8032-vec2-one-octet.binpb", "conformance/alg-ed25519/rfc8032-vec2-one-octet.expected.txt"],
+          "operations": ["Verify"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "verifier_state", "value": "VERIFIER_STATE_VERIFIED"}, {"type": "property", "name": "verified_payload_hex", "value": "72"}]
+        },
+        {
+          "id": "noncanonical-encodings",
+          "assets": ["conformance/alg-ed25519/noncanonical-R.binpb", "conformance/alg-ed25519/noncanonical-S-equals-L.binpb", "conformance/alg-ed25519/noncanonical-S-equals-L-plus-1.binpb", "conformance/alg-ed25519/noncanonical-encoding.expected.txt"],
+          "operations": ["Verify"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "verifier_state", "assets": ["noncanonical-R.binpb", "noncanonical-S-equals-L.binpb", "noncanonical-S-equals-L-plus-1.binpb"], "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "configured-key-small-order",
+          "assets": ["conformance/alg-ed25519/configured-key-small-order.txt"],
+          "operations": ["Verify"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "verifier_invocation_error", "value": "INVOCATION_ERROR_CATEGORY_KEY_RESOLUTION_FAILURE"}, {"type": "property", "name": "configured_keys_tested", "value": 8}]
+        },
+        {
+          "id": "stable-resign",
+          "assets": ["conformance/alg-ed25519/stable-resign.txt"],
+          "operations": ["Sign"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "property", "name": "same_seed_and_payload_produce_identical_signature_octets", "value": true}]
+        },
+        {
+          "id": "algorithm-parameters-present",
+          "assets": ["conformance/alg-ed25519/algorithm-parameters-present.expected.txt"],
+          "operations": ["Sign", "Verify"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "signer_invocation_error", "value": "SIGNER_INVOCATION_ERROR_CATEGORY_INVALID_ALGORITHM_PARAMETERS"}, {"type": "verifier_invocation_error", "value": "INVOCATION_ERROR_CATEGORY_INVALID_ALGORITHM_PARAMETERS"}]
+        }
+      ]
+    },
+    {
+      "id": "alg-ecdsa",
+      "readme": "conformance/alg-ecdsa/README.md",
+      "cases": [
+        {
+          "id": "verify-happy-path",
+          "assets": ["conformance/alg-ecdsa/verify-happy-path.binpb", "conformance/alg-ecdsa/verify-happy-path.yaml", "conformance/alg-ecdsa/verify-happy-path.expected.txt"],
+          "operations": ["Verify"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "verifier_state", "value": "VERIFIER_STATE_VERIFIED"}]
+        },
+        {
+          "id": "acvp-fips186-5-p256-sha256-tc131",
+          "assets": ["conformance/alg-ecdsa/acvp-fips186-5-p256-sha256-tc131.binpb", "conformance/alg-ecdsa/acvp-fips186-5-p256-sha256-tc131.expected.txt"],
+          "operations": ["Verify"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "verifier_state", "value": "VERIFIER_STATE_VERIFIED"}, {"type": "property", "name": "published_r_and_s_byte_equality", "value": true}]
+        },
+        {
+          "id": "high-s-low-s",
+          "assets": ["conformance/alg-ecdsa/high-s.binpb", "conformance/alg-ecdsa/high-s.yaml", "conformance/alg-ecdsa/low-s.binpb", "conformance/alg-ecdsa/low-s.yaml", "conformance/alg-ecdsa/high-s-low-s.expected.txt"],
+          "operations": ["Verify"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "verifier_state", "assets": ["high-s.binpb", "high-s.yaml", "low-s.binpb", "low-s.yaml"], "value": "VERIFIER_STATE_VERIFIED"}, {"type": "property", "name": "accepts_high_and_low_s", "value": true}]
+        },
+        {
+          "id": "invalid-component-ranges",
+          "assets": ["conformance/alg-ecdsa/invalid-r-zero.binpb", "conformance/alg-ecdsa/invalid-s-zero.binpb", "conformance/alg-ecdsa/invalid-r-equals-n.binpb", "conformance/alg-ecdsa/invalid-s-equals-n.binpb", "conformance/alg-ecdsa/invalid-component-ranges.expected.txt"],
+          "operations": ["Verify"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "verifier_state", "assets": ["invalid-r-zero.binpb", "invalid-s-zero.binpb", "invalid-r-equals-n.binpb", "invalid-s-equals-n.binpb"], "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "non-fixed-width",
+          "assets": ["conformance/alg-ecdsa/signature-63-bytes.binpb", "conformance/alg-ecdsa/signature-65-bytes.binpb", "conformance/alg-ecdsa/non-fixed-width.expected.txt"],
+          "operations": ["Verify"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "verifier_state", "assets": ["signature-63-bytes.binpb", "signature-65-bytes.binpb"], "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+        },
+        {
+          "id": "invalid-public-keys",
+          "assets": ["conformance/alg-ecdsa/bad-key-identity.txt", "conformance/alg-ecdsa/bad-key-off-curve.txt", "conformance/alg-ecdsa/bad-key-wrong-curve.txt"],
+          "operations": ["Verify"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "verifier_invocation_error", "value": "INVOCATION_ERROR_CATEGORY_KEY_RESOLUTION_FAILURE"}]
+        },
+        {
+          "id": "two-nonce-instability",
+          "assets": ["conformance/alg-ecdsa/two-nonce-instability-k1.binpb", "conformance/alg-ecdsa/two-nonce-instability-k2.binpb", "conformance/alg-ecdsa/two-nonce-instability.expected.txt"],
+          "operations": ["Sign", "Verify"],
+          "context": {"forms": ["PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "verifier_state", "assets": ["two-nonce-instability-k1.binpb", "two-nonce-instability-k2.binpb"], "value": "VERIFIER_STATE_VERIFIED"}, {"type": "property", "name": "same_key_and_payload_distinct_nonces_produce_distinct_signature_octets", "value": true}]
+        },
+        {
+          "id": "algorithm-parameters-present",
+          "assets": ["conformance/alg-ecdsa/algorithm-parameters-present.expected.txt"],
+          "operations": ["Sign", "Verify"],
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "signer_invocation_error", "value": "SIGNER_INVOCATION_ERROR_CATEGORY_INVALID_ALGORITHM_PARAMETERS"}, {"type": "verifier_invocation_error", "value": "INVOCATION_ERROR_CATEGORY_INVALID_ALGORITHM_PARAMETERS"}]
+        }
+      ]
+    }
+  ]
+}

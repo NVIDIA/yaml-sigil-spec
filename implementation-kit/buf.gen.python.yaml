@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: Copyright 2026 NVIDIA CORPORATION & AFFILIATES
+# SPDX-License-Identifier: Apache-2.0
+
+version: v2
+plugins:
+  - remote: buf.build/protocolbuffers/python:v36.0
+    revision: 1
+    out: python
+    exclude_types:
+      - yaml_sigil.v1alpha1.SigningService
+      - yaml_sigil.v1alpha1.TranscriptionService
+      - yaml_sigil.v1alpha1.VerificationService
+  - remote: buf.build/protocolbuffers/pyi:v36.0
+    revision: 1
+    out: python
+    exclude_types:
+      - yaml_sigil.v1alpha1.SigningService
+      - yaml_sigil.v1alpha1.TranscriptionService
+      - yaml_sigil.v1alpha1.VerificationService
+inputs:
+  # Generates straight from the published specification, so no local clone is
+  # required. Replace `branch` with `tag: <release>` or `ref: <commit>` to pin.
+  - git_repo: https://github.com/NVIDIA/yaml-sigil-spec.git
+    branch: main
+    subdir: proto

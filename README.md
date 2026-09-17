@@ -233,6 +233,27 @@ require public gRPC deployment.
 | Verification API | [`verification-api.md`](./verification-api.md) and [`verification.proto`](./proto/yaml_sigil/v1alpha1/verification.proto). |
 | Transcoding | [`transcoding.md`](./transcoding.md). |
 
+## DIY Implementations
+
+[`yaml-sigil-rs`](https://github.com/NVIDIA/yaml-sigil-rs) is the only NVIDIA
+provided implementation at time of writing. The
+[`implementation-kit/`](./implementation-kit/) directory helps start one in
+another language, with protobuf generation templates, a reusable implementation
+prompt, and a machine-readable index of the conformance fixtures. The kit is
+non-normative; this specification and the conformance fixtures remain
+authoritative.
+
+To begin, point an agent at the kit:
+
+```text
+I want to build an implementation of yaml-sigil in <LANGUAGE>. Use this kit
+and the prompt from here:
+https://github.com/NVIDIA/yaml-sigil-spec/tree/main/implementation-kit
+```
+
+Passing the conformance fixtures establishes compatibility, not security. See
+[Security Considerations](#security-considerations).
+
 ## References
 
 | File | Role |
@@ -241,6 +262,7 @@ require public gRPC deployment.
 | [`base64-requirements.md`](./base64-requirements.md) | Normative YAML `signature` base64 profile. |
 | [`schema/README.md`](./schema/README.md) | JSON Schema maintenance notes. |
 | [`conformance/README.md`](./conformance/README.md) | Normative fixture index and rebuild entry point. |
+| [`implementation-kit/README.md`](./implementation-kit/README.md) | Non-normative language implementation kit. |
 | [`DIAGRAM.md`](./DIAGRAM.md) | Non-normative API diagram companion. |
 | [`original-readme.md`](./original-readme.md) | Historical starting point. |
 
