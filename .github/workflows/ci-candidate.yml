@@ -1,0 +1,341 @@
+name: Candidate CI
+
+# Only ci.yml selects this route. Local calls use the exact caller commit;
+# ordinary copied-ref reporting binds this file to protected main as well.
+on:
+  workflow_call:
+
+permissions: {}
+
+jobs:
+  candidate_binding:
+    name: Bind candidate to protected policy and base
+    runs-on: linux-amd64-cpu4
+    timeout-minutes: 5
+    permissions: {}
+    outputs:
+      base_ref: ${{ steps.pull.outputs.base_ref }}
+      base_sha: ${{ steps.pull.outputs.base_sha }}
+      policy_sha: ${{ steps.policy.outputs.policy_sha }}
+    env:
+      GH_TOKEN: ""
+      GITHUB_TOKEN: ""
+      GIT_ASKPASS: /bin/false
+      GIT_CONFIG_GLOBAL: /dev/null
+      GIT_CONFIG_NOSYSTEM: "1"
+      GIT_CONFIG_SYSTEM: /dev/null
+      GIT_TERMINAL_PROMPT: "0"
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      # Bind the run before any candidate-executable job starts. Downstream
+      # jobs rebind these exact objects before materializing contributor code.
+      - name: Initialize fresh binding state
+        run: install -d -m 0700 "${RUNNER_TEMP}/candidate-binding"
+
+      - name: Stage binder from protected current main
+        id: policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init --quiet --initial-branch=main .
+          git remote add origin \
+            "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
+          git -c credential.helper= -c http.extraHeader= \
+            fetch --quiet --no-tags --no-recurse-submodules --depth=1 \
+            origin "+refs/heads/main:refs/remotes/origin/main"
+          policy_sha="$(git rev-parse refs/remotes/origin/main)"
+          git show \
+            "${policy_sha}:.github/scripts/bind-candidate-pr.py" \
+            > bind-candidate-pr.py
+          chmod 0500 bind-candidate-pr.py
+          python3 -m py_compile bind-candidate-pr.py
+          printf 'policy_sha=%s\n' "${policy_sha}" >> "${GITHUB_OUTPUT}"
+        working-directory: ${{ runner.temp }}/candidate-binding
+
+      - name: Bind copied ref to exact policy and contribution base
+        id: pull
+        env:
+          POLICY_SHA: ${{ steps.policy.outputs.policy_sha }}
+        run: >-
+          python3 ./bind-candidate-pr.py
+          --repository "${GITHUB_REPOSITORY}"
+          --copied-ref "${GITHUB_REF_NAME}"
+          --head-sha "${GITHUB_SHA}"
+          --policy-sha "${POLICY_SHA}"
+          --output "${GITHUB_OUTPUT}"
+        working-directory: ${{ runner.temp }}/candidate-binding
+
+  candidate_ci:
+    name: Candidate execution (Linux)
+    needs:
+      - candidate_binding
+    runs-on: linux-amd64-cpu8
+    timeout-minutes: 120
+    permissions: {}
+    env:
+      ACTIONS_CACHE_URL: ""
+      ACTIONS_ID_TOKEN_REQUEST_TOKEN: ""
+      ACTIONS_ID_TOKEN_REQUEST_URL: ""
+      ACTIONS_RESULTS_URL: ""
+      ACTIONS_RUNTIME_TOKEN: ""
+      CARGO_REGISTRIES_CRATES_IO_TOKEN: ""
+      GH_TOKEN: ""
+      GIT_ASKPASS: /bin/false
+      GIT_CONFIG_GLOBAL: /dev/null
+      GIT_CONFIG_NOSYSTEM: "1"
+      GIT_CONFIG_SYSTEM: /dev/null
+      GIT_LFS_SKIP_SMUDGE: "1"
+      GIT_TERMINAL_PROMPT: "0"
+      GITHUB_TOKEN: ""
+    steps:
+      # Allocate every mutable candidate path beneath one fresh job-temporary
+      # root. The materializer separately proves that source starts empty.
+      - name: Initialize fresh candidate state
+        shell: bash
+        run: |
+          set -euo pipefail
+          state="${RUNNER_TEMP}/yaml-sigil-candidate-state"
+          test ! -e "${state}"
+          install -d -m 0700 \
+            "${state}" \
+            "${state}/bootstrap" \
+            "${state}/cargo-home" \
+            "${state}/policy-bin" \
+            "${state}/source" \
+            "${state}/target" \
+            "${state}/tmp"
+          printf '%s\n' \
+            "CANDIDATE_STATE=${state}" \
+            "CARGO_HOME=${state}/cargo-home" \
+            "CARGO_TARGET_DIR=${state}/target" \
+            "POLICY_BIN=${state}/policy-bin" \
+            "TEMP=${state}/tmp" \
+            "TMP=${state}/tmp" \
+            "TMPDIR=${state}/tmp" >> "${GITHUB_ENV}"
+        working-directory: ${{ github.workspace }}
+
+      # Install fixed tools before any contributor-controlled path exists.
+      - name: Set up Rust
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+        with:
+          cache: false
+          components: clippy, rustfmt
+          toolchain: 1.98.0
+
+      # This section would benefit by a change to the action allowlist
+      - name: Install Rust validation tools
+        uses: taiki-e/install-action@43aecc8d72668fbcfe75c31400bc4f890f1c5853 # v2.83.2
+        with:
+          checksum: true
+          fallback: none
+          tool: cargo-audit@0.22.2,cargo-deny@0.20.2,cargo-machete@0.9.2,shellcheck@0.11.0
+
+      - name: Verify exact protected validation tools
+        run: |
+          rustc --version --verbose | grep -Fx 'release: 1.98.0'
+          test "$(cargo-audit --version)" = 'cargo-audit 0.22.2'
+          test "$(cargo-deny --version)" = 'cargo-deny 0.20.2'
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/bootstrap
+
+      - name: Install Markdown linter
+        # Refresh this immutable pin frequently to keep pace with rumdl releases.
+        uses: rvben/rumdl@95a982d941d00cf41a0dcef4d0788bd15a29be1b # v0.2.54
+        with:
+          install-only: true
+          version: "0.2.54"
+
+      # Install the exact crate-packaged Buf toolchain without a token while no
+      # contributor path exists. Its build verifies Buf's signed checksum
+      # manifest before placing the official binaries in ephemeral CARGO_HOME.
+      - name: Install Buf
+        run: |
+          cargo install buf-toolchain@1.72.0-hotfix.2 --locked
+          test "$("${CARGO_HOME}/bin/buf" --version)" = '1.72.0'
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/bootstrap
+
+      # Load checkout-boundary scripts from current protected main
+      # while the workspace still contains no contributor-controlled path.
+      - name: Load protected candidate policy
+        id: protected_policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -c credential.helper= init --quiet --initial-branch=main .
+          git remote add origin \
+            "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
+          git -c credential.helper= -c http.extraHeader= \
+            fetch --no-tags --no-recurse-submodules --depth=1 origin \
+            refs/heads/main:refs/remotes/origin/main
+          git show \
+            refs/remotes/origin/main:.github/scripts/materialize-candidate.sh \
+            > "${POLICY_BIN}/materialize-candidate.sh"
+          git show \
+            refs/remotes/origin/main:.github/scripts/bind-candidate-pr.py \
+            > "${POLICY_BIN}/bind-candidate-pr.py"
+          git show \
+            refs/remotes/origin/main:.github/scripts/check-pull-request-commits.sh \
+            > "${POLICY_BIN}/check-pull-request-commits.sh"
+          git show \
+            refs/remotes/origin/main:.github/scripts/install-actionlint.sh \
+            > "${POLICY_BIN}/install-actionlint.sh"
+          test -s "${POLICY_BIN}/materialize-candidate.sh"
+          test -s "${POLICY_BIN}/bind-candidate-pr.py"
+          test -s "${POLICY_BIN}/check-pull-request-commits.sh"
+          test -s "${POLICY_BIN}/install-actionlint.sh"
+          /bin/bash -n "${POLICY_BIN}/materialize-candidate.sh"
+          /bin/bash -n "${POLICY_BIN}/check-pull-request-commits.sh"
+          /bin/bash -n "${POLICY_BIN}/install-actionlint.sh"
+          python3 -m py_compile "${POLICY_BIN}/bind-candidate-pr.py"
+          test ! -e "${CANDIDATE_STATE}/actionlint"
+          /bin/bash --noprofile --norc \
+            "${POLICY_BIN}/install-actionlint.sh" \
+            "${CANDIDATE_STATE}/actionlint"
+          printf 'policy_sha=%s\n' \
+            "$(git rev-parse refs/remotes/origin/main)" >> "${GITHUB_OUTPUT}"
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/bootstrap
+
+      # Anonymous protected policy rejects a closed or moved pull request
+      # before any contributor-controlled path is materialized.
+      - name: Bind current open pull request
+        id: candidate_pr
+        env:
+          CANDIDATE_REF: ${{ github.ref_name }}
+          CANDIDATE_SHA: ${{ github.sha }}
+          POLICY_SHA: ${{ steps.protected_policy.outputs.policy_sha }}
+        run: |
+          set -euo pipefail
+          python3 "${POLICY_BIN}/bind-candidate-pr.py" \
+            --repository "${GITHUB_REPOSITORY}" \
+            --copied-ref "${CANDIDATE_REF}" \
+            --head-sha "${CANDIDATE_SHA}" \
+            --policy-sha "${POLICY_SHA}" \
+            --output "${GITHUB_OUTPUT}"
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/bootstrap
+
+      # The reporter consumes the pre-execution binding from the final job
+      # name. Rebinding here closes movement before materialization.
+      - name: Match pre-execution policy and base binding
+        env:
+          BASE_REF: ${{ steps.candidate_pr.outputs.base_ref }}
+          BASE_SHA: ${{ steps.candidate_pr.outputs.base_sha }}
+          EXPECTED_BASE_REF: ${{ needs.candidate_binding.outputs.base_ref }}
+          EXPECTED_BASE_SHA: ${{ needs.candidate_binding.outputs.base_sha }}
+          EXPECTED_POLICY_SHA: ${{ needs.candidate_binding.outputs.policy_sha }}
+          POLICY_SHA: ${{ steps.protected_policy.outputs.policy_sha }}
+        run: |
+          test "${POLICY_SHA}" = "${EXPECTED_POLICY_SHA}"
+          test "${BASE_REF}" = "${EXPECTED_BASE_REF}"
+          test "${BASE_SHA}" = "${EXPECTED_BASE_SHA}"
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/bootstrap
+
+      # The protected helper performs the only candidate checkout, disables
+      # filters and LFS, and never reads candidate submodule configuration.
+      - name: Materialize the exact copied candidate
+        env:
+          BASE_REF: ${{ steps.candidate_pr.outputs.base_ref }}
+          BASE_SHA: ${{ steps.candidate_pr.outputs.base_sha }}
+          POLICY_SHA: ${{ steps.protected_policy.outputs.policy_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          /bin/bash --noprofile --norc \
+            "${POLICY_BIN}/materialize-candidate.sh" \
+            "${GITHUB_REPOSITORY}" "${GITHUB_SHA}" "${GITHUB_REF_NAME}" \
+            "${POLICY_SHA}" "${BASE_REF}" "${BASE_SHA}"
+          export BASE_SHA
+          export HEAD_SHA="${GITHUB_SHA}"
+          /bin/bash --noprofile --norc \
+            "${POLICY_BIN}/check-pull-request-commits.sh"
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source
+
+      # Policy-oriented checks run before any candidate script, build script,
+      # or test can modify Cargo state or GitHub command files. Candidate code
+      # runs only in the terminal step below; no privileged step consumes its
+      # state afterward.
+      - name: Lint GitHub Actions workflows
+        run: |
+          "${CANDIDATE_STATE}/actionlint/actionlint"
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source
+
+      - name: Lint shell scripts
+        run: shellcheck .github/scripts/*.sh
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source
+
+      - name: Lint Markdown
+        run: rumdl check .
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source
+
+      - name: Build Protobuf
+        run: |
+          "${CARGO_HOME}/bin/buf" build proto
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source
+
+      - name: Lint Protobuf
+        run: |
+          "${CARGO_HOME}/bin/buf" lint proto
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source
+
+      - name: Check Protobuf formatting
+        run: |
+          "${CARGO_HOME}/bin/buf" format proto --diff --exit-code
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source
+
+      - name: Validate JSON Schema
+        run: jq empty schema/YamlSigilSignature.v1alpha1.schema.json
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source
+
+      - name: Check Rust formatting
+        run: cargo-fmt --all --check
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source/conformance/rebuild-rs
+
+      - name: Check unused Rust dependencies
+        run: cargo-machete --with-metadata
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source
+
+      - name: Check Rust dependency policy
+        run: cargo-deny --locked --workspace check bans licenses sources -D warnings
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source/conformance/rebuild-rs
+
+      - name: Audit Rust dependencies
+        run: cargo-audit audit
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source/conformance/rebuild-rs
+
+      # Rust builds and project-owned test scripts execute candidate code. Keep
+      # them together at the end so GITHUB_ENV, GITHUB_PATH, Cargo aliases,
+      # wrappers, and replaced tools cannot influence a later policy step.
+      - name: Run terminal candidate validation
+        run: |
+          cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+          cargo test --locked --workspace --all-features
+          cd "${CANDIDATE_STATE}/source"
+          python3 -m py_compile \
+            .github/scripts/bind-candidate-pr.py \
+            .github/scripts/report_required_ci.py \
+            .github/scripts/test_bind_candidate_pr.py \
+            .github/scripts/test_report_required_ci.py
+          python3 -m unittest discover \
+            -s .github/scripts -p 'test_*.py'
+          .github/scripts/test-materialize-candidate.sh
+          .github/scripts/test-trusted-tool-pins.sh
+        working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source/conformance/rebuild-rs
+
+  candidate_result:
+    name: >-
+      Candidate CI (Linux) [policy=${{ needs.candidate_binding.outputs.policy_sha }};base=${{ needs.candidate_binding.outputs.base_ref }}@${{ needs.candidate_binding.outputs.base_sha }}]
+    if: ${{ always() }}
+    needs:
+      - candidate_binding
+      - candidate_ci
+    runs-on: linux-amd64-cpu4
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      # This fresh runner consumes no candidate-writable state. Its exact name
+      # is the immutable run-to-reporter policy/base attestation.
+      - name: Require bound candidate execution
+        env:
+          BINDING_RESULT: ${{ needs.candidate_binding.result }}
+          CANDIDATE_RESULT: ${{ needs.candidate_ci.result }}
+        run: |
+          test "${BINDING_RESULT}" = success
+          test "${CANDIDATE_RESULT}" = success

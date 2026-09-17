@@ -12,8 +12,10 @@ Whenever a workflow or supporting policy changes, update the matching
 procedure in `MAINTAINERS.md` in the same change. Keep that runbook concise,
 coherent, and aligned with the executable behavior.
 
-Ordinary copied-ref tests require protected workflow equality. Reviewed
-maintainer staging uses a separate main-only route and canonical
+Ordinary copied-ref tests require protected equality for `ci.yml` and its
+local `ci-trusted.yml` and `ci-candidate.yml` callees. The static router keeps
+inactive matrix expressions out of skipped job names. Reviewed maintainer
+staging uses a separate main-only route and canonical
 `ci-testing/pr-<number>-<head-sha>` refs. Follow `MAINTAINERS.md` for exact-head
 admission, the authoritative Linux aggregate, and automatic App reporting.
 The reporter must authenticate the original writer, exact source, current
@@ -495,7 +497,7 @@ protected environment, cache-save, or retained-artifact path.
 
 The checkout-free `Required CI reporter` runs from protected `main` on a
 GitHub-hosted Linux runner. For copied refs, it binds the CI workflow ID,
-path, exact protected workflow blob, live protected-main and pull-request base,
+path, all three protected workflow blobs, live protected-main and PR base,
 repository, push event, run ID and attempt, open pull request, copied ref,
 current head, exact raw-author DCO identities, unique authoritative Linux job,
 terminal conclusion, and zero artifacts. The authoritative job name must

@@ -1,0 +1,136 @@
+name: Trusted CI
+
+# Only ci.yml selects this route. Local calls use the exact caller commit;
+# ordinary copied-ref reporting binds this file to protected main as well.
+on:
+  workflow_call:
+
+permissions: {}
+
+jobs:
+  trusted_ci:
+    name: Trusted CI (Linux)
+    runs-on: linux-amd64-cpu8
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Lint GitHub Actions workflows
+        uses: devops-actions/actionlint@9fb9c192862f19e684586ca84b500461bcd8a541 # v0.1.12 (actionlint v1.7.12)
+
+      # This section would benefit by a change to the action allowlist
+      - name: Lint shell scripts
+        uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # 2.0.0
+        with:
+          check_together: true
+          scandir: .github/scripts
+          version: v0.11.0
+
+      - name: Test CI helpers
+        run: |
+          .github/scripts/check-trusted-tool-pins.sh
+          .github/scripts/test-trusted-tool-pins.sh
+          python3 -m py_compile \
+            .github/scripts/bind-candidate-pr.py \
+            .github/scripts/report_required_ci.py \
+            .github/scripts/test_bind_candidate_pr.py \
+            .github/scripts/test_report_required_ci.py
+          python3 -m unittest discover \
+            -s .github/scripts -p 'test_*.py'
+          .github/scripts/test-materialize-candidate.sh
+
+      - name: Lint Markdown
+        # Refresh this immutable pin frequently to keep pace with rumdl releases.
+        uses: rvben/rumdl@95a982d941d00cf41a0dcef4d0788bd15a29be1b # v0.2.54
+        with:
+          version: "0.2.54"
+
+      - name: Check Protobuf
+        uses: bufbuild/buf-action@8c6a16e16f12ba20b6470afa9c2ba9b5ba8c97c3 # v1.5.0
+        with:
+          archive: false
+          breaking: false
+          format: true
+          input: proto
+          lint: true
+          pr_comment: false
+          push: false
+          version: "1.72.0"
+
+      - name: Validate JSON Schema
+        run: jq empty schema/YamlSigilSignature.v1alpha1.schema.json
+
+      - name: Set up Rust
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+        with:
+          cache: false
+          components: clippy, rustfmt
+          toolchain: 1.98.0
+
+      # This section would benefit by a change to the action allowlist
+      - name: Install Rust validation tools
+        uses: taiki-e/install-action@43aecc8d72668fbcfe75c31400bc4f890f1c5853 # v2.83.2
+        with:
+          checksum: true
+          fallback: none
+          tool: cargo-audit@0.22.2,cargo-deny@0.20.2,cargo-machete@0.9.2
+
+      - name: Verify exact trusted validation tools
+        run: |
+          rustc --version --verbose | grep -Fx 'release: 1.98.0'
+          test "$(cargo-audit --version)" = 'cargo-audit 0.22.2'
+          test "$(cargo-deny --version)" = 'cargo-deny 0.20.2'
+
+      - name: Cache trusted Rust build inputs
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          cache-bin: false
+          # Retain source registry data only; target/ may contain executables.
+          cache-targets: false
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Check Rust formatting
+        run: cargo fmt --all --check
+        working-directory: conformance/rebuild-rs
+
+      - name: Lint Rust
+        run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+        working-directory: conformance/rebuild-rs
+
+      - name: Test Rust
+        run: cargo test --locked --workspace --all-features
+        working-directory: conformance/rebuild-rs
+
+      - name: Check unused Rust dependencies
+        run: cargo-machete --with-metadata
+
+      - name: Check Rust dependency policy
+        run: cargo-deny --locked --workspace check bans licenses sources -D warnings
+        working-directory: conformance/rebuild-rs
+
+      - name: Audit Rust dependencies
+        run: cargo audit
+        working-directory: conformance/rebuild-rs
+
+
+  trusted_result:
+    name: Linux result
+    if: ${{ always() }}
+    needs:
+      - trusted_ci
+    runs-on: linux-amd64-cpu4
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      # This isolated aggregate consumes only GitHub job results. Missing,
+      # skipped, cancelled, or failed authoritative lanes cannot pass staging.
+      - name: Require every authoritative Linux lane
+        env:
+          TRUSTED_CI_RESULT: ${{ needs.trusted_ci.result }}
+        run: |
+          test "${TRUSTED_CI_RESULT}" = success
