@@ -8,6 +8,13 @@ follow this prompt. This file does not need to be edited.
 Implement `YamlSigil.v1alpha1` in `<TARGET_LANGUAGE>` for
 `<TARGET_ECOSYSTEM>`. Produce source, tests, and developer documentation.
 
+Before writing code, read this kit's [README.md](./README.md), the human
+entry point, and [AGENTS.md](./AGENTS.md), the entry point for agents with a
+local copy. Read them together with this prompt even if you arrived here
+directly. They provide complementary context, clarifications, and workflow
+guidance. Follow the "Build an implementation" guidance in `AGENTS.md`;
+"Maintaining the kit" applies when changing the kit itself.
+
 Use these repositories:
 
 - Authoritative specification:
@@ -52,6 +59,15 @@ or substitute an equivalently pinned local generator as documented by the kit.
 For Go, copy the template into this implementation's own tree and set
 `go_package_prefix` there to its real module path. Add and pin the required
 generated-code runtime dependency.
+
+The supplied templates use Buf's
+[remote plugins](https://buf.build/docs/bsr/remote-plugins/usage/), which run
+the generators on `buf.build`. When a suitable off-the-shelf plugin exists and
+remote generation fits the project, use it to avoid installing `protoc` or
+local generator executables. Buf and the generated-code runtime dependencies
+are still needed. Follow `<TARGET_ECOSYSTEM>` tooling conventions when they
+call for a different setup.
+
 Do not generate or hand-write gRPC, Connect, HTTP, IPC, or other transport
 stubs for `SigningService`, `TranscriptionService`, or `VerificationService`.
 
@@ -117,6 +133,26 @@ depth, constructed-node, alias-expansion, memory, input-size, and time bounds
 where the portable fixtures intentionally cannot prescribe a library-specific
 counter.
 
+Include a lightweight runnable signing and verification example, following
+the kit README's [example walkthroughs](./README.md#ship-a-runnable-example).
+Use an executable, script, notebook, or equivalent that fits
+`<TARGET_ECOSYSTEM>`; its conventions take precedence over the illustrative
+command-line shape. Use the offline flow of the Rust `github-keys` example
+as a reference, without GitHub identity discovery, login, or key registration.
+
+Put two tested, copy-and-paste walkthroughs in the implementation's `README.md`.
+The self-consistency walkthrough builds or prepares the example, creates a
+temporary Ed25519 key, signs a YAML file, and verifies using both the local
+key source and an explicit public-key file. For an SSH-agent implementation,
+include agent setup, fingerprint selection, and cleanup of the demo identity
+and files. The external-validation walkthrough downloads the published
+`github-keys` public-key snapshot and signed artifact from the same recorded
+`yaml-sigil-rs` commit and verifies locally with that explicit key, without an
+agent or GitHub identity lookup. Include prerequisites, concrete commands,
+expected success and failure behavior, and cleanup. Replace every illustrative
+build or executable placeholder with the implementation's actual invocation,
+and run both walkthroughs before reporting completion.
+
 A conforming implementation is not necessarily a secure one. Passing
 conformance establishes functional compatibility, nothing more. A security
 review scoped to `<TARGET_LANGUAGE>` and `<TARGET_ECOSYSTEM>` is required before
@@ -125,7 +161,8 @@ success alone as a security audit, certification, or approval.
 
 Finish by reporting the branch and commit hash used for each input repository,
 generated-code tool and runtime versions, test commands, fixture coverage,
-known deviations, and security-assessment status. Do not claim completion while
-a normative behavior or fixture case remains unimplemented.
+example walkthrough results, known deviations, and security-assessment status.
+Do not claim completion while a normative behavior or fixture case remains
+unimplemented.
 
 ---
