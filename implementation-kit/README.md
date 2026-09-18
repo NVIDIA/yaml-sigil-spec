@@ -402,7 +402,9 @@ rm -rf "$demo_dir"
 ### External validation
 
 Download the published fixture pair from `yaml-sigil-rs` on `main`,
-preserving their bytes.
+preserving their bytes. (You may add curl/wget commands in the cut and paste
+example as well depending on what works best for your developer and platform,
+make it easy for them)
 
 - [Public-key snapshot](https://raw.githubusercontent.com/NVIDIA/yaml-sigil-rs/main/examples/github-keys/fixtures/ddurst-nvidia.pub-key).
   Save as `reference.pub`.
