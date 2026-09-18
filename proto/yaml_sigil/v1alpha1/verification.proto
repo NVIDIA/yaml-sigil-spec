@@ -138,6 +138,12 @@ message PreVerifyResponse {
 
   // Verifier-derived parser observations, populated only on request.
   repeated string parser_observations = 4;
+
+  // Structured YAML signature-document unknown-field evidence. A successful
+  // YAML result MUST record the parser's decision. Non-OK and protobuf-form
+  // results use YAML_SIGNATURE_DOCUMENT_UNKNOWN_FIELD_EVIDENCE_NOT_CHECKED.
+  // Adapters MUST reject unrecognized numeric enum values.
+  YamlSignatureDocumentUnknownFieldEvidence yaml_signature_document_unknown_field_evidence = 5;
 }
 
 message UnverifiedSignature {
@@ -193,6 +199,25 @@ enum PreVerifyOutcome {
   PRE_VERIFY_OUTCOME_UNSIGNED = 2;
   PRE_VERIFY_OUTCOME_STRUCTURAL_FAILURE = 3;
   PRE_VERIFY_OUTCOME_METADATA_PARSE_FAILURE = 4;
+}
+
+enum YamlSignatureDocumentUnknownFieldEvidence {
+  // The field was absent or no value was selected. This value is invalid for
+  // every successful YAML VerifyFromPreVerify handoff.
+  YAML_SIGNATURE_DOCUMENT_UNKNOWN_FIELD_EVIDENCE_UNSPECIFIED = 0;
+
+  // PreVerify did not inspect YAML signature-document keys. Protobuf-form and
+  // non-OK results use this value. It is invalid for every successful YAML
+  // VerifyFromPreVerify handoff.
+  YAML_SIGNATURE_DOCUMENT_UNKNOWN_FIELD_EVIDENCE_NOT_CHECKED = 1;
+
+  // PreVerify inspected the YAML signature-document keys and found no unknown
+  // fields.
+  YAML_SIGNATURE_DOCUMENT_UNKNOWN_FIELD_EVIDENCE_NO_UNKNOWN_FIELDS = 2;
+
+  // PreVerify inspected the YAML signature-document keys and found one or
+  // more unknown fields.
+  YAML_SIGNATURE_DOCUMENT_UNKNOWN_FIELD_EVIDENCE_UNKNOWN_FIELDS_PRESENT = 3;
 }
 
 enum InvocationErrorCategory {

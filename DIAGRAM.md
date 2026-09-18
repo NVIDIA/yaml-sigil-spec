@@ -110,7 +110,7 @@ flowchart TD
 
         subgraph pv_box["PreVerifyOutcome"]
             direction TB
-            pv_ok["Ok<br/>(unverified payload + signature)"]
+            pv_ok["Ok<br/>(unverified payload + signature<br/>+ YAML unknown-field evidence)"]
             pv_unsigned["Unsigned"]
             pv_struct["StructuralFailure"]
             pv_meta["MetadataParseFailure"]
@@ -294,7 +294,9 @@ flowchart TD
   categories — flows to **All error cases**.
 - `PreVerify()`'s `Ok` outcome is the one variant that does not drain
   to an error; it is the same-instance handoff to
-  `VerifyFromPreVerify()`. The remaining `PreVerifyOutcome` values
+  `VerifyFromPreVerify()`. Its structured YAML unknown-field evidence is
+  distinct from diagnostic parser observations and is checked before key
+  resolution or cryptographic verification. The remaining `PreVerifyOutcome` values
   (`Unsigned`, `StructuralFailure`, `MetadataParseFailure`) flow to
   **All error cases**.
 - The **All error cases** box enumerates the concrete categories that
