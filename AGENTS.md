@@ -337,6 +337,11 @@ and a normative document disagree, the document wins.
   The SVG header carries the per-change checklist and the PNG
   rebuild command.
 
+### Implementation kit (non-normative)
+
+See
+[`implementation-kit/AGENTS.md`](./implementation-kit/AGENTS.md).
+
 ### Conformance fixtures (normative)
 
 The `conformance/` tree carries static fixtures auditors and

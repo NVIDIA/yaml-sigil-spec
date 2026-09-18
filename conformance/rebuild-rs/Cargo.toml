@@ -21,6 +21,10 @@ description = "Generators for conformance/ fixtures."
 name = "rebuild_all"
 path = "src/main.rs"
 
+[[test]]
+name = "conformance_manifest"
+path = "tests/conformance_manifest.rs"
+
 [dependencies]
 # Pinned exact versions; Cargo.lock locks the transitive graph.
 sha2 = "=0.10.9"
