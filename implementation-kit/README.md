@@ -24,12 +24,15 @@ https://github.com/NVIDIA/yaml-sigil-spec/tree/main/implementation-kit
 
 The rest of this document and
 [`implementation-prompt.md`](./implementation-prompt.md) describe what that
-work involves.
+work involves. Read them together with [AGENTS.md](./AGENTS.md), the entry
+point for agents with a local copy. All three provide complementary guidance
+for the same implementation task.
 
 ## Contents
 
 | File | Purpose |
 | --- | --- |
+| [`AGENTS.md`](./AGENTS.md) | Agent entry point and guidance for using or maintaining the kit. |
 | [`implementation-prompt.md`](./implementation-prompt.md) | Reusable prompt for a language implementation. |
 | [`buf.gen.go.yaml`](./buf.gen.go.yaml) | Go protobuf message generation. |
 | [`buf.gen.python.yaml`](./buf.gen.python.yaml) | Python protobuf message and type-stub generation. |
@@ -111,6 +114,17 @@ The templates provided here are
 [`buf.gen.yaml` v2 configuration files](https://buf.build/docs/configuration/v2/buf-gen-yaml/)
 covering three languages. Plugins for many more are listed in the
 [protobuf plugin directory](https://buf.build/plugins/protobuf).
+
+The templates use Buf's
+[remote plugins](https://buf.build/docs/bsr/remote-plugins/usage/). Their
+`remote: buf.build/...` entries run generators on the Buf Schema Registry,
+so you do not need to install `protoc` or the language-specific generator
+executables locally. When a suitable off-the-shelf plugin is available and
+remote generation fits your project, this avoids extra protobuf toolchain
+setup. You still need Buf, network access for generation, and the
+[generated-code runtime dependencies](#add-generated-code-runtimes).
+Use your ecosystem's tooling when it calls for a different setup; the
+[local-generator alternatives](#substitute-local-generators) remain available.
 
 Each template reads the `proto/` tree from the specification repository over
 Git, so generation needs no checkout of the specification itself:
@@ -309,6 +323,113 @@ to read when the assumptions have been checked first.
 Keep error values content-free. Report categories, and byte counts where they
 are useful, but do not carry payload bytes, key material, or malformed input
 into diagnostics, logs, or error strings.
+
+## Ship a runnable example
+
+Include a lightweight signing and verification example in the implementation,
+with two copy-and-paste walkthroughs in its `README.md`. Take the offline flow
+of [`yaml-sigil-rs/examples/github-keys`](https://github.com/NVIDIA/yaml-sigil-rs/tree/main/examples/github-keys)
+as a behavioral reference. Leave out GitHub identity discovery, login, and key
+registration. Select keys locally and use the implementation's public APIs.
+For key selection and trust semantics, consult the specification's
+[Verification API](../verification-api.md) and
+[signature-document guidance](../README.md#the-signature-document).
+
+Use whatever runnable form fits the language ecosystem, including an example
+binary, script, notebook, or small application. Ecosystem conventions take
+precedence over the command-line shape below. An SSH-agent example can sign
+with a selected agent identity, verify against agent public identities, and
+verify with an explicit OpenSSH public-key file. Explicit-key verification
+needs neither an agent nor identity lookup. Where an SSH agent is not a
+natural fit, use an ecosystem-native temporary key source and demonstrate
+equivalent signing and public-key verification. Keep verification offline even
+when the artifact contains a `keyid` URL.
+
+The following shell blocks illustrate the desired flow, not an executable
+provided by this kit. Replace `<build-command>` and `<demo>` with actual
+commands in the implementation's README, adapt flags to its interface, list
+prerequisites, and test the resulting instructions. For a non-CLI example,
+provide equally concrete setup and execution steps. Document expected success
+output and how failures appear; a CLI should exit unsuccessfully when
+verification does not succeed. Run both walkthroughs before delivery.
+
+### Self-consistency test
+
+Use short, commented steps. This example assumes OpenSSH tools and a running
+SSH agent. Start by building the example and creating a temporary demo key.
+
+```shell
+# Build the example.
+<build-command>
+
+# Create and load an ephemeral key in a new temporary directory.
+demo_dir="$(mktemp -d)"
+ssh-keygen -t ed25519 -f "$demo_dir/key" -N ''
+ssh-add "$demo_dir/key"
+demo_fingerprint="$(ssh-keygen -E sha256 -lf "$demo_dir/key.pub" | awk '{print $2}')"
+```
+
+Sign a small YAML file, then verify through each local key-selection path.
+Both verification calls should succeed.
+
+```shell
+# Sign with the demo key selected by fingerprint.
+printf 'service: demo\nport: 8080\n' > "$demo_dir/unsigned.yaml"
+<demo> sign \
+  --input "$demo_dir/unsigned.yaml" \
+  --output "$demo_dir/signed.yaml" \
+  --key-fingerprint "$demo_fingerprint"
+
+# Verify using public identities from the agent.
+<demo> verify --input "$demo_dir/signed.yaml"
+
+# Verify using only the explicit public-key file.
+<demo> verify \
+  --input "$demo_dir/signed.yaml" \
+  --public-key "$demo_dir/key.pub"
+```
+
+Include a negative check that changes the signed payload without signing again
+and confirms verification failure. Remove the demo key and files when finished,
+including after a failed step.
+
+```shell
+# Remove only the demo identity from the agent, then delete its files.
+ssh-add -d "$demo_dir/key.pub"
+rm -rf "$demo_dir"
+```
+
+### External validation
+
+Download the published fixture pair from `yaml-sigil-rs` on `main`,
+preserving their bytes. (You may add curl/wget commands in the cut and paste
+example as well depending on what works best for your developer and platform,
+make it easy for them)
+
+- [Public-key snapshot](https://raw.githubusercontent.com/NVIDIA/yaml-sigil-rs/main/examples/github-keys/fixtures/ddurst-nvidia.pub-key).
+  Save as `reference.pub`.
+- [Signed artifact](https://raw.githubusercontent.com/NVIDIA/yaml-sigil-rs/main/examples/github-keys/fixtures/signed.yaml).
+  Save as `reference.yaml`.
+
+Run the following from the directory containing those files, adapting the build
+and executable paths for the implementation. Verification uses the explicit
+public key and needs neither an SSH agent nor GitHub identity lookup.
+
+```shell
+# Build the example.
+<build-command>
+
+# Verify the downloaded artifact with the downloaded public key.
+<demo> verify --input reference.yaml --public-key reference.pub
+
+# Remove the downloaded files when finished.
+rm reference.yaml reference.pub
+```
+
+Expect successful verification. Consult the fixture's
+[documentation](https://github.com/NVIDIA/yaml-sigil-rs/tree/main/examples/github-keys#fixtures)
+for provenance and expected behavior. This checks an independently produced
+artifact and complements the specification's conformance suites.
 
 ## Use the conformance manifest
 
