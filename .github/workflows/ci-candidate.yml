@@ -7,6 +7,10 @@ on:
 
 permissions: {}
 
+# Workflow-level caller env is not inherited by local reusable workflows.
+env:
+  BUF_TOOLCHAIN_VERSION_REQUIREMENT: ">=1.73.0-rc.3"
+
 jobs:
   candidate_binding:
     name: Bind candidate to protected policy and base
@@ -144,13 +148,13 @@ jobs:
           install-only: true
           version: "0.2.54"
 
-      # Install the exact crate-packaged Buf toolchain without a token while no
+      # Resolve the supported crate-packaged Buf toolchain without a token while no
       # contributor path exists. Its build verifies Buf's signed checksum
       # manifest before placing the official binaries in ephemeral CARGO_HOME.
       - name: Install Buf
         run: |
-          cargo install buf-toolchain@1.72.0-hotfix.2 --locked
-          test "$("${CARGO_HOME}/bin/buf" --version)" = '1.72.0'
+          cargo install --locked --version "${BUF_TOOLCHAIN_VERSION_REQUIREMENT}" buf-toolchain
+          BUF_RS_VALIDATE_OFFLINE=1 "${CARGO_HOME}/bin/validate-cargo-buf-toolchain"
         working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/bootstrap
 
       # Load checkout-boundary scripts from current protected main

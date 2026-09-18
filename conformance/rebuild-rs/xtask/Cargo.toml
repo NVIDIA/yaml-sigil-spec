@@ -22,5 +22,6 @@ name = "xtask"
 path = "src/main.rs"
 
 [dependencies]
+semver = "1.0"
 ureq = { version = "=3.4.0", default-features = false, features = ["platform-verifier", "rustls"] }
 yamlsigil-pinned-dir = { path = "../pinned-dir" }

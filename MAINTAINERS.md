@@ -339,6 +339,14 @@ durable record.
 
 ### Test a protected-policy change
 
+For a Buf tooling change, check both Cargo installation paths against the
+minimum requirement in `ci-trusted.yml` and `ci-candidate.yml`. Confirm that
+installation uses default features and the installed validator accepts the
+resolved CLI. Candidate installation and verification must finish before
+materializing contributor content. Keep the provider-neutral local CLI minimum
+aligned with the published crate-to-CLI mapping; the crate release suffix is
+not a CLI suffix.
+
 Choose the test path from the exact reviewed workflow. Ordinary copied-ref
 CI requires `.github/workflows/ci.yml`, `ci-trusted.yml`, and
 `ci-candidate.yml` to match current `main`. Keep that equality guard intact.

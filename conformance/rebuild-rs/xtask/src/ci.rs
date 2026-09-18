@@ -8,8 +8,9 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-const BUF_INSTALL_GUIDANCE: &str = "Install or update the latest buf-toolchain release with:\n    \
-     cargo install --force buf-toolchain\n\n\
+const BUF_VERSION_REQUIREMENT: &str = ">=1.73.0";
+const BUF_INSTALL_GUIDANCE: &str = "Install a supported buf-toolchain release with:\n    \
+     cargo install --locked --force --version '>=1.73.0-rc.3' buf-toolchain\n\n\
      Then ensure $CARGO_HOME/bin is on PATH.\n\
      See https://buf.build/docs/cli/installation/ for official alternatives.";
 const CARGO_DENY_INSTALL_COMMAND: &str = "cargo install --locked cargo-deny --version 0.20.2";
@@ -236,14 +237,28 @@ fn resolve_buf() -> io::Result<PathBuf> {
         )));
     }
 
-    if String::from_utf8_lossy(&output.stdout).trim().is_empty() {
-        return Err(buf_prerequisite_error(format!(
-            "{} --version returned no version.",
-            buf.display()
-        )));
-    }
+    validate_buf_version(&output.stdout)?;
 
     Ok(buf)
+}
+
+fn validate_buf_version(stdout: &[u8]) -> io::Result<()> {
+    let text = std::str::from_utf8(stdout)
+        .map_err(|error| buf_prerequisite_error(format!("Buf version is not UTF-8: {error}")))?;
+    let version = semver::Version::parse(text.trim()).map_err(|error| {
+        buf_prerequisite_error(format!(
+            "Invalid Buf CLI version {:?}: {error}",
+            text.trim()
+        ))
+    })?;
+    let requirement = semver::VersionReq::parse(BUF_VERSION_REQUIREMENT)
+        .expect("Buf CLI requirement is valid semver");
+    if !requirement.matches(&version) {
+        return Err(buf_prerequisite_error(format!(
+            "Buf CLI {version} does not satisfy {BUF_VERSION_REQUIREMENT}."
+        )));
+    }
+    Ok(())
 }
 
 fn buf_prerequisite_error(summary: String) -> io::Error {
@@ -279,14 +294,25 @@ mod tests {
     }
 
     #[test]
-    fn buf_version_policy_is_aligned_and_actionable() {
-        assert!(BUF_INSTALL_GUIDANCE.contains("cargo install --force buf-toolchain"));
-        assert!(!BUF_INSTALL_GUIDANCE.contains("buf-toolchain@"));
-        assert!(BUF_INSTALL_GUIDANCE.contains("$CARGO_HOME/bin"));
-        assert!(BUF_INSTALL_GUIDANCE.contains("https://buf.build/docs/cli/installation/"));
-        assert!(AGENT_GUIDANCE.contains("cargo install --force buf-toolchain"));
-        assert!(AGENT_GUIDANCE.contains("rolling latest release"));
-        assert!(AGENT_GUIDANCE.contains("Keep `cargo xtask ci` provider-neutral"));
+    fn buf_version_accepts_the_minimum_and_newer_releases() {
+        for version in ["1.73.0\n", "1.73.1", "1.74.0", "2.0.0", "1.73.0+build.1"] {
+            validate_buf_version(version.as_bytes()).unwrap();
+        }
+    }
+
+    #[test]
+    fn unsupported_buf_versions_report_install_guidance() {
+        for version in [
+            b"1.72.0".as_slice(),
+            b"1.73.0-rc.3",
+            b"1.74.0-rc.1",
+            b"",
+            b"not-a-version",
+            b"\xff",
+        ] {
+            let error = validate_buf_version(version).unwrap_err().to_string();
+            assert!(error.contains(BUF_INSTALL_GUIDANCE), "{error}");
+        }
     }
 
     #[test]
