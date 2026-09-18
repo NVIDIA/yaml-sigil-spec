@@ -592,3 +592,5 @@ Rust repositories. Their `support/M.N` contribution bases apply only to
 `yaml-sigil-rs` and `yaml-sigil-traits`. The specification continues to accept
 main and its canonical `vX`, `vXalphaY`, or `vXbetaY` coordination bases and
 rejects support bases. Shared helper updates must preserve that distinction.
+
+<!-- Inert candidate Buf installation canary; close without merging. -->
