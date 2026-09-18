@@ -592,3 +592,8 @@ Rust repositories. Their `support/M.N` contribution bases apply only to
 `yaml-sigil-rs` and `yaml-sigil-traits`. The specification continues to accept
 main and its canonical `vX`, `vXalphaY`, or `vXbetaY` coordination bases and
 rejects support bases. Shared helper updates must preserve that distinction.
+
+The shared binder's `promotion_branch` output applies only to
+`yaml-sigil-rs`, whose release guard checks its unpublished coordination
+version. It remains empty for specification candidates; this repository's
+coordination and promotion procedures remain independent.
