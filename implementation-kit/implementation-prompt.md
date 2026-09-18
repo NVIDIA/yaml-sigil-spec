@@ -140,15 +140,17 @@ Use an executable, script, notebook, or equivalent that fits
 command-line shape. Use the offline flow of the Rust `github-keys` example
 as a reference, without GitHub identity discovery, login, or key registration.
 
-Put two tested, copy-and-paste walkthroughs in the implementation's `README.md`.
+Put two tested walkthroughs in the implementation's `README.md`, using short,
+commented steps with copy-and-paste commands. Keep setup, signing, verification,
+and cleanup readable as separate steps rather than one shell script.
 The self-consistency walkthrough builds or prepares the example, creates a
 temporary Ed25519 key, signs a YAML file, and verifies using both the local
 key source and an explicit public-key file. For an SSH-agent implementation,
 include agent setup, fingerprint selection, and cleanup of the demo identity
 and files. The external-validation walkthrough downloads the published
-`github-keys` public-key snapshot and signed artifact from the same recorded
-`yaml-sigil-rs` commit and verifies locally with that explicit key, without an
-agent or GitHub identity lookup. Include prerequisites, concrete commands,
+`github-keys` public-key snapshot and signed artifact from the linked
+`yaml-sigil-rs` fixtures on `main` and verifies locally with that explicit key,
+without an agent or GitHub identity lookup. Include prerequisites, concrete commands,
 expected success and failure behavior, and cleanup. Replace every illustrative
 build or executable placeholder with the implementation's actual invocation,
 and run both walkthroughs before reporting completion.

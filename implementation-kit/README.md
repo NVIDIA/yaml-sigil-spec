@@ -355,80 +355,79 @@ verification does not succeed. Run both walkthroughs before delivery.
 
 ### Self-consistency test
 
-Build or prepare the example, create an ephemeral Ed25519 key, sign a small
-YAML file, and verify it through both local key-selection paths. This Bash
-pattern requires OpenSSH tools and uses a temporary directory and an isolated
-agent. The subshell cleans up its agent and files on exit, so it can be rerun
-without replacing existing keys or changing identities in the user's agent.
+Use short, commented steps. This example assumes OpenSSH tools and a running
+SSH agent. Start by building the example and creating a temporary demo key.
 
 ```shell
+# Build the example.
 <build-command>
-(
-  set -eu
-  demo_dir="$(mktemp -d)"
-  trap 'rm -rf "$demo_dir"' EXIT
-  demo_agent_env="$(ssh-agent -s)"
-  eval "$demo_agent_env"
-  trap 'ssh-agent -k >/dev/null || true; rm -rf "$demo_dir"' EXIT
-  ssh-keygen -t ed25519 -f "$demo_dir/key" -N ''
-  ssh-add "$demo_dir/key"
-  demo_fingerprint="$(ssh-keygen -E sha256 -lf "$demo_dir/key.pub" | awk '{print $2}')"
 
-  printf 'service: demo\nport: 8080\n' > "$demo_dir/unsigned.yaml"
-  <demo> sign \
-    --input "$demo_dir/unsigned.yaml" \
-    --output "$demo_dir/signed.yaml" \
-    --key-fingerprint "$demo_fingerprint"
-  <demo> verify --input "$demo_dir/signed.yaml"
-  <demo> verify \
-    --input "$demo_dir/signed.yaml" \
-    --public-key "$demo_dir/key.pub"
-)
+# Create and load an ephemeral key in a new temporary directory.
+demo_dir="$(mktemp -d)"
+ssh-keygen -t ed25519 -f "$demo_dir/key" -N ''
+ssh-add "$demo_dir/key"
+demo_fingerprint="$(ssh-keygen -E sha256 -lf "$demo_dir/key.pub" | awk '{print $2}')"
 ```
 
-Both verification calls should succeed. Include a negative check that changes
-the signed payload without signing again and confirms verification failure.
-Passing this walkthrough checks the implementation against itself; the next
-walkthrough checks an artifact produced by another implementation.
+Sign a small YAML file, then verify through each local key-selection path.
+Both verification calls should succeed.
+
+```shell
+# Sign with the demo key selected by fingerprint.
+printf 'service: demo\nport: 8080\n' > "$demo_dir/unsigned.yaml"
+<demo> sign \
+  --input "$demo_dir/unsigned.yaml" \
+  --output "$demo_dir/signed.yaml" \
+  --key-fingerprint "$demo_fingerprint"
+
+# Verify using public identities from the agent.
+<demo> verify --input "$demo_dir/signed.yaml"
+
+# Verify using only the explicit public-key file.
+<demo> verify \
+  --input "$demo_dir/signed.yaml" \
+  --public-key "$demo_dir/key.pub"
+```
+
+Include a negative check that changes the signed payload without signing again
+and confirms verification failure. Remove the demo key and files when finished,
+including after a failed step.
+
+```shell
+# Remove only the demo identity from the agent, then delete its files.
+ssh-add -d "$demo_dir/key.pub"
+rm -rf "$demo_dir"
+```
 
 ### External validation
 
-Use the published
-[`ddurst-nvidia.pub-key`](https://github.com/NVIDIA/yaml-sigil-rs/blob/main/examples/github-keys/fixtures/ddurst-nvidia.pub-key)
-and
-[`signed.yaml`](https://github.com/NVIDIA/yaml-sigil-rs/blob/main/examples/github-keys/fixtures/signed.yaml)
-fixtures. Download both from the same exact `yaml-sigil-rs` commit recorded
-under [Track your inputs](#track-your-inputs). The example below pins a commit
-containing the pair. Record the chosen commit in the implementation's README
-and test metadata, and preserve the downloaded bytes.
+Download the published fixture pair from `yaml-sigil-rs` on `main`,
+preserving their bytes.
 
-Make this walkthrough independently runnable, including its build step.
-It needs `curl` for the downloads; verification afterward is local and uses
-only the supplied public-key file. The account name identifies the fixture's
-source, not an identity the example needs to discover or authenticate.
+- [Public-key snapshot](https://raw.githubusercontent.com/NVIDIA/yaml-sigil-rs/main/examples/github-keys/fixtures/ddurst-nvidia.pub-key).
+  Save as `reference.pub`.
+- [Signed artifact](https://raw.githubusercontent.com/NVIDIA/yaml-sigil-rs/main/examples/github-keys/fixtures/signed.yaml).
+  Save as `reference.yaml`.
+
+Run the following from the directory containing those files, adapting the build
+and executable paths for the implementation. Verification uses the explicit
+public key and needs neither an SSH agent nor GitHub identity lookup.
 
 ```shell
+# Build the example.
 <build-command>
-(
-  set -eu
-  demo_dir="$(mktemp -d)"
-  trap 'rm -rf "$demo_dir"' EXIT
-  reference_commit=deb53b7c554b89437c980a729a614dd46e5624e6
-  fixture_base="https://raw.githubusercontent.com/NVIDIA/yaml-sigil-rs/$reference_commit/examples/github-keys/fixtures"
-  curl --fail --silent --show-error --location \
-    "$fixture_base/ddurst-nvidia.pub-key" --output "$demo_dir/reference.pub"
-  curl --fail --silent --show-error --location \
-    "$fixture_base/signed.yaml" --output "$demo_dir/reference.yaml"
-  <demo> verify \
-    --input "$demo_dir/reference.yaml" \
-    --public-key "$demo_dir/reference.pub"
-)
+
+# Verify the downloaded artifact with the downloaded public key.
+<demo> verify --input reference.yaml --public-key reference.pub
+
+# Remove the downloaded files when finished.
+rm reference.yaml reference.pub
 ```
 
-Expect successful verification with the explicit key. Consult the fixture's
+Expect successful verification. Consult the fixture's
 [documentation](https://github.com/NVIDIA/yaml-sigil-rs/tree/main/examples/github-keys#fixtures)
-at the selected commit for provenance and expected behavior. This example
-complements the specification's conformance suites; it does not replace them.
+for provenance and expected behavior. This checks an independently produced
+artifact and complements the specification's conformance suites.
 
 ## Use the conformance manifest
 
