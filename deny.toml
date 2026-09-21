@@ -28,7 +28,7 @@ wildcards = "deny"
 allow-wildcard-paths = true
 highlight = "all"
 skip = [
-    { crate = "syn@2.0.117", reason = "jni-macros 0.22.4 still requires syn 2 while thiserror 2.0.20 requires syn 3" },
+    { crate = "syn@2.0.119", reason = "jni-macros 0.22.4 still requires syn 2 while thiserror 2.0.20 requires syn 3" },
     { crate = "windows-sys@0.52.0", reason = "ring 0.17.14 still requires windows-sys 0.52 while current platform support uses 0.61" },
 ]
 skip-tree = []
