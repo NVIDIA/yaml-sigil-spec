@@ -344,6 +344,11 @@ intentional compatibility-fixture pins. An Action revision and its installed
 tool version are separate inputs; verify both and use the same tool version
 locally. Changes to CI tool inputs require the staging route below.
 
+Keep the shared CI installer revision aligned across all three YamlSigil
+repositories. Retain explicit tool versions, checksum enforcement, and disabled
+fallback. Verify installed dependency-policy tools before candidate
+materialization, and exercise the candidate route after adopting an upgrade.
+
 For a Buf tooling change, check both Cargo installation paths against the
 minimum requirement in `ci-trusted.yml` and `ci-candidate.yml`. Confirm that
 installation uses default features and the installed validator accepts the
