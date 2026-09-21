@@ -10,7 +10,7 @@ use std::process::Command;
 
 const BUF_VERSION_REQUIREMENT: &str = ">=1.73.0";
 const BUF_INSTALL_GUIDANCE: &str = "Install a supported buf-toolchain release with:\n    \
-     cargo install --locked --force --version '>=1.73.0-rc.3' buf-toolchain\n\n\
+     cargo install --locked --force --version '>=1.73.0' buf-toolchain\n\n\
      Then ensure $CARGO_HOME/bin is on PATH.\n\
      See https://buf.build/docs/cli/installation/ for official alternatives.";
 const CARGO_DENY_INSTALL_COMMAND: &str = "cargo install --locked cargo-deny --version 0.20.2";

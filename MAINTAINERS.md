@@ -339,6 +339,11 @@ durable record.
 
 ### Test a protected-policy change
 
+For dependency and tool refreshes, review the resolved Cargo graph and retain
+intentional compatibility-fixture pins. An Action revision and its installed
+tool version are separate inputs; verify both and use the same tool version
+locally. Changes to CI tool inputs require the staging route below.
+
 For a Buf tooling change, check both Cargo installation paths against the
 minimum requirement in `ci-trusted.yml` and `ci-candidate.yml`. Confirm that
 installation uses default features and the installed validator accepts the
