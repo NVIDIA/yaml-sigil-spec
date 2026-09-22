@@ -261,7 +261,7 @@ It is a separately authorized coordinator operation, not contributor intake.
      --reapply-cherry-picks --empty=ask \
      --onto "${main_sha}" "${previous_main_sha}"
    new_line_sha="$(git rev-parse HEAD)"
-   cargo xtask ci
+   cargo xtask check
    ```
 
    An empty-commit stop requires explicit reconciliation; never silently skip
@@ -386,6 +386,13 @@ all authoritative policy and Linux jobs. Copied refs retain their policy/base
 attestation under `Candidate CI / Candidate CI (Linux)`. macOS and Windows
 remain advisory where present; the specification repository is Linux-only.
 The tool-pin source check validates both local callees independently.
+
+Use `cargo xtask check` for the local validation gate; `ci` remains an alias.
+Trusted CI uses selected checks from that interface. Candidate CI keeps
+Markdown, schema, formatting, and dependency-policy tools before candidate
+execution, then runs `cargo xtask check --only=check,clippy,test` in its
+terminal credential-free phase. Keep that ordering when aligning commands;
+compiling a candidate's xtask belongs in the terminal phase.
 
 For changed workflow policy, use the separate maintainer staging route:
 

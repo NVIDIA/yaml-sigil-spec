@@ -90,6 +90,8 @@ RUN useradd --uid 1000 --create-home --shell /bin/bash builder
 
 COPY --from=builder --chown=builder:builder \
     /src/target/release/rebuild_all /usr/local/bin/rebuild_all
+# The generator opens this pinned corpus through its build-time source path.
+COPY --from=builder /src/vendor/acvp /src/vendor/acvp
 COPY LICENSE THIRD_PARTY_NOTICES.md \
     /usr/share/doc/yamlsigil-conformance-rebuild/
 COPY --from=builder /src/notices/cargo \

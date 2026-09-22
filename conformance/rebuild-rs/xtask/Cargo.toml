@@ -15,13 +15,17 @@ autotests = false
 # This developer tool has no build script.
 build = false
 license = "Apache-2.0"
-description = "Developer-only tasks (vendor refresh, etc.) for rebuild-rs."
+description = "Development checks, coverage, image builds, and vendor refresh for rebuild-rs."
+
+[lib]
+path = "src/lib.rs"
 
 [[bin]]
 name = "xtask"
 path = "src/main.rs"
 
 [dependencies]
+clap = { version = "=4.6.7", features = ["derive"] }
 semver = "1.0"
 ureq = { version = "=3.4.2", default-features = false, features = ["platform-verifier", "rustls"] }
 yamlsigil-pinned-dir = { path = "../pinned-dir" }

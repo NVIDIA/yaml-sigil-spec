@@ -118,9 +118,63 @@ it explicitly when running outside the container.
 Run the complete validation sequence from the repository root:
 
 ```shell
-cargo xtask ci
+cargo xtask check
 ```
 
 This includes repository Markdown, Protobuf, and JSON Schema checks, followed
-by formatting, linting, tests, and a dependency audit for this locked Rust
-workspace.
+by formatting, compilation, linting, tests, unused-dependency detection,
+dependency policy, and audit checks for this locked Rust workspace. `ci` is an
+alias for `check`.
+
+Select checks with `cargo xtask check --only=fmt,clippy,test` or omit checks
+with `--exclude=audit`. Selections run in registry order and stop on failure.
+Use `--all-features`, `--features`, or `--no-default-features` to select Cargo
+features; with no feature option, checks enable all features.
+
+## Coverage
+
+From the repository root or this workspace, generate a fresh HTML report:
+
+```shell
+cargo xtask coverage
+cargo xtask coverage --engine tarpaulin
+cargo xtask coverage --open
+cargo xtask coverage-open --engine tarpaulin
+```
+
+Install the selected engine with `cargo install --locked cargo-llvm-cov` or
+`cargo install --locked cargo-tarpaulin`. LLVM coverage also requires
+`rustup component add llvm-tools-preview`. Both opening commands regenerate
+the report before opening it. If no browser opener is installed, use the
+printed report path.
+
+Reports live beneath this workspace at
+`target/coverage/llvm-cov/html/index.html` and
+`target/coverage/tarpaulin/tarpaulin-report.html`. Tarpaulin builds in
+`target/coverage/tarpaulin/build` so its cleanup cannot remove ordinary Cargo
+builds. Coverage accepts the same feature options as `check`.
+
+## Build and verify the local image
+
+From the repository root or this workspace:
+
+```shell
+cargo xtask image
+cargo xtask image --engine docker
+cargo xtask image --engine buildah --tag yamlsigil-conformance-rebuild-rs
+```
+
+`auto` selects a usable Docker daemon first, then Buildah. An explicit engine
+must work; a build failure does not switch engines. The command builds this
+Dockerfile with the repository root as its context, runs the generator with
+network access disabled, and compares every generated fixture byte with the
+repository. It keeps the image and removes its temporary container and fixture
+tree on success or failure. The default tag is
+`yamlsigil-conformance-rebuild-rs`. Builds are local and never push an image.
+
+The runtime image includes the pinned ACVP snapshot at `/src/vendor/acvp`,
+where the generator reads it. The manual Docker and native rebuild commands
+remain available above and in [`../README.md`](../README.md).
+
+The full command and maintenance contract is in
+[`xtask/AGENTS.md`](xtask/AGENTS.md).
