@@ -25,8 +25,7 @@ exclude = [
 # Descriptive link text is an accessibility best practice, but MD059's
 # findings in this repo are judgment calls on prose style rather than
 # mechanical formatting (unlike MD013 line length or MD047 EOF newline).
-# Disable globally so the lint pass stays noise-free; tighten link-text
-# wording in editorial review passes instead.
+# Review link wording in context during documentation edits.
 disable = ["MD059"]
 
 # --------------------------------------------------------------------
@@ -45,6 +44,6 @@ spaces-per-tab = 2
 code-blocks = false
 
 [MD033]
-# The HTML tags the editorial conventions actually use in prose.
-# Anything else fires MD033. Reference: https://rumdl.dev/md033/
+# Allow the HTML tags used by the repository's prose conventions.
+# MD033 rejects other tags. Reference: https://rumdl.dev/md033/
 allowed-elements = ["br", "img", "li", "p", "ul"]

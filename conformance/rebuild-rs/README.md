@@ -1,7 +1,8 @@
 # conformance/rebuild-rs
 
-Generator source for `conformance/` fixtures. External Cargo dependencies are
-minimal and exact-pinned in `Cargo.toml`, grouped by role:
+This workspace generates the fixtures under `conformance/`. The generator's
+external dependencies are exact-pinned in `Cargo.toml`. The workspace uses
+these dependencies:
 
 - Crypto primitives (used by the hand-rolled implementations against
   cited upstream specs): `sha2`, `num-bigint`, `num-integer`,
@@ -14,9 +15,9 @@ minimal and exact-pinned in `Cargo.toml`, grouped by role:
 - Developer-only ACVP refresh transport: `ureq` uses Rustls with the platform
   certificate verifier.
 
-The full transitive graph is locked in `Cargo.lock`. The Docker image
-defined here packages everything needed to rebuild every fixture in
-`conformance/` bit-identically.
+`Cargo.lock` records the full transitive dependency graph. Regeneration must
+reproduce every fixture in `conformance/` byte-for-byte unless the
+specification and generator change together.
 
 The generator incorporates identified standards and test-vector material that
 is not relicensed under Apache-2.0. Its source attribution, copying conditions,
@@ -72,17 +73,15 @@ rebuild-rs/
 
 ### Vendored upstream data
 
-The `vendor/` tree carries pinned snapshots of external test-vector
-files. Each subdirectory has its own `README.md` describing the
-upstream origin, pinned commit hash, and manual-verification
-commands. Currently:
+The `vendor/` tree contains pinned test-vector snapshots. Each subdirectory's
+`README.md` records its upstream source, commit, and verification commands:
 
 - [`vendor/acvp/README.md`](./vendor/acvp/README.md) — NIST
   ACVP-Server ECDSA SigGen FIPS 186-5 test vectors.
 
 To refresh a vendored file, use the corresponding xtask subcommand:
 
-```sh
+```shell
 cargo xtask update-acvp [--commit <40-character-lowercase-commit>]
 ```
 
@@ -94,18 +93,17 @@ settings. It does not retry, requests identity encoding, and bounds response
 headers, each network phase, the complete request, and the response body before
 replacing either pinned file.
 
-The xtask rewrites both the data file and the vendor `README.md` so the pin is
-always self-describing. Downloads and replay are limited to a 3 MiB encoded
-snapshot. Group, case, selected-replay, and decoded-field limits are documented
-in that generated vendor README and exercised by exact-boundary and
-limit-plus-one tests.
+The updater writes the data file and records its pin in the vendor
+`README.md`. Downloads and replay accept at most 3 MiB of encoded JSON.
+The generated README lists the group, case, selected-replay, and decoded-field
+limits. Tests cover each exact boundary and one value beyond it.
 
 ## Running locally without Docker
 
 The native flow requires Linux and a mounted `/proc`. Use the Docker workflow
 from [`../README.md`](../README.md) on other host operating systems.
 
-```sh
+```shell
 cd conformance/rebuild-rs
 CONFORMANCE_ROOT="$(realpath ..)" cargo run --release --locked
 ```

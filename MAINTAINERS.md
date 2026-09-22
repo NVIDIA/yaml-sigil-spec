@@ -1,7 +1,7 @@
 # Maintainer guide
 
-This is the concise human maintainer operations runbook for
-`yaml-sigil-spec`. Contributor guidance lives in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Use this runbook for maintainer operations in `yaml-sigil-spec`. Read
+[`CONTRIBUTING.md`](CONTRIBUTING.md) for contributor guidance.
 
 If an agent performs repository work, require it to read
 [`AGENTS.md`](AGENTS.md) first. That file defines agent-specific skill and
@@ -95,10 +95,9 @@ from other forbidden responses; HTTP 403 alone does not establish the cause.
 Coordination branches are optional, temporary contribution bases. Generic CI
 routing supports explicitly activated lines; it does not require one to exist.
 
-Landing coordination support does not activate a line. Use this procedure only
-for a concrete approved next track, with one separately reviewed repository-
-administrator activation packet and explicit authorization for its exact
-objects and settings.
+Activate a coordination line only for an approved next track. Obtain a
+separately reviewed repository-administrator activation packet and explicit
+authorization for its exact objects and settings.
 
 1. Select exactly one unused `vX`, `vXalphaY`, or `vXbetaY` line. Record
    exact current `main`, the full coordination and
@@ -143,9 +142,8 @@ objects and settings.
 
 ### Test a coordination-line pull request
 
-Use this only after one canonical next-line base has been explicitly activated,
-advertised, and protected. Landing this runbook or its workflow support does
-not activate a line.
+Use this procedure only for a canonical next-line base that maintainers have
+explicitly activated, advertised, and protected.
 
 1. Record the full current protected-policy, contribution-base, and candidate
    objects:
@@ -204,9 +202,8 @@ intentionally distinct.
      origin "<NEW-SHA>:${destination}"
    ```
 
-   The exact lease is a stale-ref compare-and-swap guard, not permission to
-   rewrite history. Never use a generic force option or retry an ambiguous
-   update.
+   The exact lease rejects an update if the ref has moved. Keep the update a
+   fast-forward. Never use a generic force option or retry an ambiguous update.
 4. Restore protection before interpreting the update. Read back the ref,
    terminal pull-request association, retained commits, signatures, DCO,
    branch CI, artifacts, deployments, and unchanged tag protection.
@@ -217,7 +214,7 @@ Synchronize only an active, unpromoted coordination line. A ref retained
 solely for recovery is closed to intake and routine synchronization.
 
 Synchronization rebases the complete next-line series onto current `main`.
-It is a separately authorized coordinator operation, not contributor intake.
+Obtain separate coordinator authorization before synchronizing a line.
 
 1. Pause intake. Record exact `main`, coordination, previous-main-base, and
    rollback objects plus complete applicable rules and active runs.
@@ -374,17 +371,17 @@ Choose the test path from the exact reviewed workflow. Ordinary copied-ref
 CI requires `.github/workflows/ci.yml`, `ci-trusted.yml`, and
 `ci-candidate.yml` to match current `main`. Keep that equality guard intact.
 If the workflows are unchanged, use the ordinary exact-head `/ok to test`
-path. Its verdict exercises existing protected policy;
-a reporter change still needs focused tests and an inert current-main canary
-after integration before the new reporter is considered operational.
+path. Its verdict exercises protected policy. For a reporter change, run
+focused tests and an inert canary against current `main` after integration
+before relying on the updated reporter.
 
 The `CI` workflow selects one local reusable workflow before expanding jobs.
-`Trusted CI` runs main, coordination/support where supported, and staging
-checks; `Candidate CI` runs explicitly admitted copied refs. The inactive
+`Trusted CI` runs `main`, coordination and support branches where supported,
+and staging refs; `Candidate CI` runs explicitly admitted copied refs. The inactive
 route has a static skipped name. The trusted `Linux result` aggregate requires
 all authoritative policy and Linux jobs. Copied refs retain their policy/base
 attestation under `Candidate CI / Candidate CI (Linux)`. macOS and Windows
-remain advisory where present; the specification repository is Linux-only.
+jobs are advisory where present; the specification repository is Linux-only.
 The tool-pin source check validates both local callees independently.
 
 For changed workflow policy, use the separate maintainer staging route:
@@ -404,16 +401,16 @@ For changed workflow policy, use the separate maintainer staging route:
    git push origin <HEAD-SHA>:refs/heads/ci-testing/pr-<PR-NUMBER>-<HEAD-SHA>
    ```
 
-   This push is exact-head test authorization, not merge authorization. A
-   changed head requires fresh review and a new ref. An external contributor
-   cannot perform this upstream staging operation; an eligible maintainer may
-   stage the contributor's reviewed head.
+   This push authorizes testing of the exact head. Obtain separate approval to
+   merge it. A changed head requires fresh review and a new ref. An external
+   contributor cannot perform this upstream staging operation; an eligible
+   maintainer may stage the contributor's reviewed head.
 3. Wait for automatic App-owned `Required CI` on that head and inspect advisory
    results. The protected-main reporter authenticates the original pushing
    user's current write permission, exact PR/ref/head, current-main parent
    chain, CI workflow and attempt, unique Linux aggregate and zero artifacts.
    It repeats mutable checks before writing. Staging may exercise changed
-   workflow bytes; ordinary copied refs still require protected blob equality.
+   workflow bytes; ordinary copied refs require protected blob equality.
 4. Use the ordinary passing-PR merge procedure after the required verdict and
    merge review succeed. Other `ci-testing/*` names supply test evidence only.
    A missing or rejected verdict remains blocking; inspect the reporter's
@@ -549,8 +546,8 @@ erase, or rewrite `main` for a revert.
 
 Use this only for an explicitly authorized, fully reviewed head that the
 normal required-check path cannot evaluate for one of the causes above. It
-requires equivalent exact-head validation and repository-admin access, not an
-organization-owner settings change.
+requires equivalent exact-head validation and repository-admin access. Keep
+organization settings unchanged.
 
 1. Freeze the exact old `main`, target head, pull request, active runs, and
    every rule applicable to `main`. Prove every requirement except the named
@@ -603,20 +600,19 @@ choose the smallest accurate type. Follow the sign-off requirements in
 
 ## Repository development guidance
 
-Repository scope, commands, documentation and style, third-party material
-and attribution, coordinated Buf upgrades, and other working guidance remain
-in [`AGENTS.md`](AGENTS.md). Agents performing maintainer operations must
-read both files completely.
+Read [`AGENTS.md`](AGENTS.md) for repository scope, development commands,
+documentation style, and third-party attribution. Agents performing maintainer
+operations must read both files completely.
 
 ## Shared admission policy
 
 The binder, reporter, materializer, and their fixtures are shared with the
 Rust repositories. Their `support/M.N` contribution bases apply only to
-`yaml-sigil-rs` and `yaml-sigil-traits`. The specification continues to accept
-main and its canonical `vX`, `vXalphaY`, or `vXbetaY` coordination bases and
+`yaml-sigil-rs` and `yaml-sigil-traits`. The specification accepts `main` and
+its canonical `vX`, `vXalphaY`, or `vXbetaY` coordination bases and
 rejects support bases. Shared helper updates must preserve that distinction.
 
 The shared binder's `promotion_branch` output applies only to
 `yaml-sigil-rs`, whose release guard checks its unpublished coordination
-version. It remains empty for specification candidates; this repository's
+version. It is empty for specification candidates; this repository's
 coordination and promotion procedures remain independent.

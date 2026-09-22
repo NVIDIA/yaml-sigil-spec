@@ -235,8 +235,8 @@ require public gRPC deployment.
 
 ## DIY Implementations
 
-[`yaml-sigil-rs`](https://github.com/NVIDIA/yaml-sigil-rs) is the only NVIDIA
-provided implementation at time of writing. The
+NVIDIA provides [`yaml-sigil-rs`](https://github.com/NVIDIA/yaml-sigil-rs) as
+its Rust implementation. The
 [`implementation-kit/`](./implementation-kit/) directory helps start one in
 another language, with protobuf generation templates, a reusable implementation
 prompt, and a machine-readable index of the conformance fixtures. The kit is

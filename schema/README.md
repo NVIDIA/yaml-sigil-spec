@@ -15,15 +15,12 @@ The JSON Schema document is written against the IETF JSON Schema draft:
 
 ## JSON Schema interim validation formalism
 
-The artifact in this directory is the **working enumeration of the
-YAML-form `YamlSigilSignature.v1alpha1` shape**, written in JSON
-Schema because that's the most widely understood notation for the
-constraints today. The repo [README](../README.md)'s Implementation
-Note treats this as the spec's interim validation formalism. JSON
-Schema is in use today; the broader alignment story (driving the
-`.proto` and the YAML-form schema from one source, with
-`protovalidate` as the eventual mechanization path) is named under
-Known Deficiencies.
+Use this JSON Schema as the working enumeration of the YAML-form
+`YamlSigilSignature.v1alpha1` shape. It is the specification's interim
+validation formalism, as described in the
+[README](../README.md)'s Implementation Note. Generating the `.proto` and
+YAML-form schema from one source, with `protovalidate` as the intended
+mechanization path, is tracked under Known Deficiencies.
 
 JSON Schema's fit for a YAML-rooted format is imperfect:
 
@@ -54,9 +51,8 @@ JSON Schema's fit for a YAML-rooted format is imperfect:
   algorithms) and is enforced at the verification stage, per
   verification-api.md's metadata-extraction rules.
 
-This file remains the reference shape any future bespoke
-YAML-subset validator MUST agree with; switching mechanisms would
-be a "swap the validator, keep the shape" exercise.
+Any replacement YAML-subset validator MUST agree with this reference shape.
+Changing the validation mechanism must preserve the schema constraints.
 
 ## Recommended editing workflow
 
@@ -77,11 +73,8 @@ The protobuf `v1alpha1.YamlSigilSignature` definition (in
 and the YAML `YamlSigilSignature.v1alpha1` definition here are two
 reifications of the same logical schema. **They MUST be kept aligned:
 a change to one MUST be accompanied by a matching change to the
-other.** A formal alignment process — automated checks, cross-validation
-tooling, conformance tests — cannot be created until both
-representations exist by hand first. That is why both are written by
-hand now. Mechanizing the alignment is future work; the artifacts have
-to exist before any process can validate them against each other.
+other.** Maintain both representations by hand. Automated alignment is
+tracked under Known Deficiencies.
 
 **`alg` spelling.** Protobuf `Algorithm` enum constants use an
 `ALGORITHM_` prefix; this JSON Schema and the YAML `alg` scalar use the

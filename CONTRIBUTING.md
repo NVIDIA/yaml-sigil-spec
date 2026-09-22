@@ -7,17 +7,16 @@ material, then review the result as the responsible author before submitting it.
 Repository writers use [`MAINTAINERS.md`](MAINTAINERS.md) for exact-head test
 authorization, protected-policy staging, merges, exceptions, and reverts.
 
-## The Critical Rule
+## Understand your contribution
 
-**You must understand your contribution.** AI-assisted contributions are
-welcome, but you must be able to explain what changed, why it changed, and how
-it affects the normative specification or companion material. Do not submit
-generated text, schemas, diagrams, fixtures, or documentation that you cannot
-defend without the agent open.
+You must understand the contribution you submit. Explain what changed, why it
+changed, and how it affects the normative specification or companion material.
+Review AI-assisted text, schemas, diagrams, fixtures, and documentation until
+you can explain them without consulting the agent.
 
 ## AI Usage
 
-`yaml-sigil-spec` is agent-first, not agent-only.
+Use agents to assist your work. You are responsible for the contribution.
 
 - **Do** use agents to read the specification, check cross-references, inspect
   conformance data, and draft updates.

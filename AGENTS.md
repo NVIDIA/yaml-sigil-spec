@@ -196,12 +196,9 @@ Treat them differently.
   and the YAML `YamlSigilSignature.v1alpha1` JSON Schema are two
   reifications of the same logical schema. **They MUST be kept
   aligned**: a change to one MUST be accompanied by a matching change
-  to the other. A formal alignment process (automated checks,
-  cross-validation tooling, conformance tests) cannot exist until both
-  representations are written by hand first — that is why both are
-  written by hand now. Mechanizing the alignment is future work; the
-  artifacts have to exist before any process can validate them against
-  each other. Edits SHOULD start with the `.proto` representation and
+  to the other. Maintain both representations by hand. Automated alignment
+  is tracked under Known Deficiencies. Edits SHOULD start with the `.proto`
+  representation and
   replicate into the JSON Schema; see
   [`schema/README.md`](./schema/README.md). For `alg`, the canonical
   names and the protobuf-prefix convention are pinned in
@@ -631,11 +628,12 @@ Terminology is defined in [README](./README.md)'s glossary and in the
 **Naming** section below. Use those forms consistently; do not invent
 synonyms for glossary entries.
 
-The Markdown dialect target is GitHub Flavored Markdown (GFM), as
-rendered by GitHub repository views. Rely on GitHub's generated
-document outline for navigation. Avoid renderer-specific inline
-attributes such as `{width=50%}` in new content unless the file
-explicitly targets a separate renderer.
+Use GitHub Flavored Markdown (GFM), as rendered in GitHub repository views,
+unless a file documents a narrower renderer requirement. Rely on GitHub's
+generated document outline for navigation.
+
+Avoid renderer-specific inline attributes such as `{width=50%}` in new content
+unless the file explicitly targets a separate renderer.
 
 ### Voice and tone
 

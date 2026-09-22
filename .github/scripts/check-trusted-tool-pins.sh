@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 
 # Enforce only the reviewed trusted Rust and Cargo policy-tool source pins.
-# This is a narrow supply-chain lint, not a workflow graph or permissions
-# parser.
 set -euo pipefail
 
 # With no fixture arguments, validate both fixed local callees independently.
@@ -18,7 +16,7 @@ expected_audit="cargo-audit@0.22.2"
 expected_deny="cargo-deny@0.20.2"
 expected_toolchain="1.98.0"
 compatibility_toolchain="1.95.0"
-# This is a literal GitHub expression admitted by the source check, not shell.
+# Preserve this literal GitHub expression for the source check.
 # shellcheck disable=SC2016
 matrix_toolchain='${{ matrix.toolchain }}'
 

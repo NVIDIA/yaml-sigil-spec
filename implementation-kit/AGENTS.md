@@ -113,10 +113,9 @@ approach. Present optional tooling as available rather than as a blessed
 or discouraged path, and qualify structural advice by when it actually
 applies.
 
-Rust is the only NVIDIA provided implementation at time of writing, but
-the kit's structural guidance is offered, not required. Nothing about
-how `yaml-sigil-rs` is arranged constrains a conforming implementation,
-and the kit should not read as though it does.
+NVIDIA provides `yaml-sigil-rs` as its Rust implementation. The kit's
+structural guidance is optional. A conforming implementation can use a
+different structure; keep that choice clear in the kit.
 
 ### Maintenance triggers
 

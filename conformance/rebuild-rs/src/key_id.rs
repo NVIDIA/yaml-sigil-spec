@@ -36,12 +36,11 @@
 //!
 //! The multibyte fixtures below use `U+1F600` (😀, falling in the
 //! 4-octet range), giving exactly 4 UTF-8 octets per code point.
-//! This drives a wedge between octet-counting and code-point-counting
-//! implementations: `256 × 😀` is 256 code points (passes JSON
-//! Schema `maxLength: 1024`) but 1024 UTF-8 octets (right at the
-//! protobuf/decoder octet limit); `257 × 😀` is 257 code points
-//! (still passes the schema) but 1028 UTF-8 octets (over the limit).
-//! The fixtures' purpose is to surface that disagreement.
+//! `256 × 😀` contains 256 code points and 1024 UTF-8 octets, satisfying
+//! both JSON Schema `maxLength: 1024` and the protobuf/decoder octet limit.
+//! `257 × 😀` contains 257 code points and 1028 octets, satisfying the
+//! schema constraint while exceeding the octet limit. These fixtures
+//! distinguish octet counting from code-point counting.
 
 use crate::b64::placeholder_sig;
 use crate::util::write_bytes;
@@ -168,8 +167,7 @@ pub fn generate(dir: &PinnedDir) -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     /// `U+1F600` MUST encode as four UTF-8 octets per RFC 3629 §3.
-    /// If a future Rust changes that, every multibyte fixture would
-    /// stop reading at exactly 1024 / 1028 octets — fail loudly.
+    /// The multibyte boundary fixtures depend on this octet count.
     #[test]
     fn u1f600_is_four_utf8_octets() {
         let s = "\u{1F600}";

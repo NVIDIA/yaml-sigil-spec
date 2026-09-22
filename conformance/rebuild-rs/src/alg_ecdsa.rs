@@ -82,9 +82,8 @@ const ECDSA_ALG: u64 = 2;
 
 const PAYLOAD: &[u8] = b"hello: world\n";
 
-/// Pinned auditor-reproducible private key. Any non-zero `d < n` works
-/// as long as the value is published; we pick the all-`0x42` pattern
-/// so the constant is visually obvious in fixture hex dumps.
+/// Published test-only private key in `[1, n)`. Repeated `0x42` octets
+/// make the value recognizable in fixture hex dumps.
 const D_HEX: &str = "4242424242424242424242424242424242424242424242424242424242424242";
 /// Pinned ephemeral nonces for the happy-path and two-nonce-instability
 /// fixtures. Distinct, non-zero, both `< n`.
@@ -468,11 +467,10 @@ pub fn generate(dir: &PinnedDir) -> std::io::Result<()> {
 /// Emit a NIST-anchored happy-path fixture from the vendored
 /// ACVP-Server ECDSA SigGen FIPS 186-5 test set.
 ///
-/// Picks the first AFT (Algorithm Functional Test) case of the first
-/// `curve = P-256 / hashAlg = SHA2-256` group. Our hand-rolled signer
-/// replays `sign(d, SHA-256(message), k)` and we assert byte-equality
-/// against the published `(r, s)` before writing the fixture — so
-/// fixture generation is itself a NIST-vector conformance check.
+/// Use the first AFT case of the first `curve = P-256 / hashAlg = SHA2-256`
+/// group. Replay `sign(d, SHA-256(message), k)` with the hand-written signer
+/// and require byte equality with the published `(r, s)` before writing
+/// the fixture.
 fn emit_acvp_anchored_fixture(dir: &PinnedDir) -> std::io::Result<()> {
     let file = acvp::load()?;
     let group = acvp::p256_sha256_aft_groups(&file)
@@ -603,7 +601,7 @@ mod tests {
 
     /// SHA-256 of the empty string is the published value
     /// `e3b0c442 98fc1c14 9afbf4c8 996fb924 27ae41e4 649b934c a495991b 7852b855`
-    /// (FIPS 180-4 §C). Tests the hash dependency, not just our code.
+    /// (FIPS 180-4 §C). This checks the hash dependency against that value.
     #[test]
     fn sha256_empty_known_answer() {
         let got = hex_lower(&Sha256::digest([]));
@@ -683,13 +681,9 @@ mod tests {
         );
     }
 
-    /// Replay every P-256 / SHA-256 AFT case from the vendored
-    /// ACVP-Server file: run `sign(d, SHA-256(message), k)` through
-    /// our hand-rolled signer and assert byte-equality with the
-    /// published `(r, s)`. This is the safety net behind the
-    /// NIST-anchored `acvp-fips186-5-*` conformance fixture — if our
-    /// signer ever drifts from NIST's reference output, the test
-    /// fails before any fixture is written.
+    /// Replay every P-256 / SHA-256 AFT case from the pinned ACVP file.
+    /// Require `sign(d, SHA-256(message), k)` to reproduce the published
+    /// `(r, s)` for every case used by the `acvp-fips186-5-*` fixtures.
     #[test]
     fn p256_sha256_acvp_aft_replay_matches() {
         let file = crate::acvp::load().expect("vendored ACVP JSON parses within bounds");

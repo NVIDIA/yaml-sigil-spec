@@ -138,10 +138,9 @@ See [alg-ed25519/README.md](./alg-ed25519/README.md).
   specifies the full payload as the single byte `0x72`. The YAML
   form cannot represent it (the constrained marker profile requires
   the byte before the marker to be a line terminator). The protobuf
-  form has no such constraint; `verification-api.md`'s
-  metadata-extraction table now spells out that YAML-envelope
-  payload rules do NOT apply to the protobuf form, so this is a
-  spec-normative carve-out rather than a per-fixture compromise.
+  form has no such constraint. Under `verification-api.md`'s
+  metadata-extraction rules, YAML-envelope payload rules do NOT apply to
+  the protobuf form. This is a specification rule.
   See also the protobuf-conformance fixture
   `binary-payload-no-yaml-fit.binpb` for a minimal example of the
   same carve-out and `transcoding.md`'s round-trip table for the
@@ -228,14 +227,13 @@ cd conformance/rebuild-rs
 CONFORMANCE_ROOT="$(realpath ..)" cargo run --release --locked
 ```
 
-The container entrypoint iterates each subdirectory under `/work`
-and regenerates its fixtures. On a steady-state branch, re-running
-MUST produce bit-identical output for everything currently shipped;
-a non-empty `git diff` after running is either a generator defect or
-an intended spec change that's now propagated into the fixtures. On
-a branch that is updating the spec, the fixture diff IS part of the
-spec change — the generator is authoritative either way; never edit
-a fixture by hand.
+The container entrypoint regenerates each fixture suite under `/work`.
+Without an intentional specification change, regeneration MUST produce
+bit-identical output for every shipped fixture. Inspect any non-empty
+`git diff` for a generator defect or an intended specification change.
+When updating the specification, include the corresponding generator and
+fixture changes together. The generator is authoritative; never edit a
+fixture by hand.
 
 If the host's effective UID isn't `1000`, pre-`chown` `conformance/`
 or pass `--user "$(id -u):$(id -g)"` to `docker run`.

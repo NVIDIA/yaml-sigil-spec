@@ -37,9 +37,8 @@ COPY --chown=builder:builder conformance/rebuild-rs/src /src/src
 
 USER builder
 
-# --locked aborts if Cargo.lock would be regenerated, which is what
-# we want for reproducibility. `-p` builds just the rebuild_all bin
-# (skips the xtask dev tool).
+# --locked rejects dependency resolution changes. Select the rebuilder
+# package explicitly so this build excludes the developer xtask.
 RUN cargo build --release --locked -p yamlsigil-conformance-rebuild
 
 # Collect the license, copyright, and notice files supplied by every registry
@@ -74,14 +73,12 @@ RUN install -d /src/notices/rust \
         /src/notices/rust/
 
 # --- Runtime stage --------------------------------------------------
-# The release binary is statically-enough linked for Debian Trixie's
-# libc (Rust links libstd statically by default). Use a minimal
-# Trixie runtime image so the dynamic loader, libc, and libgcc match.
+# Rust links libstd statically. Debian Trixie supplies the matching dynamic
+# loader, libc, and libgcc for the remaining runtime dependencies.
 
 FROM docker.io/library/debian:trixie-slim
 
-# CA certificates for any future net-fetching steps; ca-certificates is
-# tiny and keeps the image generally useful.
+# Install the system CA trust store.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
