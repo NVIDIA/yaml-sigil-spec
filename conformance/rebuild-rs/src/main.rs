@@ -3,17 +3,14 @@
 
 //! Rebuild every fixture in every conformance subdirectory.
 //!
-//! Default behaviour: writes fixtures under `$CONFORMANCE_ROOT`
-//! (defaults to `/work`, matching the Dockerfile's WORKDIR + volume
-//! mount layout).
+//! Write fixtures under `$CONFORMANCE_ROOT`, which defaults to `/work`
+//! for the container's volume mount.
 //!
-//! Local usage outside the container:
+//! From `conformance/rebuild-rs/`, run locally with:
 //!
 //! ```text
 //! CONFORMANCE_ROOT=$(realpath ..) cargo run --release --locked
 //! ```
-//!
-//! (run from inside `conformance/rebuild-rs/`).
 
 use std::env;
 use std::path::PathBuf;

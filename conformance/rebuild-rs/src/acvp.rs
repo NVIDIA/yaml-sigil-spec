@@ -21,11 +21,10 @@
 //! The exact vendored source and NIST terms are recorded in the repository
 //! `THIRD_PARTY_NOTICES.md`.
 //!
-//! For the `verify-happy-path` conformance artifact we use the first
-//! AFT test case of the first `curve = "P-256" / hashAlg = "SHA2-256"`
-//! group. The [`test_replay_all_p256_sha256`] (in `alg_ecdsa.rs`)
-//! walks **all** such cases and asserts our hand-rolled signer
-//! reproduces the published `(r, s)` byte-for-byte.
+//! The `acvp-fips186-5-*` conformance artifact uses the first AFT case of
+//! the first `curve = "P-256" / hashAlg = "SHA2-256"` group.
+//! `p256_sha256_acvp_aft_replay_matches` in [`crate::alg_ecdsa`] checks every such
+//! case against the published `(r, s)` using the hand-written signer.
 
 use serde::de::{self, DeserializeSeed, IgnoredAny, MapAccess, SeqAccess, Visitor};
 use serde::Deserialize;
@@ -50,9 +49,8 @@ const MAX_SCALAR_HEX_CHARS: usize = 160;
 const MAX_MESSAGE_HEX_CHARS: usize = 4_096;
 const MAX_RANDOM_VALUE_HEX_CHARS: usize = 256;
 
-/// The upstream commit hash the vendored file was pulled from.
-/// Kept here in addition to `vendor/acvp/README.md` so the generator
-/// can stamp it into the per-fixture `.expected.txt` sidecar.
+/// Upstream commit recorded in the vendor README and each generated
+/// `.expected.txt` sidecar.
 pub const VENDORED_COMMIT: &str = "15c0f3deeefbfa8cb6cd32a99e1ca3b738c66bf0";
 
 /// The upstream path within the ACVP-Server repo.
@@ -84,11 +82,10 @@ pub struct AcvpGroup {
     pub curve: String,
     #[serde(rename = "hashAlg")]
     pub hash_alg: String,
-    /// Some groups carry a `conformance` tag (e.g. `"SP800-106"` for
-    /// the NIST randomized-hashing extension, which prepends a
-    /// `randomValue` to the message before hashing). Our slot does
-    /// plain `SHA-256(message)` — see [`p256_sha256_aft_groups`] for
-    /// the filter that rejects those non-baseline groups.
+    /// A `conformance` tag identifies additional rules, such as NIST's
+    /// `"SP800-106"` randomized hashing, which prepends `randomValue` to
+    /// the message. [`p256_sha256_aft_groups`] excludes these groups
+    /// because the algorithm slot uses `SHA-256(message)` directly.
     #[serde(default)]
     pub conformance: Option<String>,
     pub d: String,
@@ -839,15 +836,11 @@ impl<'de> Visitor<'de> for CaseVisitor {
     }
 }
 
-/// Filter for the AFT (Algorithm Functional Test) groups that match
-/// curve = P-256 and hash = SHA2-256, AND use the baseline hashing
-/// rule (no `conformance` tag).
+/// Select AFT groups with curve P-256, hash SHA2-256, and no `conformance` tag.
 ///
-/// Groups marked `conformance: "SP800-106"` use NIST randomized
-/// hashing (a `randomValue` is prepended to the message before
-/// `SHA-256`), which is NOT what this crate's
-/// `ECDSA_SECP256R1_SHA256_RAW_RS64` slot specifies. Those groups
-/// are filtered out so the replay assertions don't false-fail.
+/// `ECDSA_SECP256R1_SHA256_RAW_RS64` hashes the message directly. Groups
+/// marked `conformance: "SP800-106"` prepend a `randomValue` before SHA-256
+/// and therefore use a different hashing rule.
 pub fn p256_sha256_aft_groups(file: &AcvpFile) -> impl Iterator<Item = &AcvpGroup> {
     file.test_groups
         .iter()
@@ -858,17 +851,15 @@ pub fn p256_sha256_aft_groups(file: &AcvpFile) -> impl Iterator<Item = &AcvpGrou
 mod tests {
     use super::*;
 
-    /// The vendored JSON MUST parse. If this fails, either the file
-    /// drifted from its upstream pin (see `vendor/acvp/README.md`) or
-    /// the upstream schema changed under the same commit.
+    /// The pinned JSON MUST satisfy the parser's schema and resource limits.
+    /// Check the vendored bytes and parser contract if this test fails.
     #[test]
     fn vendored_json_parses() {
         let file = load().expect("vendored ACVP JSON parses within bounds");
         assert!(!file.test_groups.is_empty());
     }
 
-    /// There MUST be at least one P-256 / SHA-256 AFT group — that's
-    /// the entire reason we're vendoring this file.
+    /// The pinned corpus MUST include a P-256 / SHA-256 AFT group for replay.
     #[test]
     fn at_least_one_p256_sha256_aft_group_exists() {
         let file = load().expect("vendored ACVP JSON parses within bounds");

@@ -101,8 +101,8 @@ pub fn generate(dir: &PinnedDir) -> std::io::Result<()> {
     write_bytes(dir, "duplicate-schema.yaml", &artifact(&dup_schema))?;
 
     // duplicate-alg.yaml: alg appears twice with DIFFERENT values.
-    // This is the load-bearing attacker case. Every profile rejects it
-    // before effective-value selection can change the algorithm.
+    // Every profile rejects conflicting algorithm values before choosing
+    // an effective value.
     let dup_alg = format!(
         "schema: YamlSigilSignature.v1alpha1\n\
          alg: ED25519_PUREEDDSA_RAW_RS64_CANONICAL\n\

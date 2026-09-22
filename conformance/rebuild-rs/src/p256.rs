@@ -3,10 +3,9 @@
 
 //! Hand-rolled P-256 (secp256r1) ECDSA over `num-bigint`.
 //!
-//! No crypto-library trust — the only outside math is `num-bigint`'s
-//! arbitrary-precision integer type. Every constant and every
-//! arithmetic step is derived directly from the cited upstream
-//! standards.
+//! The implementation uses `num-bigint` for arbitrary-precision arithmetic
+//! and derives each cryptographic operation and constant from the cited
+//! upstream standards.
 //!
 //! ## Domain parameters — Standards for Efficient Cryptography 2 (SEC 2)
 //!
@@ -40,9 +39,8 @@
 //! > n = FFFFFFFF 00000000 FFFFFFFF FFFFFFFF BCE6FAAD A7179E84 F3B9CAC2 FC632551
 //! > h = 01
 //!
-//! These are the exact values loaded by [`params`] below. Note `a` is
-//! given as `p - 3`; we store it as `(-3) mod p`, which equals that
-//! number.
+//! [`params`] loads these exact values. It stores `a = p - 3` as
+//! `(-3) mod p`.
 //!
 //! The cited SEC 1 operations and encodings and SEC 2 domain parameters are
 //! third-party standards material, not material relicensed under the
@@ -222,7 +220,7 @@ pub fn point_mul(k: &BigInt, point: &Point) -> Option<Point> {
 
 /// Curve-equation check: returns true iff `(x, y)` satisfies
 /// `y^2 ≡ x^3 + ax + b (mod p)`. Used by [`crate::alg_ecdsa`] to
-/// confirm the off-curve fixture really is off-curve.
+/// confirm that the off-curve fixture violates the curve equation.
 pub fn on_curve(x: &BigInt, y: &BigInt) -> bool {
     let p = &params().p;
     let a = &params().a;

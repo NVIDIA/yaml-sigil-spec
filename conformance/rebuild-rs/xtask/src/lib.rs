@@ -20,10 +20,9 @@ use ureq::tls::{RootCerts, TlsConfig, TlsProvider};
 use ureq::{Agent, Error as UreqError, Proxy, ProxyProtocol};
 use yamlsigil_pinned_dir::PinnedDir;
 
-/// Pinned upstream commit of `usnistgov/ACVP-Server`. Bump this
-/// constant (or pass `--commit <hash>`) when refreshing the vendored
-/// vectors; the xtask rewrites both the JSON file and the vendor
-/// README so the pin is always self-describing.
+/// Pinned upstream commit of `usnistgov/ACVP-Server`. Update this constant
+/// or pass `--commit <hash>` to refresh the vectors. The updater records
+/// the selected commit in the vendor README.
 const DEFAULT_COMMIT: &str = "15c0f3deeefbfa8cb6cd32a99e1ca3b738c66bf0";
 
 const UPSTREAM_REPO: &str = "usnistgov/ACVP-Server";
@@ -458,99 +457,94 @@ fn candidate_preflight(candidate_root: &std::path::Path) -> io::Result<usize> {
 }
 
 fn render_readme(commit: &str, size: u64) -> String {
-    let raw_url =
-        format!("https://raw.githubusercontent.com/{UPSTREAM_REPO}/{commit}/{UPSTREAM_PATH}");
-    let tree_url = format!("https://github.com/{UPSTREAM_REPO}/blob/{commit}/{UPSTREAM_PATH}");
     format!(
-        "# Vendored ACVP test vectors\n\
-         \n\
-         This directory tracks a single file from the NIST\n\
-         [Automated Cryptographic Validation Protocol (ACVP)](https://pages.nist.gov/ACVP/)\n\
-         server's reference test-vector tree.\n\
-         \n\
-         | Field | Value |\n\
-         | --- | --- |\n\
-         | Upstream repo | <https://github.com/{UPSTREAM_REPO}> |\n\
-         | Commit | `{commit}` |\n\
-         | Upstream path | `{UPSTREAM_PATH}` |\n\
-         | Browse on GitHub | <{tree_url}> |\n\
-         | Vendored as | `vendor/acvp/{VENDORED_FILE_NAME}` ({size} bytes) |\n\
-         | Pinned by | `xtask/src/lib.rs` `DEFAULT_COMMIT` |\n\
-         \n\
-         ## What this is\n\
-         \n\
-         A NIST ACVP \"AFT\" (Algorithm Functional Test) vector set\n\
-         for ECDSA signature generation under FIPS 186-5. Each test\n\
-         group pins `(d, Q, k, message, r, s)` — i.e. the private key,\n\
-         public key, ephemeral nonce, message, and expected signature\n\
-         components — so the rebuilder can replay the sign and assert\n\
-         byte-equality against the published `(r, s)`. The file\n\
-         covers multiple curve / hash combinations; the rebuilder\n\
-         filters for `curve = P-256` and `hashAlg = SHA2-256`.\n\
-         \n\
-         ## Resource limits\n\
-         \n\
-         Candidate preflight and the native rebuilder accept at most 3 MiB of\n\
-         encoded JSON, 512 test groups, 64 cases per group, and 4,096\n\
-         cases in total. The selected P-256 / SHA2-256 replay is further\n\
-         limited to eight groups and 256 cases. Scalar-like hex fields are\n\
-         capped at 160 characters, messages at 4,096 characters, and\n\
-         randomized-hashing values at 256 characters. The rebuilder reads\n\
-         one anchored no-follow byte snapshot, validates these limits before\n\
-         retaining collections, and deserializes that same snapshot before\n\
-         replay. A refresh outside these limits requires an explicit review\n\
-         and coordinated limit change. `cargo xtask check` exercises every\n\
-         exact-boundary and limit-plus-one regression.\n\
-         \n\
-         The National Institute of Standards and Technology is explicitly\n\
-         acknowledged as the source of this test data. The local file name\n\
-         was changed; its contents were not modified. The NIST notice that\n\
-         governs this snapshot is reproduced in\n\
-         [`THIRD_PARTY_NOTICES.md`](../../../../THIRD_PARTY_NOTICES.md) and\n\
-         must remain with distributions of this vendored file.\n\
-         \n\
-         ## Manual verification\n\
-         \n\
-         To confirm the vendored bytes by hand, fetch the same file at\n\
-         the pinned commit and compare SHA-256 hashes:\n\
-         \n\
-         ```sh\n\
-         # Compute the hash of the upstream file at the pinned commit.\n\
-         curl -sL '{raw_url}' | sha256sum\n\
-         \n\
-         # Compare against the hash of the vendored copy.\n\
-         sha256sum vendor/acvp/{VENDORED_FILE_NAME}\n\
-         ```\n\
-         \n\
-         The two outputs MUST match. If they don't, the vendored file\n\
-         has drifted from its upstream pin and that diff is itself a\n\
-         finding to surface.\n\
-         \n\
-         ## Refreshing\n\
-         \n\
-         To bump the pin to a newer commit, edit `DEFAULT_COMMIT` in\n\
-         `xtask/src/lib.rs` and run:\n\
-         \n\
-         ```sh\n\
-         cargo xtask update-acvp\n\
-         ```\n\
-         \n\
-         Or pass an explicit full 40-character lowercase hexadecimal commit\n\
-         hash (without bumping the default):\n\
-         \n\
-         ```sh\n\
-         cargo xtask update-acvp --commit <40-character-lowercase-commit>\n\
-         ```\n\
-         \n\
-         The updater accepts only an HTTP 200 response over HTTPS, follows at\n\
-         most five HTTPS redirects, and uses the platform certificate verifier.\n\
-         It honors supported HTTP and HTTPS proxy and `NO_PROXY` environment\n\
-         settings, does not retry, requests identity encoding, and bounds\n\
-         response headers, timeouts, and the 3 MiB response body before\n\
-         replacing either pinned file.\n\
-         \n\
-         The xtask rewrites both the JSON file and this README. This\n\
-         file is regenerated on every run; do not edit it by hand.\n",
+        r#"# Vendored ACVP test vectors
+
+This directory contains a pinned snapshot from the NIST
+[Automated Cryptographic Validation Protocol (ACVP)](https://pages.nist.gov/ACVP/)
+server's reference test vectors.
+
+| Field | Value |
+| --- | --- |
+| Upstream repo | <https://github.com/{UPSTREAM_REPO}> |
+| Commit | `{commit}` |
+| Upstream path | `{UPSTREAM_PATH}` |
+| Browse on GitHub | <https://github.com/{UPSTREAM_REPO}/blob/{commit}/{UPSTREAM_PATH}> |
+| Vendored as | `vendor/acvp/{VENDORED_FILE_NAME}` ({size} bytes) |
+| Pinned by | `xtask/src/lib.rs` `DEFAULT_COMMIT` |
+
+## Vector set
+
+The snapshot contains Algorithm Functional Test (AFT) vectors for ECDSA
+signature generation under FIPS 186-5. The values `(d, Q, k, message, r, s)`
+identify the private key, public key, nonce, message, and expected signature
+components. The rebuilder replays signing and requires byte equality with the
+published `(r, s)`. It selects `curve = P-256` and `hashAlg = SHA2-256` groups
+without a `conformance` tag from the snapshot's curve and hash combinations.
+
+## Resource limits
+
+Candidate preflight and the native rebuilder accept at most 3 MiB of encoded
+JSON. The rebuilder also limits the corpus to 512 test groups, 64 cases per
+group, and 4,096 cases in total. The selected P-256 / SHA2-256 replay accepts
+at most eight groups and 256 cases. Scalar-like hex fields have a
+160-character limit; messages have a 4,096-character limit; randomized-hashing
+values have a 256-character limit.
+
+The rebuilder reads one anchored no-follow snapshot and validates these limits
+before retaining collections. It then deserializes the same bytes for replay.
+A refresh outside these limits requires explicit review and a coordinated
+limit change. `cargo xtask check` tests every exact boundary and one value beyond
+it.
+
+The National Institute of Standards and Technology is explicitly
+acknowledged as the source of this test data. The local file name
+was changed; its contents were not modified. The NIST notice that
+governs this snapshot is reproduced in
+[`THIRD_PARTY_NOTICES.md`](../../../../THIRD_PARTY_NOTICES.md) and
+must remain with distributions of this vendored file.
+
+## Manual verification
+
+From `conformance/rebuild-rs`, fetch the upstream file at the pinned commit
+and compare its SHA-256 hash with the local snapshot:
+
+```shell
+# Compute the hash of the upstream file at the pinned commit.
+curl -sL 'https://raw.githubusercontent.com/{UPSTREAM_REPO}/{commit}/{UPSTREAM_PATH}' | sha256sum
+
+# Compare against the hash of the vendored copy.
+sha256sum vendor/acvp/{VENDORED_FILE_NAME}
+```
+
+The two hashes MUST match. Investigate any mismatch before using the snapshot.
+
+## Refreshing
+
+To select a different default pin, edit `DEFAULT_COMMIT` in
+`xtask/src/lib.rs` and run:
+
+```shell
+cargo xtask update-acvp
+```
+
+To refresh from a full 40-character lowercase hexadecimal commit without
+changing the default, pass it explicitly:
+
+```shell
+cargo xtask update-acvp --commit <40-character-lowercase-commit>
+```
+
+The updater accepts only an HTTP 200 response over HTTPS, follows at
+most five HTTPS redirects, and uses the platform certificate verifier.
+It honors supported HTTP and HTTPS proxy and `NO_PROXY` environment
+settings, does not retry, requests identity encoding, and bounds
+response headers, timeouts, and the 3 MiB response body before
+replacing either pinned file.
+
+The updater rewrites the JSON snapshot and this README. Edit the README
+template in `xtask/src/lib.rs`; do not edit the generated file by hand.
+"#,
     )
 }
 

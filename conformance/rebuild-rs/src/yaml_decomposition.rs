@@ -181,9 +181,8 @@ pub fn generate(dir: &PinnedDir) -> std::io::Result<()> {
 
 #[cfg(test)]
 mod tests {
-    /// The constrained-marker profile fixes the marker bytes
-    /// exactly. Pin them at the test level so any future drift in
-    /// what the generator emits gets surfaced here too.
+    /// Require the generated marker bytes to match the constrained-marker
+    /// profile exactly.
     #[test]
     fn marker_bytes_are_three_dashes_plus_line_terminator() {
         let lf_marker: &[u8] = b"---\n";
