@@ -120,7 +120,7 @@ For any spec change that touches conformance behavior:
    `rebuild-rs/src/`, register it in `main.rs`'s `SUBDIRS` const,
    create the new subdirectory with its `README.md`, and add a
    top-level entry in [`conformance/README.md`](./README.md).
-6. Run `cargo xtask ci` from the repository root. It performs the Markdown,
+6. Run `cargo xtask check` from the repository root. It performs the Markdown,
    Buf, JSON Schema, formatting, linting, test, and dependency-audit checks
    required by the top-level [`AGENTS.md`](../AGENTS.md). Conformance fixtures
    are downstream of the IDL and schema; a fixture cannot be valid if the
@@ -197,7 +197,7 @@ Every Rust source file under `rebuild-rs/src/` MUST:
    (encoder / decoder pairs, arithmetic identities, known-answer
    vectors). Test data SHOULD come from the same upstream citation
    used in the rustdoc.
-3. **Pass `cargo xtask ci` from the repository root.** The complete
+3. **Pass `cargo xtask check` from the repository root.** The complete
    formatting, clippy-with-denied-warnings, test, and dependency-audit gate
    MUST be clean before the change can land.
 

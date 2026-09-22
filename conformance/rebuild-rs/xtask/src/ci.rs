@@ -1,12 +1,14 @@
 // SPDX-FileCopyrightText: Copyright 2026 NVIDIA CORPORATION & AFFILIATES
 // SPDX-License-Identifier: Apache-2.0
 
-//! Local entry point for the repository's non-release validation sequence.
+//! Provider-independent repository check planning and execution.
 
 use std::env;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+
+use crate::cli::{CheckStep, Features};
+use crate::process::{probe, Invocation, Runner};
 
 const BUF_VERSION_REQUIREMENT: &str = ">=1.73.0";
 const BUF_INSTALL_GUIDANCE: &str = "Install a supported buf-toolchain release with:\n    \
@@ -16,229 +18,135 @@ const BUF_INSTALL_GUIDANCE: &str = "Install a supported buf-toolchain release wi
 const CARGO_DENY_INSTALL_COMMAND: &str = "cargo install --locked cargo-deny --version 0.20.2";
 const CARGO_MACHETE_INSTALL_COMMAND: &str = "cargo install --locked cargo-machete --version 0.9.2";
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum WorkingDirectory {
-    Repository,
-    RebuildWorkspace,
-}
-
-#[derive(Clone, Copy, Debug)]
-struct Step {
-    label: &'static str,
-    program: &'static str,
-    args: &'static [&'static str],
-    working_directory: WorkingDirectory,
-}
-
-impl Step {
-    fn command_line(self) -> String {
-        std::iter::once(self.program)
-            .chain(self.args.iter().copied())
-            .collect::<Vec<_>>()
-            .join(" ")
+fn invocation(
+    step: CheckStep,
+    repository: &Path,
+    workspace: &Path,
+    features: &Features,
+) -> Invocation {
+    use crate::cli::CheckStep::*;
+    let (program, args, cwd): (&str, &[&str], &Path) = match step {
+        Markdown => ("rumdl", &["check", "."], repository),
+        BufBuild => ("buf", &["build", "proto"], repository),
+        BufLint => ("buf", &["lint", "proto"], repository),
+        BufFmt => (
+            "buf",
+            &["format", "proto", "--diff", "--exit-code"],
+            repository,
+        ),
+        Schema => (
+            "jq",
+            &["empty", "schema/YamlSigilSignature.v1alpha1.schema.json"],
+            repository,
+        ),
+        Fmt => ("cargo", &["fmt", "--all", "--check"], workspace),
+        Check => (
+            "cargo",
+            &["check", "--locked", "--workspace", "--all-targets"],
+            workspace,
+        ),
+        Clippy => (
+            "cargo",
+            &["clippy", "--locked", "--workspace", "--all-targets"],
+            workspace,
+        ),
+        Test => ("cargo", &["test", "--locked", "--workspace"], workspace),
+        // Invoke cargo-machete directly: inherited Cargo package variables in
+        // 0.9.2 make `cargo machete` parse its subcommand as an input path.
+        Machete => ("cargo-machete", &["--with-metadata"], repository),
+        Deny => ("cargo-deny", &["--locked", "--workspace"], workspace),
+        Audit => ("cargo", &["audit"], workspace),
+    };
+    let mut command = Invocation::new(program, args, cwd);
+    if matches!(step, Check | Clippy | Test | Deny) {
+        command.args.extend(features.args());
     }
-
-    fn command(self) -> Command {
-        let mut command = Command::new(self.program);
-        command.args(self.args);
+    if step == Clippy {
         command
+            .args
+            .extend(["--", "-D", "warnings"].map(Into::into));
     }
-}
-
-const CI_STEPS: &[Step] = &[
-    Step {
-        label: "Markdown lint",
-        program: "rumdl",
-        args: &["check", "."],
-        working_directory: WorkingDirectory::Repository,
-    },
-    Step {
-        label: "Protobuf build",
-        program: "buf",
-        args: &["build", "proto"],
-        working_directory: WorkingDirectory::Repository,
-    },
-    Step {
-        label: "Protobuf lint",
-        program: "buf",
-        args: &["lint", "proto"],
-        working_directory: WorkingDirectory::Repository,
-    },
-    Step {
-        label: "Protobuf formatting",
-        program: "buf",
-        args: &["format", "proto", "--diff", "--exit-code"],
-        working_directory: WorkingDirectory::Repository,
-    },
-    Step {
-        label: "JSON Schema validation",
-        program: "jq",
-        args: &["empty", "schema/YamlSigilSignature.v1alpha1.schema.json"],
-        working_directory: WorkingDirectory::Repository,
-    },
-    Step {
-        label: "Rust formatting",
-        program: "cargo",
-        args: &["fmt", "--all", "--check"],
-        working_directory: WorkingDirectory::RebuildWorkspace,
-    },
-    Step {
-        label: "Rust lint",
-        program: "cargo",
-        args: &[
-            "clippy",
-            "--locked",
-            "--workspace",
-            "--all-targets",
-            "--all-features",
-            "--",
-            "-D",
-            "warnings",
-        ],
-        working_directory: WorkingDirectory::RebuildWorkspace,
-    },
-    Step {
-        label: "Rust tests",
-        program: "cargo",
-        args: &["test", "--locked", "--workspace", "--all-features"],
-        working_directory: WorkingDirectory::RebuildWorkspace,
-    },
-    // A Cargo-launched xtask must invoke this binary directly. In cargo-machete
-    // 0.9.2, inherited Cargo package variables otherwise make `cargo machete`
-    // parse its subcommand name as an input path.
-    Step {
-        label: "Unused Rust dependencies",
-        program: "cargo-machete",
-        args: &["--with-metadata"],
-        working_directory: WorkingDirectory::Repository,
-    },
-    Step {
-        label: "Rust dependency policy",
-        program: "cargo-deny",
-        args: &[
-            "--locked",
-            "--workspace",
-            "check",
-            "bans",
-            "licenses",
-            "sources",
-            "-D",
-            "warnings",
-        ],
-        working_directory: WorkingDirectory::RebuildWorkspace,
-    },
-    Step {
-        label: "Rust dependency audit",
-        program: "cargo",
-        args: &["audit"],
-        working_directory: WorkingDirectory::RebuildWorkspace,
-    },
-];
-
-pub(crate) fn run(repository_root: &Path, rebuild_root: &Path) -> io::Result<()> {
-    require_cargo_machete()?;
-    require_cargo_deny()?;
-    let buf = resolve_buf()?;
-
-    for step in CI_STEPS {
-        let current_dir = match step.working_directory {
-            WorkingDirectory::Repository => repository_root,
-            WorkingDirectory::RebuildWorkspace => rebuild_root,
-        };
-        eprintln!("+ {} (cwd {})", step.command_line(), current_dir.display());
-        let mut command = if step.program == "buf" {
-            Command::new(&buf)
-        } else {
-            step.command()
-        };
-        if step.program == "buf" {
-            command.args(step.args);
-        }
-        let status = command
-            .current_dir(current_dir)
-            .status()
-            .map_err(|error| io::Error::new(error.kind(), format!("{}: {error}", step.label)))?;
-        if !status.success() {
-            return Err(io::Error::other(format!(
-                "{} failed with {status}",
-                step.label
-            )));
-        }
+    if step == Deny {
+        command
+            .args
+            .extend(["check", "bans", "licenses", "sources", "-D", "warnings"].map(Into::into));
     }
-    Ok(())
+    command
 }
 
-fn require_cargo_machete() -> io::Result<()> {
-    require_cargo_tool("cargo-machete", CARGO_MACHETE_INSTALL_COMMAND)
-}
-
-fn require_cargo_deny() -> io::Result<()> {
-    require_cargo_tool("cargo-deny", CARGO_DENY_INSTALL_COMMAND)
-}
-
-fn require_cargo_tool(program: &str, install_command: &str) -> io::Result<()> {
-    let output = Command::new(program)
-        .arg("--version")
-        .output()
-        .map_err(|error| {
-            if error.kind() == io::ErrorKind::NotFound {
-                io::Error::new(
-                    io::ErrorKind::NotFound,
-                    format!(
-                        "{program} is required but was not found.\n\n\
-                         Install it with:\n    {install_command}"
-                    ),
-                )
-            } else {
-                io::Error::new(error.kind(), format!("failed to run {program}: {error}"))
+pub(crate) fn run(
+    repository: &Path,
+    workspace: &Path,
+    selected: &[CheckStep],
+    features: &Features,
+    runner: &mut impl Runner,
+) -> io::Result<()> {
+    let mut buf = None;
+    for step in selected {
+        let mut command = invocation(*step, repository, workspace, features);
+        match step {
+            CheckStep::BufBuild | CheckStep::BufLint | CheckStep::BufFmt => {
+                if buf.is_none() {
+                    buf = Some(resolve_buf(repository, runner)?);
+                }
+                command.program = buf.as_ref().expect("resolved Buf").as_os_str().into();
             }
-        })?;
-
-    if !output.status.success() {
-        return Err(io::Error::other(format!(
-            "{program} --version failed with {}.\n\n{install_command}",
-            output.status
-        )));
+            _ => preflight(*step, &command.cwd, runner)?,
+        }
+        runner.run(&command)?;
     }
-
     Ok(())
 }
 
-fn resolve_buf() -> io::Result<PathBuf> {
+fn preflight(step: CheckStep, cwd: &Path, runner: &mut impl Runner) -> io::Result<()> {
+    let (program, args, guidance): (&str, &[&str], &str) = match step {
+        CheckStep::Markdown => ("rumdl", &["--version"], "cargo install rumdl"),
+        CheckStep::Schema => (
+            "jq",
+            &["--version"],
+            "Install jq: https://jqlang.org/download/",
+        ),
+        CheckStep::Fmt => (
+            "cargo",
+            &["fmt", "--version"],
+            "rustup component add rustfmt",
+        ),
+        CheckStep::Clippy => (
+            "cargo",
+            &["clippy", "--version"],
+            "rustup component add clippy",
+        ),
+        CheckStep::Check | CheckStep::Test => {
+            ("cargo", &["--version"], "Install Rust: https://rustup.rs/")
+        }
+        CheckStep::Machete => (
+            "cargo-machete",
+            &["--version"],
+            CARGO_MACHETE_INSTALL_COMMAND,
+        ),
+        CheckStep::Deny => ("cargo-deny", &["--version"], CARGO_DENY_INSTALL_COMMAND),
+        CheckStep::Audit => (
+            "cargo-audit",
+            &["--version"],
+            "cargo +1.98.0 install --locked cargo-audit --version 0.22.2",
+        ),
+        CheckStep::BufBuild | CheckStep::BufLint | CheckStep::BufFmt => return Ok(()),
+    };
+    probe(runner, &Invocation::new(program, args, cwd), guidance)?;
+    Ok(())
+}
+
+fn resolve_buf(cwd: &Path, runner: &mut impl Runner) -> io::Result<PathBuf> {
     let buf = env::var_os("BUF")
         .filter(|value| !value.is_empty())
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("buf"));
-
-    let output = Command::new(&buf)
-        .arg("--version")
-        .output()
-        .map_err(|error| {
-            if error.kind() == io::ErrorKind::NotFound {
-                io::Error::new(
-                    io::ErrorKind::NotFound,
-                    format!("Buf CLI is required but was not found.\n\n{BUF_INSTALL_GUIDANCE}"),
-                )
-            } else {
-                io::Error::new(
-                    error.kind(),
-                    format!("failed to run {} --version: {error}", buf.display()),
-                )
-            }
-        })?;
-
-    if !output.status.success() {
-        let detail = String::from_utf8_lossy(&output.stderr);
-        return Err(buf_prerequisite_error(format!(
-            "{} --version failed with {}: {}",
-            buf.display(),
-            output.status,
-            detail.trim()
-        )));
-    }
-
+    let output = probe(
+        runner,
+        &Invocation::new(&buf, &["--version"], cwd),
+        BUF_INSTALL_GUIDANCE,
+    )?;
     validate_buf_version(&output.stdout)?;
-
     Ok(buf)
 }
 
@@ -268,29 +176,105 @@ fn buf_prerequisite_error(summary: String) -> io::Error {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::process::tests::FakeRunner;
 
     const AGENT_GUIDANCE: &str = include_str!("../../../../AGENTS.md");
 
     #[test]
-    fn agent_guidance_documents_every_local_ci_step() {
-        for step in CI_STEPS {
-            let expected = step.command_line();
+    fn agent_guidance_documents_every_default_check() {
+        for step in CheckStep::ORDER {
+            let command = invocation(
+                step,
+                Path::new("repo"),
+                Path::new("workspace"),
+                &Features::default(),
+            );
             assert!(
-                AGENT_GUIDANCE.contains(&expected),
-                "AGENTS.md is missing `{expected}`"
+                AGENT_GUIDANCE.contains(&command.display()),
+                "missing {}",
+                command.display()
             );
         }
     }
 
     #[test]
-    fn rebuild_steps_use_the_rebuild_working_directory() {
+    fn formatting_needs_no_unselected_tool_or_features() {
+        let mut runner = FakeRunner::default();
+        run(
+            Path::new("repo"),
+            Path::new("workspace"),
+            &[CheckStep::Fmt],
+            &Features::default(),
+            &mut runner,
+        )
+        .unwrap();
+        assert_eq!(runner.probes.len(), 1);
+        assert_eq!(runner.probes[0].display(), "cargo fmt --version");
+        assert_eq!(runner.commands[0].display(), "cargo fmt --all --check");
+        assert_eq!(runner.commands[0].cwd, Path::new("workspace"));
+    }
+
+    #[test]
+    fn checks_preserve_target_flags_and_stop_after_failure() {
+        let mut runner = FakeRunner {
+            fail_run: Some(1),
+            ..FakeRunner::default()
+        };
+        assert!(run(
+            Path::new("repo"),
+            Path::new("workspace"),
+            &[CheckStep::Check, CheckStep::Test],
+            &Features::default(),
+            &mut runner
+        )
+        .is_err());
+        assert_eq!(runner.commands.len(), 1);
         assert_eq!(
-            CI_STEPS
-                .iter()
-                .filter(|step| step.working_directory == WorkingDirectory::RebuildWorkspace)
-                .count(),
-            5
+            runner.commands[0].display(),
+            "cargo check --locked --workspace --all-targets --all-features"
         );
+        let clippy = invocation(
+            CheckStep::Clippy,
+            Path::new("repo"),
+            Path::new("workspace"),
+            &Features::default(),
+        );
+        assert_eq!(
+            clippy.display(),
+            "cargo clippy --locked --workspace --all-targets --all-features -- -D warnings"
+        );
+    }
+
+    #[test]
+    fn explicit_features_reach_compilation_and_dependency_policy() {
+        use clap::Parser;
+        let cli = crate::Cli::try_parse_from([
+            "xtask",
+            "check",
+            "--features=a,b",
+            "--no-default-features",
+        ])
+        .unwrap();
+        let crate::cli::Task::Check(args) = cli.task else {
+            unreachable!()
+        };
+        for step in [
+            CheckStep::Check,
+            CheckStep::Clippy,
+            CheckStep::Test,
+            CheckStep::Deny,
+        ] {
+            let command = invocation(
+                step,
+                Path::new("repo"),
+                Path::new("workspace"),
+                &args.features,
+            );
+            assert!(!command.args.contains(&"--all-features".into()));
+            assert!(command
+                .display()
+                .contains("--features a,b --no-default-features"));
+        }
     }
 
     #[test]
@@ -316,23 +300,8 @@ mod tests {
     }
 
     #[test]
-    fn cargo_machete_guidance_is_aligned_and_actionable() {
-        assert_eq!(
-            CARGO_MACHETE_INSTALL_COMMAND,
-            "cargo install --locked cargo-machete --version 0.9.2"
-        );
+    fn dependency_install_guidance_matches_agent_instructions() {
         assert!(AGENT_GUIDANCE.contains(CARGO_MACHETE_INSTALL_COMMAND));
-        assert!(AGENT_GUIDANCE.contains("cargo-machete --with-metadata"));
-    }
-
-    #[test]
-    fn cargo_deny_guidance_is_aligned_and_actionable() {
-        assert_eq!(
-            CARGO_DENY_INSTALL_COMMAND,
-            "cargo install --locked cargo-deny --version 0.20.2"
-        );
         assert!(AGENT_GUIDANCE.contains(CARGO_DENY_INSTALL_COMMAND));
-        assert!(AGENT_GUIDANCE
-            .contains("cargo-deny --locked --workspace check bans licenses sources -D warnings"));
     }
 }

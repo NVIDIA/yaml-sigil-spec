@@ -11,7 +11,7 @@ server's reference test-vector tree.
 | Upstream path | `gen-val/json-files/ECDSA-SigGen-FIPS186-5/internalProjection.json` |
 | Browse on GitHub | <https://github.com/usnistgov/ACVP-Server/blob/15c0f3deeefbfa8cb6cd32a99e1ca3b738c66bf0/gen-val/json-files/ECDSA-SigGen-FIPS186-5/internalProjection.json> |
 | Vendored as | `vendor/acvp/ECDSA-SigGen-FIPS186-5.json` (2330483 bytes) |
-| Pinned by | `xtask/src/main.rs` `DEFAULT_COMMIT` |
+| Pinned by | `xtask/src/lib.rs` `DEFAULT_COMMIT` |
 
 ## What this is
 
@@ -35,7 +35,7 @@ randomized-hashing values at 256 characters. The rebuilder reads
 one anchored no-follow byte snapshot, validates these limits before
 retaining collections, and deserializes that same snapshot before
 replay. A refresh outside these limits requires an explicit review
-and coordinated limit change. `cargo xtask ci` exercises every
+and coordinated limit change. `cargo xtask check` exercises every
 exact-boundary and limit-plus-one regression.
 
 The National Institute of Standards and Technology is explicitly
@@ -65,7 +65,7 @@ finding to surface.
 ## Refreshing
 
 To bump the pin to a newer commit, edit `DEFAULT_COMMIT` in
-`xtask/src/main.rs` and run:
+`xtask/src/lib.rs` and run:
 
 ```sh
 cargo xtask update-acvp

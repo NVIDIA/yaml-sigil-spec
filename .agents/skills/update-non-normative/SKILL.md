@@ -122,7 +122,7 @@ Do not hide a normative contract change inside a non-normative cleanup.
 6. Run the complete local validation sequence from the repository root:
 
    ```shell
-   cargo xtask ci
+   cargo xtask check
    ```
 
    This covers Markdown, Protobuf, JSON Schema, and the complete locked Rust

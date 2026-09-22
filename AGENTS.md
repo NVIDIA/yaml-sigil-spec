@@ -405,26 +405,49 @@ corresponding conformance update, treat it as a defect.
   documents a narrower renderer requirement.
   Run `rumdl check` on touched files before landing.
 
-### CI validation
+### Development commands
+
+For work under `conformance/rebuild-rs/xtask/`, also read
+[`conformance/rebuild-rs/xtask/AGENTS.md`](conformance/rebuild-rs/xtask/AGENTS.md).
+The canonical commands are `check` (also available as `ci`), `image`,
+`coverage`, and `coverage-open`. Profiling is omitted because this repository
+owns a fixture generator without a performance workload. MCP evaluation is omitted
+because the repository has no MCP server.
+
+Prefer `cargo xtask` for typed, Cargo-aware development orchestration. Inspect
+and propose changes to overlapping Python scripts before replacing them or
+changing their callers, and obtain user approval for that migration. Retain
+Python at the pre-checkout and checkout-free boundaries described below.
 
 Run the complete repository-owned, non-release validation sequence from the
 repository root:
 
 ```shell
-cargo xtask ci
+cargo xtask check
 ```
 
 To apply the validator from the current checkout to another repository
 checkout, pass its root explicitly:
 
 ```shell
-cargo xtask ci --candidate-root PATH
+cargo xtask check --candidate-root PATH
 ```
 
 The command still builds and runs the xtask from the current checkout; only
 the repository content being validated comes from `PATH`.
 
-The command runs these checks in order:
+`cargo xtask ci` is a visible alias with the same parser and behavior. Select
+checks with `--only=fmt,clippy,test` or `--exclude=audit`; the two selectors
+conflict, reject empty or unknown names, and preserve registry order. With no
+selector, every check runs. Checks fail at the first unsuccessful command.
+
+The registry order is `markdown`, `buf-build`, `buf-lint`, `buf-fmt`, `schema`,
+`fmt`, `check`, `clippy`, `test`, `machete`, `deny`, `audit`. Feature-aware checks
+and coverage default to `--all-features` only when no feature option is given.
+Use Cargo's `--features`, `--all-features`, or `--no-default-features`; the
+last option can be combined with `--features`.
+
+The default command runs these checks in order:
 
 ```shell
 rumdl check .
@@ -435,13 +458,14 @@ jq empty schema/YamlSigilSignature.v1alpha1.schema.json
 (
   cd conformance/rebuild-rs
   cargo fmt --all --check
+  cargo check --locked --workspace --all-targets --all-features
   cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
   cargo test --locked --workspace --all-features
 )
 cargo-machete --with-metadata
 (
   cd conformance/rebuild-rs
-  cargo-deny --locked --workspace check bans licenses sources -D warnings
+  cargo-deny --locked --workspace --all-features check bans licenses sources -D warnings
   cargo audit
 )
 ```
@@ -489,7 +513,9 @@ See the [official Buf installation instructions](https://buf.build/docs/cli/inst
 for other installation methods. Keep the minimum CLI requirement and local
 validation sequence aligned with this guidance.
 
-Keep `cargo xtask ci` provider-neutral. It must not read, parse, or test a
+Keep workflows, scripts, and command documentation aligned with the canonical
+xtask behavior whenever it changes. Keep `cargo xtask check` provider-neutral.
+It must not read, parse, or test a
 hosted CI provider's configuration. Its tests should validate the
 repository-owned command plan and actionable prerequisite guidance. Hosted CI
 may declare the same checks as independent steps, but behavioral alignment is
@@ -558,21 +584,24 @@ shellcheck .github/scripts/check-pull-request-commits.sh
 ```
 
 Hosted CI runs its pinned ShellCheck Action for these provider-specific scripts.
-Keep this validation outside `cargo xtask ci`.
+Keep this validation outside `cargo xtask check`.
 
 Treat every GitHub Action `uses:` pin update as a potential validation-behavior
 change, even when the workflow inputs remain unchanged. While evaluating a
 candidate update, compare the Action at the current and candidate immutable
 SHAs, including its commands, inputs and defaults, runtime, and transitive
 `uses:` dependencies. Determine whether those changes affect the local
-`cargo xtask ci` equivalent or this exact-command documentation. When an Action
+`cargo xtask check` equivalent or this exact-command documentation. When an Action
 update changes relevant behavior, reify it in hosted CI and, when applicable,
 the xtask command plan and this file in the same change. Document any
 intentional hosted-versus-local difference without making the xtask depend on
 the hosted provider's configuration.
 
 Keep maintenance commands such as `cargo xtask update-acvp` separate from CI
-unless hosted validation explicitly needs them.
+unless hosted validation explicitly needs them. Coverage and image builds are
+local, optional operations. `cargo xtask image` retains the verified local
+image and cleans its smoke containers and temporary fixture tree; it never
+pushes an image.
 
 ## Coordinated Buf upgrades
 

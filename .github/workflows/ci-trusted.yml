@@ -69,12 +69,11 @@ jobs:
 
       - name: Check Protobuf
         run: |
-          "${CARGO_HOME:-${HOME}/.cargo}/bin/buf" build proto
-          "${CARGO_HOME:-${HOME}/.cargo}/bin/buf" lint proto
-          "${CARGO_HOME:-${HOME}/.cargo}/bin/buf" format proto --diff --exit-code
+          BUF="${CARGO_HOME:-${HOME}/.cargo}/bin/buf" \
+            cargo xtask check --only=buf-build,buf-lint,buf-fmt
 
       - name: Validate JSON Schema
-        run: jq empty schema/YamlSigilSignature.v1alpha1.schema.json
+        run: cargo xtask check --only=schema
 
       - name: Install Rust validation tools
         uses: taiki-e/install-action@9114bf4d891761788c546334fd37538eae1bf8b3 # v2.87.16
@@ -98,27 +97,25 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Check Rust formatting
-        run: cargo fmt --all --check
-        working-directory: conformance/rebuild-rs
+        run: cargo xtask check --only=fmt
+
+      - name: Check Rust
+        run: cargo xtask check --only=check
 
       - name: Lint Rust
-        run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
-        working-directory: conformance/rebuild-rs
+        run: cargo xtask check --only=clippy
 
       - name: Test Rust
-        run: cargo test --locked --workspace --all-features
-        working-directory: conformance/rebuild-rs
+        run: cargo xtask check --only=test
 
       - name: Check unused Rust dependencies
-        run: cargo-machete --with-metadata
+        run: cargo xtask check --only=machete
 
       - name: Check Rust dependency policy
-        run: cargo-deny --locked --workspace check bans licenses sources -D warnings
-        working-directory: conformance/rebuild-rs
+        run: cargo xtask check --only=deny
 
       - name: Audit Rust dependencies
-        run: cargo audit
-        working-directory: conformance/rebuild-rs
+        run: cargo xtask check --only=audit
 
 
   trusted_result:

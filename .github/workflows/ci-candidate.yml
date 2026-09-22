@@ -297,7 +297,7 @@ jobs:
         working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source
 
       - name: Check Rust dependency policy
-        run: cargo-deny --locked --workspace check bans licenses sources -D warnings
+        run: cargo-deny --locked --workspace --all-features check bans licenses sources -D warnings
         working-directory: ${{ runner.temp }}/yaml-sigil-candidate-state/source/conformance/rebuild-rs
 
       - name: Audit Rust dependencies
@@ -309,8 +309,7 @@ jobs:
       # wrappers, and replaced tools cannot influence a later policy step.
       - name: Run terminal candidate validation
         run: |
-          cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
-          cargo test --locked --workspace --all-features
+          cargo xtask check --only=check,clippy,test
           cd "${CANDIDATE_STATE}/source"
           python3 -m py_compile \
             .github/scripts/bind-candidate-pr.py \
