@@ -26,6 +26,12 @@ next-line coordination base before starting work. Keep compatible and
 protected-policy changes on `main`; target the active coordination branch only
 for next-line work. A coordination branch never supplies its own CI policy.
 
+Coordination branches are optional, temporary contribution bases. After
+promotion and successful validation on `main`, target `main` for subsequent
+work. Retained recovery refs are closed to contribution intake and routine
+synchronization. Follow the
+[retirement procedure](MAINTAINERS.md#retire-abandon-or-restart-a-line).
+
 ## Agent Documentation Standards
 
 Project-local skills exist under `.agents/skills/` and should remain
