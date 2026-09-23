@@ -38,7 +38,9 @@ Share feature options with coverage. With no explicit option, enable all
 features. Forward `--features` and `--no-default-features` with Cargo semantics,
 including their combination. `--all-features` conflicts with both. Preserve
 locked workspace and target flags; formatting receives no feature flags.
-Cargo Deny receives the same feature selection as compilation and tests.
+Cargo Deny always uses `--all-features`, matching the repository's `deny.toml`
+policy. Its checks include all features even when compilation, tests, or
+coverage select fewer features.
 
 `--candidate-root PATH` keeps the running validator in its original checkout.
 Pin the candidate repository and rebuild workspace without following symlinks,

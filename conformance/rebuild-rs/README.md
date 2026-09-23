@@ -129,7 +129,9 @@ alias for `check`.
 Select checks with `cargo xtask check --only=fmt,clippy,test` or omit checks
 with `--exclude=audit`. Selections run in registry order and stop on failure.
 Use `--all-features`, `--features`, or `--no-default-features` to select Cargo
-features; with no feature option, checks enable all features.
+features for compilation, tests, and coverage; with no feature option, these
+commands enable all features. Cargo Deny includes all features under the
+repository's `deny.toml` policy even when compilation selects fewer features.
 
 ## Coverage
 

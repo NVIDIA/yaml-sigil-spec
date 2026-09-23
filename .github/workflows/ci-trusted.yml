@@ -67,13 +67,20 @@ jobs:
           cargo install --locked --version "${BUF_TOOLCHAIN_VERSION_REQUIREMENT}" buf-toolchain
           BUF_RS_VALIDATE_OFFLINE=1 "${CARGO_HOME:-${HOME}/.cargo}/bin/validate-cargo-buf-toolchain"
 
-      - name: Check Protobuf
+      - name: Build Protobuf
         run: |
-          BUF="${CARGO_HOME:-${HOME}/.cargo}/bin/buf" \
-            cargo xtask check --only=buf-build,buf-lint,buf-fmt
+          "${CARGO_HOME:-${HOME}/.cargo}/bin/buf" build proto
+
+      - name: Lint Protobuf
+        run: |
+          "${CARGO_HOME:-${HOME}/.cargo}/bin/buf" lint proto
+
+      - name: Check Protobuf formatting
+        run: |
+          "${CARGO_HOME:-${HOME}/.cargo}/bin/buf" format proto --diff --exit-code
 
       - name: Validate JSON Schema
-        run: cargo xtask check --only=schema
+        run: jq empty schema/YamlSigilSignature.v1alpha1.schema.json
 
       - name: Install Rust validation tools
         uses: taiki-e/install-action@9114bf4d891761788c546334fd37538eae1bf8b3 # v2.87.16
@@ -97,25 +104,31 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Check Rust formatting
-        run: cargo xtask check --only=fmt
+        run: cargo fmt --all --check
+        working-directory: conformance/rebuild-rs
 
       - name: Check Rust
-        run: cargo xtask check --only=check
+        run: cargo check --locked --workspace --all-targets --all-features
+        working-directory: conformance/rebuild-rs
 
       - name: Lint Rust
-        run: cargo xtask check --only=clippy
+        run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+        working-directory: conformance/rebuild-rs
 
       - name: Test Rust
-        run: cargo xtask check --only=test
+        run: cargo test --locked --workspace --all-features
+        working-directory: conformance/rebuild-rs
 
       - name: Check unused Rust dependencies
-        run: cargo xtask check --only=machete
+        run: cargo-machete --with-metadata
 
       - name: Check Rust dependency policy
-        run: cargo xtask check --only=deny
+        run: cargo-deny --locked --workspace --all-features check bans licenses sources -D warnings
+        working-directory: conformance/rebuild-rs
 
       - name: Audit Rust dependencies
-        run: cargo xtask check --only=audit
+        run: cargo audit
+        working-directory: conformance/rebuild-rs
 
 
   trusted_result:

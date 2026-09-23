@@ -54,11 +54,17 @@ fn invocation(
         // Invoke cargo-machete directly: inherited Cargo package variables in
         // 0.9.2 make `cargo machete` parse its subcommand as an input path.
         Machete => ("cargo-machete", &["--with-metadata"], repository),
-        Deny => ("cargo-deny", &["--locked", "--workspace"], workspace),
+        // Dependency policy covers every feature, even when compilation is
+        // narrowed by the caller. Keep this aligned with deny.toml.
+        Deny => (
+            "cargo-deny",
+            &["--locked", "--workspace", "--all-features"],
+            workspace,
+        ),
         Audit => ("cargo", &["audit"], workspace),
     };
     let mut command = Invocation::new(program, args, cwd);
-    if matches!(step, Check | Clippy | Test | Deny) {
+    if matches!(step, Check | Clippy | Test) {
         command.args.extend(features.args());
     }
     if step == Clippy {
@@ -246,7 +252,7 @@ mod tests {
     }
 
     #[test]
-    fn explicit_features_reach_compilation_and_dependency_policy() {
+    fn explicit_features_select_compilation_but_preserve_full_dependency_policy() {
         use clap::Parser;
         let cli = crate::Cli::try_parse_from([
             "xtask",
@@ -258,12 +264,7 @@ mod tests {
         let crate::cli::Task::Check(args) = cli.task else {
             unreachable!()
         };
-        for step in [
-            CheckStep::Check,
-            CheckStep::Clippy,
-            CheckStep::Test,
-            CheckStep::Deny,
-        ] {
+        for step in [CheckStep::Check, CheckStep::Clippy, CheckStep::Test] {
             let command = invocation(
                 step,
                 Path::new("repo"),
@@ -275,6 +276,16 @@ mod tests {
                 .display()
                 .contains("--features a,b --no-default-features"));
         }
+        let deny = invocation(
+            CheckStep::Deny,
+            Path::new("repo"),
+            Path::new("workspace"),
+            &args.features,
+        );
+        assert_eq!(
+            deny.display(),
+            "cargo-deny --locked --workspace --all-features check bans licenses sources -D warnings"
+        );
     }
 
     #[test]

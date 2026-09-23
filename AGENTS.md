@@ -448,10 +448,11 @@ conflict, reject empty or unknown names, and preserve registry order. With no
 selector, every check runs. Checks fail at the first unsuccessful command.
 
 The registry order is `markdown`, `buf-build`, `buf-lint`, `buf-fmt`, `schema`,
-`fmt`, `check`, `clippy`, `test`, `machete`, `deny`, `audit`. Feature-aware checks
+`fmt`, `check`, `clippy`, `test`, `machete`, `deny`, `audit`. Compilation, tests,
 and coverage default to `--all-features` only when no feature option is given.
-Use Cargo's `--features`, `--all-features`, or `--no-default-features`; the
-last option can be combined with `--features`.
+Use Cargo's `--features`, `--all-features`, or `--no-default-features` to select
+their features; the last option can be combined with `--features`. Cargo Deny
+always uses `--all-features`, matching the repository's `deny.toml` policy.
 
 The default command runs these checks in order:
 

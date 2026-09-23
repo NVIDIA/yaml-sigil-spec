@@ -307,6 +307,11 @@ jobs:
       # Rust builds and project-owned test scripts execute candidate code. Keep
       # them together at the end so GITHUB_ENV, GITHUB_PATH, Cargo aliases,
       # wrappers, and replaced tools cannot influence a later policy step.
+      # The scoped xtask runs workspace check and Clippy for all targets, then
+      # tests, with locked dependencies and all features. Markdown, Protobuf,
+      # schema, formatting, and dependency checks ran above; image, coverage,
+      # and maintenance commands are excluded. The remaining commands test
+      # CI helpers.
       - name: Run terminal candidate validation
         run: |
           cargo xtask check --only=check,clippy,test
