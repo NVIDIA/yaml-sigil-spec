@@ -38,6 +38,12 @@ work that depends on that unpromoted change, or its migration documentation
 and tests. Do not invent a coordination branch. When compatibility is
 uncertain, ask a maintainer before opening the pull request.
 
+Coordination branches are optional, temporary contribution bases. After
+promotion and successful validation on `main`, target `main` for subsequent
+work. Retained recovery refs are closed to contribution intake and routine
+synchronization. Follow the
+[retirement procedure](MAINTAINERS.md#retire-abandon-or-restart-a-line).
+
 Apply a fix needed by both lines to `main` first; the release coordinator moves
 it forward. Protected CI and admission changes always target `main`.
 
