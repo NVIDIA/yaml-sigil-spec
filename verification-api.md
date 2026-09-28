@@ -58,7 +58,7 @@ MUST be distinguishable from verifier states.
 | `InvalidAlgorithmParameters` | Required algorithm parameters are missing, malformed, out of bounds, or surplus. |
 | `KeyResolutionFailure` | The verifier cannot obtain or use the configured key before cryptographic verification. |
 | `TrustPolicyConfigurationError` | The supplied trust policy is malformed or internally inconsistent. |
-| `InvalidPreVerifyResult` | `VerifyFromPreVerify` received a result that is not an `Ok` result from the same verifier instance and profile. |
+| `InvalidPreVerifyResult` | `VerifyFromPreVerify` received a result that is not a valid `Ok` result from the same verifier instance and profile; this includes any successful YAML result without the required structured unknown-field evidence. |
 
 Implementations MAY define additional subcategories, but callers MUST NOT need
 to parse human text to distinguish the baseline categories above.
@@ -242,6 +242,39 @@ at request validation, before a helper result exists.
 | `PreVerify` | Runs structural processing and unauthenticated signature metadata extraction. It performs no cryptographic verification and does not classify runtime algorithm support. |
 | `VerifyFromPreVerify` | Runs only the verification stage using an opaque successful result produced by the same verifier instance and profile. |
 
+Each `PreVerifyResponse` carries
+`yaml_signature_document_unknown_field_evidence`. The field records a
+structured parser decision for the YAML signature document and is independent
+of diagnostic `parser_observations`.
+
+| Evidence | Meaning |
+| --- | --- |
+| `YAML_SIGNATURE_DOCUMENT_UNKNOWN_FIELD_EVIDENCE_UNSPECIFIED` | The field was absent or no value was selected. |
+| `YAML_SIGNATURE_DOCUMENT_UNKNOWN_FIELD_EVIDENCE_NOT_CHECKED` | `PreVerify` did not inspect YAML signature-document keys. Protobuf-form and non-`Ok` results use this value. |
+| `YAML_SIGNATURE_DOCUMENT_UNKNOWN_FIELD_EVIDENCE_NO_UNKNOWN_FIELDS` | The structured YAML parser inspected the signature-document keys and found no unknown fields. |
+| `YAML_SIGNATURE_DOCUMENT_UNKNOWN_FIELD_EVIDENCE_UNKNOWN_FIELDS_PRESENT` | The structured YAML parser inspected the signature-document keys and found one or more unknown fields. |
+
+A successful YAML result MUST carry `NO_UNKNOWN_FIELDS` or
+`UNKNOWN_FIELDS_PRESENT`. `VerifyFromPreVerify` MUST return
+`InvalidPreVerifyResult` for `UNSPECIFIED`, `NOT_CHECKED`, or an unrecognized
+numeric enum value before it applies the unknown-field policy.
+`UNKNOWN_FIELDS_PRESENT` MAY continue only under an explicitly permissive
+policy and MUST return `MalformedAttemptedSigned` under a policy that rejects
+unknown YAML signature-document fields. `NO_UNKNOWN_FIELDS` MAY continue
+under either policy. Protobuf-form results use `NOT_CHECKED`; YAML
+unknown-field evidence does not apply to that form.
+
+`VerifyFromPreVerify` MUST validate the result's form and `Ok` outcome before
+applying this evidence. It MUST apply the evidence before key resolution,
+runtime algorithm processing, or cryptographic verification. Implementations
+MUST derive the evidence from the structured parser that performed metadata
+extraction. They MUST NOT infer it by parsing `parser_observations` or other
+diagnostic text.
+
+The evidence does not make a `PreVerifyResponse` remotely trustworthy.
+`VerifyFromPreVerify` continues to accept only an opaque result produced by
+the same verifier instance and profile.
+
 `PreVerify` does not enforce the runtime non-empty `signature` rule. It returns
 `Ok` for otherwise valid metadata containing empty decoded signature octets.
 `Verify` and `VerifyFromPreVerify` then apply the required runtime ordering
@@ -256,7 +289,7 @@ above.
 | `StructuralFailure` | Form-specific structural processing rejected the input. |
 | `MetadataParseFailure` | YAML signature-document parsing, schema matching, required-field extraction, or base64 decoding failed. |
 
-`PreVerifyResult` values are unverified. For any input where `PreVerify`
+`PreVerifyResponse` values are unverified. For any input where `PreVerify`
 returns `Ok`, `Verify` and same-instance `VerifyFromPreVerify` MUST produce
 the same verifier outcome under the same configuration.
 
