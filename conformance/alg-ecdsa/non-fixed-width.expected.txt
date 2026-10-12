@@ -1,4 +1,23 @@
 # Non-fixed-width signature encodings.
+# Provenance: Standards for Efficient Cryptography 1 (SEC 1), Version 2.0 §C.5.
+# Standards-derived encodings are not relicensed under Apache-2.0; see ../../THIRD_PARTY_NOTICES.md.
+# Algorithm enabled: ECDSA_SECP256R1_SHA256_RAW_RS64.
+# YAML signatures use canonical URL-safe, unpadded base64.
+# payload: 68656c6c6f3a20776f726c640a
+# public_key: 043ad3861a95621392516bb593ef05583ed2e5866f5cb6260a3017237fd89b90afd0961c7e37075a6791a39c61f56295b02b6d26567b615e60aa41ee1c8e83388d
 
-Verify(*, input=signature-63-bytes.binpb) -> MalformedAttemptedSigned
-Verify(*, input=signature-65-bytes.binpb) -> MalformedAttemptedSigned
+Verify(form=PROTOBUF, input=signature-63-bytes.binpb,
+       config.public_key_handle=<65-octet uncompressed public key above>)
+Expected: MalformedAttemptedSigned
+
+Verify(form=YAML, input=signature-63-bytes.yaml,
+       config.public_key_handle=<65-octet uncompressed public key above>)
+Expected: MalformedAttemptedSigned
+
+Verify(form=PROTOBUF, input=signature-65-bytes.binpb,
+       config.public_key_handle=<65-octet uncompressed public key above>)
+Expected: MalformedAttemptedSigned
+
+Verify(form=YAML, input=signature-65-bytes.yaml,
+       config.public_key_handle=<65-octet uncompressed public key above>)
+Expected: MalformedAttemptedSigned

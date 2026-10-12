@@ -130,6 +130,8 @@ See [base64/README.md](./base64/README.md).
   configured-key `KeyResolutionFailure`, stable re-signing,
   `algorithm_parameters` rejection.
 
+Canonical-encoding rejection fixtures cover both YAML and protobuf forms.
+
 See [alg-ed25519/README.md](./alg-ed25519/README.md).
 
 #### Compromise (Ed25519)
@@ -160,6 +162,9 @@ See [alg-ed25519/README.md](./alg-ed25519/README.md).
 - **ECDSA** — CAVP / ACVP vectors, high-S and low-S acceptance,
   invalid component ranges, invalid public keys, deterministic
   two-nonce instability, `algorithm_parameters` rejection.
+
+Component-range and signature-length rejection fixtures cover both YAML and
+protobuf forms.
 
 See [alg-ecdsa/README.md](./alg-ecdsa/README.md).
 
