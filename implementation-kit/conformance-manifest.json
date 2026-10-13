@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "normative": false,
-  "fixture_asset_count": 130,
+  "fixture_asset_count": 139,
   "authority": {
     "specification": "README.md",
     "fixture_index": "conformance/README.md",
@@ -653,10 +653,10 @@
         },
         {
           "id": "noncanonical-encodings",
-          "assets": ["conformance/alg-ed25519/noncanonical-R.binpb", "conformance/alg-ed25519/noncanonical-S-equals-L.binpb", "conformance/alg-ed25519/noncanonical-S-equals-L-plus-1.binpb", "conformance/alg-ed25519/noncanonical-encoding.expected.txt"],
+          "assets": ["conformance/alg-ed25519/noncanonical-R.binpb", "conformance/alg-ed25519/noncanonical-R.yaml", "conformance/alg-ed25519/noncanonical-S-equals-L.binpb", "conformance/alg-ed25519/noncanonical-S-equals-L.yaml", "conformance/alg-ed25519/noncanonical-S-equals-L-plus-1.binpb", "conformance/alg-ed25519/noncanonical-S-equals-L-plus-1.yaml", "conformance/alg-ed25519/noncanonical-encoding.expected.txt"],
           "operations": ["Verify"],
-          "context": {"forms": ["PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
-          "expectations": [{"type": "verifier_state", "assets": ["noncanonical-R.binpb", "noncanonical-S-equals-L.binpb", "noncanonical-S-equals-L-plus-1.binpb"], "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "verifier_state", "assets": ["noncanonical-R.binpb", "noncanonical-R.yaml", "noncanonical-S-equals-L.binpb", "noncanonical-S-equals-L.yaml", "noncanonical-S-equals-L-plus-1.binpb", "noncanonical-S-equals-L-plus-1.yaml"], "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
         },
         {
           "id": "configured-key-small-order",
@@ -708,17 +708,17 @@
         },
         {
           "id": "invalid-component-ranges",
-          "assets": ["conformance/alg-ecdsa/invalid-r-zero.binpb", "conformance/alg-ecdsa/invalid-s-zero.binpb", "conformance/alg-ecdsa/invalid-r-equals-n.binpb", "conformance/alg-ecdsa/invalid-s-equals-n.binpb", "conformance/alg-ecdsa/invalid-component-ranges.expected.txt"],
+          "assets": ["conformance/alg-ecdsa/invalid-r-zero.binpb", "conformance/alg-ecdsa/invalid-r-zero.yaml", "conformance/alg-ecdsa/invalid-s-zero.binpb", "conformance/alg-ecdsa/invalid-s-zero.yaml", "conformance/alg-ecdsa/invalid-r-equals-n.binpb", "conformance/alg-ecdsa/invalid-r-equals-n.yaml", "conformance/alg-ecdsa/invalid-s-equals-n.binpb", "conformance/alg-ecdsa/invalid-s-equals-n.yaml", "conformance/alg-ecdsa/invalid-component-ranges.expected.txt"],
           "operations": ["Verify"],
-          "context": {"forms": ["PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
-          "expectations": [{"type": "verifier_state", "assets": ["invalid-r-zero.binpb", "invalid-s-zero.binpb", "invalid-r-equals-n.binpb", "invalid-s-equals-n.binpb"], "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "verifier_state", "assets": ["invalid-r-zero.binpb", "invalid-r-zero.yaml", "invalid-s-zero.binpb", "invalid-s-zero.yaml", "invalid-r-equals-n.binpb", "invalid-r-equals-n.yaml", "invalid-s-equals-n.binpb", "invalid-s-equals-n.yaml"], "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
         },
         {
           "id": "non-fixed-width",
-          "assets": ["conformance/alg-ecdsa/signature-63-bytes.binpb", "conformance/alg-ecdsa/signature-65-bytes.binpb", "conformance/alg-ecdsa/non-fixed-width.expected.txt"],
+          "assets": ["conformance/alg-ecdsa/signature-63-bytes.binpb", "conformance/alg-ecdsa/signature-63-bytes.yaml", "conformance/alg-ecdsa/signature-65-bytes.binpb", "conformance/alg-ecdsa/signature-65-bytes.yaml", "conformance/alg-ecdsa/non-fixed-width.expected.txt"],
           "operations": ["Verify"],
-          "context": {"forms": ["PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
-          "expectations": [{"type": "verifier_state", "assets": ["signature-63-bytes.binpb", "signature-65-bytes.binpb"], "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
+          "context": {"forms": ["YAML", "PROTOBUF"], "conformance_profiles": [], "outer_conformance": []},
+          "expectations": [{"type": "verifier_state", "assets": ["signature-63-bytes.binpb", "signature-63-bytes.yaml", "signature-65-bytes.binpb", "signature-65-bytes.yaml"], "value": "VERIFIER_STATE_MALFORMED_ATTEMPTED_SIGNED"}]
         },
         {
           "id": "invalid-public-keys",

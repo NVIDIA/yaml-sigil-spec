@@ -61,6 +61,12 @@ with the specific public key documented in `expected.txt` —
 `KeyResolutionFailure` is an invocation-error category that depends
 on caller-supplied key material, not on artifact bytes.
 
+Malformed-signature pairs require `ECDSA_SECP256R1_SHA256_RAW_RS64`
+enabled and the uncompressed public key in
+`invalid-component-ranges.expected.txt` or `non-fixed-width.expected.txt`.
+Each pair carries the happy-path payload and the same malformed signature
+octets. The YAML `signature` scalars use canonical URL-safe, unpadded base64.
+
 ## Fixtures
 
 ### Happy-path vectors
@@ -96,10 +102,10 @@ implementation's high-S acceptance and absence of any low-S preference.
 
 | File | Component | Expected outcome |
 | --- | --- | --- |
-| `invalid-r-zero.binpb` | `R = 0` | `MalformedAttemptedSigned` |
-| `invalid-s-zero.binpb` | `S = 0` | `MalformedAttemptedSigned` |
-| `invalid-r-equals-n.binpb` | `R = n` (curve order) | `MalformedAttemptedSigned` |
-| `invalid-s-equals-n.binpb` | `S = n` | `MalformedAttemptedSigned` |
+| `invalid-r-zero.binpb` / `.yaml` | `R = 0` | `MalformedAttemptedSigned` |
+| `invalid-s-zero.binpb` / `.yaml` | `S = 0` | `MalformedAttemptedSigned` |
+| `invalid-r-equals-n.binpb` / `.yaml` | `R = n` (curve order) | `MalformedAttemptedSigned` |
+| `invalid-s-equals-n.binpb` / `.yaml` | `S = n` | `MalformedAttemptedSigned` |
 
 The wire-rule range is `0 < R < n` and `0 < S < n`. Boundary fixtures
 test the strict-inequality rejection.
@@ -108,8 +114,8 @@ test the strict-inequality rejection.
 
 | File | Targets | Expected outcome |
 | --- | --- | --- |
-| `signature-63-bytes.binpb` | 63-octet signature (one byte short of fixed width) | `MalformedAttemptedSigned` |
-| `signature-65-bytes.binpb` | 65-octet signature (one byte over) | `MalformedAttemptedSigned` |
+| `signature-63-bytes.binpb` / `.yaml` | 63-octet signature (one byte short of fixed width) | `MalformedAttemptedSigned` |
+| `signature-65-bytes.binpb` / `.yaml` | 65-octet signature (one byte over) | `MalformedAttemptedSigned` |
 
 ### Invalid public keys (configured-key — `KeyResolutionFailure`)
 

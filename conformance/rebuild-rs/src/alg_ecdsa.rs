@@ -280,39 +280,55 @@ pub fn generate(dir: &PinnedDir) -> std::io::Result<()> {
 
     // Component-range rejection
     let zero = BigInt::zero();
-    write_bytes(
-        dir,
-        "invalid-r-zero.binpb",
-        &proto_artifact(PAYLOAD, &sig_field(&zero, &s1)),
-    )?;
-    write_bytes(
-        dir,
-        "invalid-s-zero.binpb",
-        &proto_artifact(PAYLOAD, &sig_field(&r1, &zero)),
-    )?;
-    write_bytes(
-        dir,
-        "invalid-r-equals-n.binpb",
-        &proto_artifact(PAYLOAD, &sig_field(&p.n, &s1)),
-    )?;
-    write_bytes(
-        dir,
-        "invalid-s-equals-n.binpb",
-        &proto_artifact(PAYLOAD, &sig_field(&r1, &p.n)),
-    )?;
+    let mut range_calls = String::new();
+    for (stem, signature) in [
+        ("invalid-r-zero", sig_field(&zero, &s1)),
+        ("invalid-s-zero", sig_field(&r1, &zero)),
+        ("invalid-r-equals-n", sig_field(&p.n, &s1)),
+        ("invalid-s-equals-n", sig_field(&r1, &p.n)),
+    ] {
+        write_bytes(
+            dir,
+            &format!("{stem}.binpb"),
+            &proto_artifact(PAYLOAD, &signature),
+        )?;
+        write_bytes(
+            dir,
+            &format!("{stem}.yaml"),
+            &yaml_artifact(PAYLOAD, &signature),
+        )?;
+        for (form, extension) in [("PROTOBUF", "binpb"), ("YAML", "yaml")] {
+            range_calls.push_str(&format!(
+                concat!(
+                    "Verify(form={form}, input={stem}.{extension},\n",
+                    "       config.public_key_handle=<65-octet uncompressed public key above>)\n",
+                    "Expected: MalformedAttemptedSigned\n\n",
+                ),
+                form = form,
+                stem = stem,
+                extension = extension,
+            ));
+        }
+    }
     write_text(
         dir,
         "invalid-component-ranges.expected.txt",
         &format!(
             concat!(
                 "# Range-rejection fixtures. Wire rule: 0 < R < n and 0 < S < n.\n",
+                "# Provenance: Standards for Efficient Cryptography 2 (SEC 2), Version 2.0 §2.4.2.\n",
+                "# Standards-derived values are not relicensed under Apache-2.0; see ../../THIRD_PARTY_NOTICES.md.\n",
+                "# Algorithm enabled: ECDSA_SECP256R1_SHA256_RAW_RS64.\n",
+                "# YAML signatures use canonical URL-safe, unpadded base64.\n",
+                "# payload: {payload_hex}\n",
+                "# public_key: {pub_hex}\n",
                 "# n (curve order): {n_hex}\n\n",
-                "Verify(*, input=invalid-r-zero.binpb)      -> MalformedAttemptedSigned\n",
-                "Verify(*, input=invalid-s-zero.binpb)      -> MalformedAttemptedSigned\n",
-                "Verify(*, input=invalid-r-equals-n.binpb)  -> MalformedAttemptedSigned\n",
-                "Verify(*, input=invalid-s-equals-n.binpb)  -> MalformedAttemptedSigned\n",
+                "{range_calls}\n",
             ),
+            payload_hex = hex_lower(PAYLOAD),
+            pub_hex = hex_lower(&pub_key),
             n_hex = p256::hex64(&p.n),
+            range_calls = range_calls.trim_end(),
         ),
     )?;
 
@@ -324,22 +340,52 @@ pub fn generate(dir: &PinnedDir) -> std::io::Result<()> {
     let mut sig_65: Vec<u8> = vec![0x00];
     sig_65.extend_from_slice(&r_be);
     sig_65.extend_from_slice(&s_be);
-    write_bytes(
-        dir,
-        "signature-63-bytes.binpb",
-        &proto_artifact(PAYLOAD, &sig_63),
-    )?;
-    write_bytes(
-        dir,
-        "signature-65-bytes.binpb",
-        &proto_artifact(PAYLOAD, &sig_65),
-    )?;
+    let mut length_calls = String::new();
+    for (stem, signature) in [
+        ("signature-63-bytes", sig_63),
+        ("signature-65-bytes", sig_65),
+    ] {
+        write_bytes(
+            dir,
+            &format!("{stem}.binpb"),
+            &proto_artifact(PAYLOAD, &signature),
+        )?;
+        write_bytes(
+            dir,
+            &format!("{stem}.yaml"),
+            &yaml_artifact(PAYLOAD, &signature),
+        )?;
+        for (form, extension) in [("PROTOBUF", "binpb"), ("YAML", "yaml")] {
+            length_calls.push_str(&format!(
+                concat!(
+                    "Verify(form={form}, input={stem}.{extension},\n",
+                    "       config.public_key_handle=<65-octet uncompressed public key above>)\n",
+                    "Expected: MalformedAttemptedSigned\n\n",
+                ),
+                form = form,
+                stem = stem,
+                extension = extension,
+            ));
+        }
+    }
     write_text(
         dir,
         "non-fixed-width.expected.txt",
-        "# Non-fixed-width signature encodings.\n\n\
-         Verify(*, input=signature-63-bytes.binpb) -> MalformedAttemptedSigned\n\
-         Verify(*, input=signature-65-bytes.binpb) -> MalformedAttemptedSigned\n",
+        &format!(
+            concat!(
+                "# Non-fixed-width signature encodings.\n",
+                "# Provenance: Standards for Efficient Cryptography 1 (SEC 1), Version 2.0 §C.5.\n",
+                "# Standards-derived encodings are not relicensed under Apache-2.0; see ../../THIRD_PARTY_NOTICES.md.\n",
+                "# Algorithm enabled: ECDSA_SECP256R1_SHA256_RAW_RS64.\n",
+                "# YAML signatures use canonical URL-safe, unpadded base64.\n",
+                "# payload: {payload_hex}\n",
+                "# public_key: {pub_hex}\n\n",
+                "{length_calls}\n",
+            ),
+            payload_hex = hex_lower(PAYLOAD),
+            pub_hex = hex_lower(&pub_key),
+            length_calls = length_calls.trim_end(),
+        ),
     )?;
 
     // Bad-key fixtures

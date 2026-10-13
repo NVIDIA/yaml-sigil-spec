@@ -265,17 +265,35 @@ pub fn generate(dir: &PinnedDir) -> std::io::Result<()> {
     };
     let s_eq_l_plus_1 = signature_with_s(r_1, &l_plus_1_le);
 
-    write_bytes(dir, "noncanonical-R.binpb", &proto_artifact(&[], &nc_r_sig))?;
-    write_bytes(
-        dir,
-        "noncanonical-S-equals-L.binpb",
-        &proto_artifact(&[], &s_eq_l),
-    )?;
-    write_bytes(
-        dir,
-        "noncanonical-S-equals-L-plus-1.binpb",
-        &proto_artifact(&[], &s_eq_l_plus_1),
-    )?;
+    let mut malformed_calls = String::new();
+    for (stem, signature) in [
+        ("noncanonical-R", nc_r_sig),
+        ("noncanonical-S-equals-L", s_eq_l),
+        ("noncanonical-S-equals-L-plus-1", s_eq_l_plus_1),
+    ] {
+        write_bytes(
+            dir,
+            &format!("{stem}.binpb"),
+            &proto_artifact(&[], &signature),
+        )?;
+        write_bytes(
+            dir,
+            &format!("{stem}.yaml"),
+            &yaml_empty_payload(&signature),
+        )?;
+        for (form, extension) in [("PROTOBUF", "binpb"), ("YAML", "yaml")] {
+            malformed_calls.push_str(&format!(
+                concat!(
+                    "Verify(form={form}, input={stem}.{extension},\n",
+                    "       config.public_key_handle=<32-octet public key above>)\n",
+                    "Expected: MalformedAttemptedSigned\n\n",
+                ),
+                form = form,
+                stem = stem,
+                extension = extension,
+            ));
+        }
+    }
     write_text(
         dir,
         "noncanonical-encoding.expected.txt",
@@ -283,14 +301,16 @@ pub fn generate(dir: &PinnedDir) -> std::io::Result<()> {
             concat!(
                 "# Three canonical-encoding rejection fixtures.\n",
                 "# Provenance: RFC 8032 §§5.1 and 7.1 values; see ../../THIRD_PARTY_NOTICES.md.\n",
+                "# RFC-derived values are not relicensed under Apache-2.0.\n",
                 "# All use payload = (empty), public_key = RFC 8032 §7.1 Test 1's public key.\n",
                 "# The S-boundary fixtures retain Test 1's valid R component.\n",
+                "# Algorithm enabled: ED25519_PUREEDDSA_RAW_RS64_CANONICAL.\n",
+                "# YAML signatures use canonical URL-safe, unpadded base64.\n",
                 "# public_key: {pub_}\n\n",
-                "Verify(*, input=noncanonical-R.binpb, ...)               -> MalformedAttemptedSigned\n",
-                "Verify(*, input=noncanonical-S-equals-L.binpb, ...)      -> MalformedAttemptedSigned\n",
-                "Verify(*, input=noncanonical-S-equals-L-plus-1.binpb, ...) -> MalformedAttemptedSigned\n",
+                "{malformed_calls}\n",
             ),
             pub_ = hex_lower(&pub_1),
+            malformed_calls = malformed_calls.trim_end(),
         ),
     )?;
 
