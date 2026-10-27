@@ -1,5 +1,7 @@
 # Maintainer guide
 
+<!-- Buf 1.75.0 ordinary candidate installer validation. -->
+
 This is the concise human maintainer operations runbook for
 `yaml-sigil-spec`. Contributor guidance lives in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
