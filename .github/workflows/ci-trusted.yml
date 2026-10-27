@@ -9,7 +9,7 @@ permissions: {}
 
 # Workflow-level caller env is not inherited by local reusable workflows.
 env:
-  BUF_TOOLCHAIN_VERSION_REQUIREMENT: ">=1.73.0"
+  BUF_TOOLCHAIN_VERSION_REQUIREMENT: ">=1.74.0"
 
 jobs:
   trusted_ci:
