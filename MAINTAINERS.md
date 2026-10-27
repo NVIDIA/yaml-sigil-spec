@@ -632,3 +632,5 @@ The shared binder's `promotion_branch` output applies only to
 `yaml-sigil-rs`, whose release guard checks its unpublished coordination
 version. It remains empty for specification candidates; this repository's
 coordination and promotion procedures remain independent.
+
+<!-- Buf minimum candidate-installer canary; close without merging. -->
