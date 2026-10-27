@@ -10,9 +10,9 @@ use std::path::{Path, PathBuf};
 use crate::cli::{CheckStep, Features};
 use crate::process::{probe, Invocation, Runner};
 
-const BUF_VERSION_REQUIREMENT: &str = ">=1.74.0";
+const BUF_VERSION_REQUIREMENT: &str = ">=1.75.0";
 const BUF_INSTALL_GUIDANCE: &str = "Install a supported buf-toolchain release with:\n    \
-     cargo install --locked --force --version '>=1.74.0' buf-toolchain\n\n\
+     cargo install --locked --force --version '>=1.75.0' buf-toolchain\n\n\
      Then ensure $CARGO_HOME/bin is on PATH.\n\
      See https://buf.build/docs/cli/installation/ for official alternatives.";
 const CARGO_DENY_INSTALL_COMMAND: &str = "cargo install --locked cargo-deny --version 0.20.2";
@@ -290,7 +290,7 @@ mod tests {
 
     #[test]
     fn buf_version_accepts_the_minimum_and_newer_releases() {
-        for version in ["1.74.0\n", "1.74.1", "1.75.0", "2.0.0", "1.74.0+build.1"] {
+        for version in ["1.75.0\n", "1.75.1", "1.76.0", "2.0.0", "1.75.0+build.1"] {
             validate_buf_version(version.as_bytes()).unwrap();
         }
     }
@@ -301,6 +301,8 @@ mod tests {
             b"1.72.0".as_slice(),
             b"1.73.0",
             b"1.73.99",
+            b"1.74.0",
+            b"1.74.99",
             b"1.74.0-rc.1",
             b"1.75.0-rc.1",
             b"",
