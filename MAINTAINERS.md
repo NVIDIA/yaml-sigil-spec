@@ -370,6 +370,10 @@ materializing contributor content. Keep the provider-neutral local CLI minimum
 aligned with the published crate-to-CLI mapping; the crate release suffix is
 not a CLI suffix.
 
+For a minimum-version update, test rejection of the previous stable CLI.
+After staged CI and main integration, exercise the ordinary copied-ref
+installer with one inert fork PR and close it without merging.
+
 Choose the test path from the exact reviewed workflow. Ordinary copied-ref
 CI requires `.github/workflows/ci.yml`, `ci-trusted.yml`, and
 `ci-candidate.yml` to match current `main`. Keep that equality guard intact.
