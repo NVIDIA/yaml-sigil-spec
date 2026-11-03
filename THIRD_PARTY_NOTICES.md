@@ -153,6 +153,13 @@ intellectual-property-rights caveat. RFC test-vector octets remain unchanged;
 Rust literals, YAML base64, protobuf framing, sidecars, and YamlSigil state
 terminology are identified adaptations.
 
+The three `noncanonical-*.yaml` fixtures in `conformance/alg-ed25519/`
+repackage the existing malformed-signature protobuf fixtures using the same
+payload and signature octets. These locally constructed rejection cases use
+the cited RFC parameters and Test 1 values; they are not additional RFC test
+vectors. Their provenance is recorded in `noncanonical-encoding.expected.txt`,
+the directory README, and `conformance/rebuild-rs/src/alg_ed25519.rs`.
+
 ## RFC 4648 material
 
 The specification and conformance generator use the canonical-encoding rules,
@@ -371,6 +378,14 @@ Sources:
 
 The SEC 1 and SEC 2 material is not relicensed under Apache-2.0. YamlSigil is
 not affiliated with, sponsored by, or endorsed by SECG or Certicom Corp.
+
+The six malformed-signature YAML fixtures in `conformance/alg-ecdsa/`
+repackage the existing protobuf rejection cases with unchanged payload and
+signature octets. Their range boundaries use the SEC 2 Version 2.0 section
+2.4.2 curve order, and their raw encoding uses SEC 1 Version 2.0 section C.5.
+These locally constructed cases carry provenance in
+`invalid-component-ranges.expected.txt`, `non-fixed-width.expected.txt`, the
+directory README, and `conformance/rebuild-rs/src/alg_ecdsa.rs`.
 
 ## Ed25519 small-order point data
 

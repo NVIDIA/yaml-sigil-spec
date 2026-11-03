@@ -85,14 +85,20 @@ documents the same constraint and the top-level
 
 | File | Targets | Expected outcome |
 | --- | --- | --- |
-| `noncanonical-R.binpb` | non-canonical `R` (encoded integer ≥ `p`) | `MalformedAttemptedSigned` |
-| `noncanonical-S-equals-L.binpb` | `S = L` (boundary, just over) | `MalformedAttemptedSigned` |
-| `noncanonical-S-equals-L-plus-1.binpb` | `S = L + 1` | `MalformedAttemptedSigned` |
+| `noncanonical-R.binpb` / `.yaml` | non-canonical `R` (encoded integer ≥ `p`) | `MalformedAttemptedSigned` |
+| `noncanonical-S-equals-L.binpb` / `.yaml` | `S = L` (boundary, just over) | `MalformedAttemptedSigned` |
+| `noncanonical-S-equals-L-plus-1.binpb` / `.yaml` | `S = L + 1` | `MalformedAttemptedSigned` |
 
 These bytes are in the artifact, so the rejection is artifact-side
 (`MalformedAttemptedSigned`), not configured-key-side.
 Each `S`-boundary fixture retains the valid `R` component from RFC 8032
 section 7.1 Test 1, so `S >= L` is its only canonical-encoding violation.
+
+Run both forms with `ED25519_PUREEDDSA_RAW_RS64_CANONICAL` enabled and
+the RFC 8032 Test 1 public key documented in
+`noncanonical-encoding.expected.txt`. The YAML `signature` scalars use
+canonical URL-safe, unpadded base64, so these cases test malformed decoded
+signature octets rather than a base64 failure.
 
 ### Configured-key rejection (key material — `KeyResolutionFailure`)
 
