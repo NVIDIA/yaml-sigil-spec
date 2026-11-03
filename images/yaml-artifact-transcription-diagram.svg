@@ -196,7 +196,8 @@
       <text x="1055" y="226" class="range-cap">the payload</text>
 
       <text x="1055" y="252">marker (at M)</text>
-      <text x="1055" y="266" class="range-cap">M = max(S)</text>
+      <text x="1055" y="266" class="range-cap">greatest constrained</text>
+      <text x="1055" y="280" class="range-cap">marker offset</text>
 
       <text x="1055" y="298">signature_carrier_range</text>
       <text x="1055" y="312" class="range-cap">[T, |A|)</text>
@@ -205,9 +206,9 @@
       <text x="1055" y="356" class="range-cap">[M, |A|)</text>
     </g>
 
-    <text x="660" y="385" class="frame-sub">Algorithm step 4: M = max(S). The earlier three-dash at offset m&#8320; is a</text>
-    <text x="660" y="400" class="frame-sub">YAML document boundary inside the payload; only the FINAL constrained</text>
-    <text x="660" y="415" class="frame-sub">marker starts the signature document.</text>
+    <text x="660" y="385" class="frame-sub">Algorithm step 3: find the greatest offset M where a constrained marker occurs.</text>
+    <text x="660" y="400" class="frame-sub">Marker discovery retains at most one candidate offset and marker form.</text>
+    <text x="660" y="415" class="frame-sub">Any earlier constrained marker belongs to the signed payload.</text>
     <text x="660" y="438" class="frame-sub">DecomposeOutcome: Ok</text>
   </g>
 
@@ -237,7 +238,7 @@
     <text class="offset" x="55" y="654" text-anchor="end">|A|&#8594;</text>
 
     <g class="range-label">
-      <text x="455" y="618">|S| = 0</text>
+      <text x="455" y="618">no candidate</text>
       <text x="455" y="632" class="range-cap">no constrained marker</text>
       <text x="455" y="646" class="range-cap">offset found in A</text>
 
@@ -249,7 +250,7 @@
       <text x="455" y="755" class="range-cap">ranges</text>
     </g>
 
-    <text x="60" y="790" class="frame-sub">Algorithm step 4: |S| = 0 returns Unsigned (no ranges assigned).</text>
+    <text x="60" y="790" class="frame-sub">Algorithm step 4: if no candidate exists, return Unsigned (no ranges assigned).</text>
     <text x="60" y="805" class="frame-sub">Same outcome as an empty artifact (|A| = 0, step 2).</text>
 
     <text x="60" y="838" class="frame-sub">DecomposeOutcome: Unsigned</text>
